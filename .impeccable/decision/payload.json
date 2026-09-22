@@ -1,0 +1,130 @@
+{
+  "title": "Pilih dunia visual untuk versi impeccable",
+  "question": "Undian menetapkan Rak Tag Servis. Pakai itu, ambil alternatif, atau undi ulang.",
+  "options": [
+    {
+      "id": "assigned",
+      "label": "Rak Tag Servis",
+      "kicker": "THE ROLL",
+      "lineage": "Tag karton bernomor yang diikat ke perangkat di rak workbench konter servis",
+      "thesis": "Setiap kerusakan dapat tag bernomor, dan tag itu yang kamu kirim lewat WhatsApp.",
+      "palette": ["#062036", "#FAA403", "#FC5B02", "#73CABF", "#FFFFFF"],
+      "materials": ["tag karton berlubang dengan tali", "cap stempel nomor", "papan pegboard workshop"],
+      "viewport": "Tag amber besar tergantung dari tali di hero: pilih perangkat dan keluhan, lalu kirim tag itu sebagai chat WhatsApp.",
+      "risk": "Terasa gimmick kalau tag cuma hiasan; tag harus benar-benar bekerja sebagai formulir.",
+      "raised": [
+        { "from": "challenger-alphabet-storm", "raise": "Nomor tag dan nama perangkat dicetak monumental; tipografi jadi materi utama halaman." },
+        { "from": "challenger-neon", "raise": "Hanya satu elemen aktif yang menyala amber penuh; tag lain di rak tetap tenang sampai dipilih." },
+        { "from": "challenger-chromatophore", "raise": "Tag punya kosakata status yang tegas (ditulis, dicek, disetujui, dikerjakan, diambil), masing-masing dengan capnya sendiri." },
+        { "from": "challenger-teletext", "raise": "Satu sistem penomoran konsisten untuk tag, keluhan, dan langkah alur." },
+        { "from": "challenger-hypercard", "raise": "Alat membaca adalah alat menulis: memilih keluhan di rak langsung mengisi tag di hero." }
+      ]
+    },
+    {
+      "id": "model-pick",
+      "label": "Nota Servis Rangkap",
+      "kicker": "IMPECCABLE’S PICK",
+      "lineage": "Buku nota tanda terima servis konter HP dengan kertas karbon",
+      "thesis": "Halaman adalah nota tanda terima: keluhan, estimasi, dan nomor ditulis sebelum perangkat disentuh.",
+      "palette": ["#FFFFFF", "#1F3A8A", "#062036", "#FAA403"],
+      "materials": ["kertas nota rangkap", "tulisan karbon biru", "cap bulat"],
+      "viewport": "Satu nota bernomor memenuhi layar HP, kolom keluhan dan estimasi terisi tulisan karbon.",
+      "risk": "Paling akrab dan paling mudah ditebak; banyak halaman bertema tiket berakhir di sini."
+    },
+    {
+      "id": "challenger-loteria",
+      "label": "Kartu Keluhan Bernomor",
+      "verdict": "competitive",
+      "lineage": "Kartu lotería bernomor",
+      "thesis": "Setiap keluhan jadi kartu bergambar bernomor; pengunjung mencari kartu kerusakannya sendiri.",
+      "palette": ["#FAA403", "#FC5B02", "#73CABF", "#062036"],
+      "materials": ["bidang warna datar", "kontur tinta tebal"],
+      "viewport": "Satu kartu terpanggil di atas, dek kartu keluhan di bawahnya dalam grid persegi.",
+      "case": "Menyatu dengan logo dan jelas untuk memindai keluhan, tapi pengunjung Cimahi tidak mengenal lotería.",
+      "risk": "Bisa terasa seperti permainan dan mengaburkan pesan transparansi biaya.",
+      "hero": "https://impeccable.style/worlds/cards/vernacular-ephemera-loteria-tabla-night-hero.webp"
+    },
+    {
+      "id": "challenger-alphabet-storm",
+      "label": "Badai Huruf",
+      "verdict": "declined",
+      "lineage": "Dunia surealis tempat huruf menjadi cuaca",
+      "thesis": "Nama kerusakan berubah bentuk menjadi cuaca huruf.",
+      "palette": ["#FFFFFF", "#111111", "#B8BEC4"],
+      "materials": ["grotesk monumental", "partikel huruf"],
+      "viewport": "Kata LAYAR PECAH pecah menjadi hujan huruf.",
+      "case": "Tidak dikenal pengunjung dan mengaburkan informasi servis.",
+      "risk": "Keterbacaan hilang saat huruf bergerak.",
+      "kept": "Tipografi sebagai materi utama, dicetak monumental.",
+      "hero": "https://impeccable.style/worlds/cards/dream-surreal-impossible-worlds-alphabet-storm-hero.webp"
+    },
+    {
+      "id": "challenger-chromatophore",
+      "label": "Kulit Cumi Bercahaya",
+      "verdict": "declined",
+      "lineage": "Kulit cephalopoda sebagai layar hidup",
+      "thesis": "Permukaan halaman berubah pola sesuai status.",
+      "palette": ["#F1E6D6", "#7A3B26", "#2FB5A8"],
+      "materials": ["shader seluler", "tekstur kulit"],
+      "viewport": "Pola kulit bergerak mengikuti keluhan yang dipilih.",
+      "case": "Tidak punya hubungan dengan bengkel servis dan berat untuk HP.",
+      "risk": "Performa buruk di HP kelas menengah.",
+      "kept": "Kosakata status yang tegas, tiap status punya tanda sendiri.",
+      "hero": "https://impeccable.style/worlds/cards/reefs-bioluminescent-nocturnal-chromatophore-skin-language-hero.webp"
+    },
+    {
+      "id": "challenger-neon",
+      "label": "Malam Neon Neo-Tokyo",
+      "verdict": "declined",
+      "lineage": "Signage neon kota malam",
+      "thesis": "Menara papan neon dengan satu aksen merah di tengah.",
+      "palette": ["#0A0A0F", "#FF2E88", "#22D3EE", "#FF3B30"],
+      "materials": ["tabung neon", "aspal basah"],
+      "viewport": "Tumpukan papan neon dengan satu tanda merah menyala.",
+      "case": "Klise gelap-neon teknologi; bertentangan dengan nada kalem dan transparan.",
+      "risk": "Terlihat seperti template teknologi generik.",
+      "kept": "Hanya satu elemen aktif yang menyala penuh.",
+      "hero": "https://impeccable.style/worlds/cards/pop-culture-shelf-neo-tokyo-neon-night-hero.webp"
+    },
+    {
+      "id": "challenger-teletext",
+      "label": "Layanan Teletext",
+      "verdict": "declined",
+      "lineage": "Majalah teletext siaran TV",
+      "thesis": "Setiap keluhan adalah halaman bernomor tiga digit.",
+      "palette": ["#000000", "#FFFF00", "#00FFFF", "#FFFFFF"],
+      "materials": ["grid karakter 40x24", "mozaik blok"],
+      "viewport": "Halaman indeks P100 dengan keluhan sebagai baris bernomor.",
+      "case": "Nostalgia yang tidak dimiliki mahasiswa sekarang; grid kaku menyulitkan HP.",
+      "risk": "Terbaca sebagai novelty retro.",
+      "kept": "Satu sistem penomoran yang konsisten di seluruh halaman.",
+      "hero": "https://impeccable.style/worlds/cards/broadcast-programming-teletext-service-hero.webp"
+    },
+    {
+      "id": "challenger-hypercard",
+      "label": "Tumpukan HyperCard",
+      "verdict": "declined",
+      "lineage": "Tumpukan kartu HyperCard hitam-putih",
+      "thesis": "Kartu yang dibaca juga bisa ditulis.",
+      "palette": ["#FFFFFF", "#000000"],
+      "materials": ["satu-bit", "dither"],
+      "viewport": "Kartu hitam-putih dengan tombol yang dilukis tangan.",
+      "case": "Bahasa komputer lama yang asing bagi pengunjung dan membuang warna logo.",
+      "risk": "Terasa eksperimen, bukan bengkel.",
+      "kept": "Alat membaca sekaligus alat menulis.",
+      "hero": "https://impeccable.style/worlds/cards/medium-native-hypercard-stack-shoebox-hero.webp"
+    }
+  ],
+  "reroll": { "registers": ["safer", "bolder"] },
+  "buildPath": { "value": "code" },
+  "canon": true,
+  "canonCard": {
+    "label": "Standar kategori",
+    "thesis": "Halaman bengkel servis yang biasa, dikerjakan dengan rapi.",
+    "palette": ["#FFFFFF", "#062036", "#FAA403"],
+    "materials": ["grid kartu layanan", "ikon layanan"],
+    "viewport": "Hero dengan tombol WhatsApp, kartu layanan, alasan memilih, lalu lokasi.",
+    "risk": "Tidak bisa dibedakan dari pesaing, memang begitu desainnya."
+  },
+  "steer": true
+}

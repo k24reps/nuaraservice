@@ -1,0 +1,159 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-22T00:00:00Z",
+  "title": "Design System: Nuara Service",
+  "extensions": {
+    "source": "versi-impeccable/style.css (dunia Nota Servis Rangkap). Versi root dan versi-opus tidak termasuk.",
+    "colorMeta": {
+      "counter": { "role": "primary", "displayName": "Navy Meja Konter", "canonical": "#062036", "tonalRamp": ["#020b13", "#062036", "#0b2a45", "#16456d", "#2f6796", "#6a95bb", "#b3cbe0", "#e8f0f7"] },
+      "counter-raised": { "role": "neutral", "displayName": "Meja Terangkat", "canonical": "#0b2a45", "tonalRamp": ["#041220", "#0b2a45", "#123a5e", "#1e5282", "#3d71a3", "#7aa0c4", "#bcd0e3", "#eaf1f7"] },
+      "paper": { "role": "neutral", "displayName": "Kertas Putih", "canonical": "#ffffff", "tonalRamp": ["#1f2226", "#3b3f45", "#5b6068", "#80858d", "#a8acb2", "#cfd2d6", "#eceef0", "#ffffff"] },
+      "ink": { "role": "neutral", "displayName": "Tinta Cetak", "canonical": "#062036", "tonalRamp": ["#020b13", "#062036", "#0b2a45", "#16456d", "#2f6796", "#6a95bb", "#b3cbe0", "#e8f0f7"] },
+      "ink-hover": { "role": "neutral", "displayName": "Navy Hover", "canonical": "#0d3558", "tonalRamp": ["#04121f", "#0d3558", "#154670", "#205c90", "#3e7bb0", "#7ea7cc", "#bed3e7", "#ebf2f9"] },
+      "ink-soft": { "role": "neutral", "displayName": "Tinta Pudar", "canonical": "#5b6776", "tonalRamp": ["#1d2127", "#2f3640", "#454e5a", "#5b6776", "#7d8795", "#a2aab5", "#c9ced5", "#eef0f3"] },
+      "carbon": { "role": "tertiary", "displayName": "Karbon Biru", "canonical": "#2536a0", "tonalRamp": ["#0b1033", "#141d5c", "#1d2a82", "#2536a0", "#4b5cc4", "#7e8bdb", "#b6bef0", "#e9ecfb"] },
+      "numerator": { "role": "tertiary", "displayName": "Oranye Numerator", "canonical": "#fc5b02", "tonalRamp": ["#3d1300", "#6e2400", "#a33600", "#d64800", "#fc5b02", "#ff8c4d", "#ffbf99", "#fff0e6"] },
+      "stamp": { "role": "tertiary", "displayName": "Merah Cap", "canonical": "#c43f00", "tonalRamp": ["#330f00", "#5c1c00", "#8a2b00", "#c43f00", "#e8641f", "#f59461", "#fbc4a3", "#fff0e7"] },
+      "amber": { "role": "primary", "displayName": "Amber Rangkap", "canonical": "#faa403", "tonalRamp": ["#3b2600", "#6b4600", "#9c6600", "#cc8600", "#faa403", "#ffc04d", "#ffda94", "#fff4dc"] },
+      "amber-hover": { "role": "primary", "displayName": "Amber Terang", "canonical": "#ffb42d", "tonalRamp": ["#3d2800", "#6e4a00", "#a16c00", "#d48f00", "#ffb42d", "#ffc95e", "#ffe0a0", "#fff6e2"] },
+      "teal": { "role": "secondary", "displayName": "Teal Rangkap Kedua", "canonical": "#73cabf", "tonalRamp": ["#0e2c28", "#1b4f48", "#2b766c", "#43a094", "#73cabf", "#98d9d0", "#c2eae4", "#ebf8f6"] },
+      "rule": { "role": "neutral", "displayName": "Garis Isian", "canonical": "#c9d6e3", "tonalRamp": ["#1f2a35", "#3a4b5c", "#5a6f84", "#7f95ab", "#a5b8cb", "#c9d6e3", "#e2eaf1", "#f5f8fb"] },
+      "box-hover": { "role": "neutral", "displayName": "Kotak Disentuh", "canonical": "#eef3f8", "tonalRamp": ["#22303d", "#40566b", "#62798f", "#8aa0b5", "#b3c4d4", "#d6e1eb", "#eef3f8", "#fafcfd"] },
+      "on-counter": { "role": "neutral", "displayName": "Teks di Meja", "canonical": "#ffffff", "tonalRamp": ["#1f2226", "#3b3f45", "#5b6068", "#80858d", "#a8acb2", "#cfd2d6", "#eceef0", "#ffffff"] },
+      "on-counter-soft": { "role": "neutral", "displayName": "Teks di Meja Redup", "canonical": "#c5d0db", "tonalRamp": ["#1e2731", "#384858", "#566a7e", "#7a8fa3", "#a0b1c1", "#c5d0db", "#e0e7ed", "#f4f7f9"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Judul penawaran di meja; baris janji biaya turun ke baris baru berwarna amber." },
+      "headline": { "displayName": "Headline", "purpose": "Judul bagian: Setelah nota dikirim, Datang ke workshop." },
+      "title": { "displayName": "Title", "purpose": "Judul cetak kapital di kertas: Tanda Terima Servis, label langkah, Tiket servis digital." },
+      "body": { "displayName": "Body", "purpose": "Paragraf, dibatasi 38ch sampai 52ch." },
+      "label": { "displayName": "Label", "purpose": "Label baris formulir di nota." },
+      "brand": { "displayName": "Brand", "purpose": "Nama toko NUARA di nota dan kartu nama, sumbu lebar 118." },
+      "numerator": { "displayName": "Numerator", "purpose": "Nomor nota No. NS- saja, oranye numerator, angka tabular." },
+      "hand": { "displayName": "Hand", "purpose": "Isian tangan pelanggan dan pratinjau pesan, selalu karbon biru." }
+    },
+    "shadows": [
+      { "name": "kertas-nota", "value": "0 2px 3px rgba(0,0,0,0.18), 0 18px 40px -12px rgba(0,0,0,0.5)", "purpose": "Lembar atas nota di atas meja." },
+      { "name": "kertas-lembar", "value": "0 2px 3px rgba(0,0,0,0.18), 0 18px 40px -16px rgba(0,0,0,0.45)", "purpose": "Lembar alur teal." },
+      { "name": "kartu-nama", "value": "0 2px 3px rgba(0,0,0,0.2), 0 20px 36px -14px rgba(0,0,0,0.55)", "purpose": "Kartu nama di bagian lokasi." },
+      { "name": "cincin-logo", "value": "0 0 0 1px rgba(255,255,255,0.24)", "purpose": "Memisahkan tepi navy logo kecil dari meja di bar." },
+      { "name": "cincin-ganda-cap", "value": "inset 0 0 0 3px #ffffff, inset 0 0 0 4.5px currentColor", "purpose": "Garis dalam cap bulat; bukan elevasi." }
+    ],
+    "motion": [
+      { "name": "ease", "value": "cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "Satu-satunya kurva; dipakai semua transisi." },
+      { "name": "state", "value": "0.2s", "purpose": "Perubahan warna dan tekan tombol." },
+      { "name": "tick-stroke", "value": "stroke-dashoffset 26 ke 0, 0.28s", "purpose": "Goresan centang tangan karbon saat dicentang." },
+      { "name": "stamp-drop", "value": "opacity 0 dan scale 1.08 ke 1, 0.45s, sekali via IntersectionObserver (threshold 0.6)", "purpose": "Cap turun sekali saat pertama terlihat, hanya jika mulanya di bawah layar pertama." },
+      { "name": "reduced-motion", "value": "durasi 0.01ms, scroll-behavior auto, cap tidak disembunyikan", "purpose": "Menghormati prefers-reduced-motion." }
+    ],
+    "breakpoints": [
+      { "name": "hp", "value": "max-width: 639px" },
+      { "name": "sm", "value": "640px" },
+      { "name": "nav", "value": "820px" },
+      { "name": "meja-penuh", "value": "1080px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Tombol Kirim Nota",
+      "kind": "button",
+      "refersTo": "button-send",
+      "description": "Aksi utama di dalam kertas; menyusun pesan WhatsApp dari isi nota.",
+      "html": "<button class=\"ds-btn-send\"><svg viewBox=\"0 0 32 32\" aria-hidden=\"true\"><path d=\"M16 3.2C8.94 3.2 3.2 8.94 3.2 16c0 2.26.6 4.44 1.73 6.36L3.2 28.8l6.6-1.7A12.73 12.73 0 0 0 16 28.7c7.06 0 12.8-5.74 12.8-12.8S23.07 3.2 16 3.2z\"/></svg>Kirim nota via WhatsApp</button>",
+      "css": ".ds-btn-send { width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 54px; padding: 12px 20px; border: 0; border-radius: 8px; background: var(--ink, #062036); color: #fff; font-family: Archivo, 'Arial Narrow', sans-serif; font-weight: 800; font-size: 1.05rem; font-variation-settings: 'wdth' 100; cursor: pointer; transition: background-color 0.2s cubic-bezier(0.16,1,0.3,1), transform 0.2s cubic-bezier(0.16,1,0.3,1); } .ds-btn-send svg { width: 22px; height: 22px; fill: currentColor; } .ds-btn-send:hover { background: #0d3558; } .ds-btn-send:active { transform: translateY(1px); } .ds-btn-send:focus-visible { outline: 3px solid #2536a0; outline-offset: 3px; }"
+    },
+    {
+      "name": "Tombol Amber",
+      "kind": "button",
+      "refersTo": "button-amber",
+      "description": "Aksi utama di atas meja navy: rute ke workshop, chat di bar.",
+      "html": "<div style=\"background:#062036;padding:20px\"><a class=\"ds-btn-amber\" href=\"#\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M12 21.5s-6.5-6.1-6.5-11.2a6.5 6.5 0 0 1 13 0c0 5.1-6.5 11.2-6.5 11.2z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\"/><circle cx=\"12\" cy=\"10.3\" r=\"2.4\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\"/></svg>Rute ke workshop</a></div>",
+      "css": ".ds-btn-amber { display: inline-flex; align-items: center; gap: 10px; min-height: 50px; padding: 0 20px; border-radius: 8px; background: #faa403; color: #062036; font-family: Archivo, 'Arial Narrow', sans-serif; font-weight: 800; text-decoration: none; transition: background-color 0.2s cubic-bezier(0.16,1,0.3,1); } .ds-btn-amber svg { width: 20px; height: 20px; } .ds-btn-amber:hover { background: #ffb42d; } .ds-btn-amber:focus-visible { outline: 3px solid #faa403; outline-offset: 3px; }"
+    },
+    {
+      "name": "Tombol Garis",
+      "kind": "button",
+      "refersTo": "button-line",
+      "description": "Aksi sekunder di atas meja, berpasangan dengan tombol amber.",
+      "html": "<div style=\"background:#062036;padding:20px\"><a class=\"ds-btn-line\" href=\"#\">Chat langsung</a></div>",
+      "css": ".ds-btn-line { display: inline-flex; align-items: center; gap: 10px; min-height: 50px; padding: 0 20px; border-radius: 8px; border: 2px solid #c5d0db; color: #fff; font-family: Archivo, 'Arial Narrow', sans-serif; font-weight: 800; text-decoration: none; transition: border-color 0.2s cubic-bezier(0.16,1,0.3,1); } .ds-btn-line:hover { border-color: #fff; } .ds-btn-line:focus-visible { outline: 3px solid #faa403; outline-offset: 3px; }"
+    },
+    {
+      "name": "Kotak Centang Tangan",
+      "kind": "input",
+      "refersTo": "tick-box",
+      "description": "Kotak cetak dengan centang karbon yang tergores saat dipilih; radio dan checkbox sama bentuknya.",
+      "html": "<label class=\"ds-tick\"><input type=\"checkbox\" checked /><span class=\"ds-box\" aria-hidden=\"true\"><svg viewBox=\"0 0 24 24\"><path d=\"M4 13.5l5 5L20.5 5\"/></svg></span>Laptop / PC</label>",
+      "css": ".ds-tick { position: relative; display: flex; align-items: center; gap: 12px; min-height: 44px; cursor: pointer; font-family: Archivo, 'Arial Narrow', sans-serif; font-weight: 700; color: #062036; background: #fff; padding: 4px 8px; } .ds-tick input { position: absolute; opacity: 0; width: 24px; height: 24px; margin: 0; } .ds-box { flex-shrink: 0; width: 22px; height: 22px; border: 2px solid #062036; border-radius: 2px; position: relative; } .ds-box svg { position: absolute; left: -3px; top: -9px; width: 30px; height: 30px; fill: none; stroke: #2536a0; stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 26; stroke-dashoffset: 26; transition: stroke-dashoffset 0.28s cubic-bezier(0.16,1,0.3,1); } .ds-tick input:checked + .ds-box svg { stroke-dashoffset: 0; } .ds-tick:hover .ds-box { background: #eef3f8; } .ds-tick input:focus-visible + .ds-box { outline: 3px solid #2536a0; outline-offset: 3px; }"
+    },
+    {
+      "name": "Garis Isian Tangan",
+      "kind": "input",
+      "refersTo": "line-input",
+      "description": "Isian satu baris tanpa bingkai, ditulis dengan Kalam karbon di atas garis titik-titik.",
+      "html": "<label class=\"ds-line\"><span>Keluhan lain</span><input type=\"text\" placeholder=\"tulis di sini, misalnya: engsel patah\" /></label>",
+      "css": ".ds-line { display: grid; gap: 2px; background: #fff; padding: 12px; } .ds-line span { font-family: Archivo, 'Arial Narrow', sans-serif; font-size: 0.78rem; font-weight: 800; font-variation-settings: 'wdth' 75; text-transform: uppercase; letter-spacing: 0.05em; color: #5b6776; } .ds-line input { min-height: 44px; border: 0; border-bottom: 1.5px dotted #5b6776; background: transparent; font-family: Kalam, 'Comic Sans MS', cursive; font-size: 1.2rem; font-weight: 700; color: #2536a0; caret-color: #2536a0; padding: 4px 0; } .ds-line input::placeholder { color: #5b6776; font-weight: 400; } .ds-line input:focus-visible { outline: 3px solid #2536a0; outline-offset: 2px; border-radius: 4px; }"
+    },
+    {
+      "name": "Navigasi Bar",
+      "kind": "nav",
+      "refersTo": "nav-link",
+      "description": "Bar navy lengket dengan merek, tautan redup, dan tombol chat amber di kanan.",
+      "html": "<nav class=\"ds-bar\"><span class=\"ds-bar-brand\">Nuara Service</span><a href=\"#\">Isi nota</a><a href=\"#\">Alur servis</a><a href=\"#\">Lokasi</a><a class=\"ds-bar-wa\" href=\"#\">Chat WhatsApp</a></nav>",
+      "css": ".ds-bar { display: flex; align-items: center; gap: 4px; min-height: 60px; padding: 0 18px; background: rgba(6,32,54,0.97); border-bottom: 1px solid #0b2a45; font-family: Archivo, 'Arial Narrow', sans-serif; } .ds-bar-brand { color: #fff; font-weight: 800; font-variation-settings: 'wdth' 110; margin-right: 24px; } .ds-bar a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 6px; text-decoration: none; font-weight: 600; color: #c5d0db; } .ds-bar a:hover { color: #fff; background: #0b2a45; } .ds-bar a:focus-visible { outline: 3px solid #faa403; outline-offset: 3px; } .ds-bar .ds-bar-wa { margin-left: auto; padding: 0 16px; border-radius: 8px; background: #faa403; color: #062036; font-weight: 800; font-size: 0.9rem; } .ds-bar .ds-bar-wa:hover { background: #ffb42d; color: #062036; }"
+    },
+    {
+      "name": "Cap Bulat",
+      "kind": "custom",
+      "refersTo": "stamp",
+      "description": "Satu-satunya cap di halaman: nilai kolom Estimasi biaya.",
+      "html": "<div style=\"background:#fff;padding:24px\"><p class=\"ds-stamp\"><span>Disepakati</span> <span>sebelum dikerjakan</span></p></div>",
+      "css": ".ds-stamp { margin: 0; display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; width: 196px; min-height: 106px; padding: 14px 18px; border: 3px solid currentColor; border-radius: 50%; box-shadow: inset 0 0 0 3px #fff, inset 0 0 0 4.5px currentColor; color: #c43f00; text-align: center; font-family: Archivo, 'Arial Narrow', sans-serif; font-weight: 900; font-variation-settings: 'wdth' 62; font-size: 1.3rem; text-transform: uppercase; letter-spacing: 0.05em; line-height: 1.05; transform: rotate(-8deg); } .ds-stamp span:last-child { font-size: 0.72em; letter-spacing: 0.07em; }"
+    },
+    {
+      "name": "Nota Rangkap",
+      "kind": "card",
+      "refersTo": "nota",
+      "description": "Lembar atas putih di atas rangkap amber dan teal, dengan lubang sobekan dan lembar pelanggan amber di dasar.",
+      "html": "<div style=\"background:#062036;padding:40px\"><div class=\"ds-nota-stack\"><div class=\"ds-nota\"><p class=\"ds-nota-title\">Tanda Terima Servis</p><p class=\"ds-nota-no\">No. NS-<span></span></p><div class=\"ds-stub\"><p class=\"ds-tear\">lembar pelanggan</p><p>Tiket servis digital</p></div></div></div></div>",
+      "css": ".ds-nota-stack { position: relative; max-width: 420px; } .ds-nota-stack::before, .ds-nota-stack::after { content: ''; position: absolute; inset: 16px -14px -16px 12px; border-radius: 3px; background: #73cabf; transform: rotate(3deg); } .ds-nota-stack::after { inset: 6px 8px -9px -8px; background: #faa403; transform: rotate(-2deg); } .ds-nota { position: relative; z-index: 1; background: #fff; color: #062036; border-radius: 3px; padding: 30px 32px 0; transform: rotate(-0.8deg); box-shadow: 0 2px 3px rgba(0,0,0,0.18), 0 18px 40px -12px rgba(0,0,0,0.5); font-family: Archivo, 'Arial Narrow', sans-serif; } .ds-nota::before { content: ''; position: absolute; top: 7px; left: 14px; right: 14px; height: 7px; background: radial-gradient(circle, #062036 2.4px, transparent 2.9px) 0 50% / 13px 7px repeat-x; opacity: 0.85; } .ds-nota-title { margin: 0; font-weight: 900; font-variation-settings: 'wdth' 70; text-transform: uppercase; letter-spacing: 0.03em; } .ds-nota-no { margin: 8px 0 18px; font-size: 1.6rem; font-weight: 800; font-variation-settings: 'wdth' 62; color: #fc5b02; font-variant-numeric: tabular-nums; } .ds-nota-no span { display: inline-block; width: 3.2em; border-bottom: 2px dotted #5b6776; } .ds-stub { position: relative; margin: 0 -32px; padding: 28px 32px 24px; background: #faa403; border-top: 2px dashed #062036; border-radius: 0 0 3px 3px; font-weight: 900; font-variation-settings: 'wdth' 75; text-transform: uppercase; } .ds-stub p { margin: 0; } .ds-tear { position: absolute; top: -13px; left: 14px; padding: 0 8px; background: #fff; font-size: 0.75rem; font-weight: 700; text-transform: none; font-variation-settings: 'wdth' 96; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Nota Servis Rangkap",
+    "overview": "Halaman adalah buku nota tanda terima servis yang tergeletak di meja konter navy. Lembar atas putih dicetak tinta navy, dan rangkapnya mengintip di bawah dalam amber dan teal, persis buku nota konter. Pengunjung tidak membaca brosur; ia mengisi nota: mencentang perangkat dan keluhan, menulis keluhan lain dengan tulisan tangan karbon biru, lalu mengirim nota itu lewat WhatsApp. Janji utama (biaya disepakati sebelum dikerjakan) tidak diklaim dengan kata sifat, tapi dicap di kolom Estimasi biaya.\n\nKepadatannya seperti formulir cetak: garis isian tipis, label kecil huruf kapital sempit, kotak centang, garis sobek putus-putus. Semua benda kertas sedikit miring dan punya bayangan lunak dari meja, sedangkan meja itu sendiri datar. Tipografi cetak memakai Archivo dengan sumbu lebar variabel sebagai alat utama hierarki; tulisan tangan Kalam hanya untuk isian.\n\nSetiap bagian berujung pada chat WhatsApp atau rute ke workshop. Tidak ada foto, ilustrasi, atau gambar stok; satu-satunya citra adalah logo asli pemilik.",
+    "keyCharacteristics": [
+      "Meja navy datar, benda kertas di atasnya miring dan berbayang.",
+      "Tiga warna kertas: putih (lembar atas), amber (lembar pelanggan), teal (rangkap alur).",
+      "Archivo variabel: lebar sempit untuk label dan angka, lebar lebar untuk nama toko.",
+      "Kalam hanya untuk isian tangan dan pratinjau pesan, selalu dalam karbon biru.",
+      "Satu cap bulat per halaman, satu nomor numerator oranye per halaman.",
+      "Nota adalah formulir sungguhan yang menyusun pesan WhatsApp."
+    ],
+    "rules": [
+      { "name": "The Kertas Punya Warna Sendiri Rule", "body": "Amber dan teal adalah warna kertas, bukan warna aksen dekoratif. Keduanya muncul sebagai lembar, rangkap, atau tombol aksi; tidak sebagai gradien, ikon berwarna, atau latar bagian yang bukan kertas.", "section": "colors" },
+      { "name": "The Tangan Selalu Karbon Rule", "body": "Apa pun yang \"ditulis pelanggan\" berwarna karbon biru; apa pun yang \"dicetak toko\" berwarna tinta navy. Jangan campur.", "section": "colors" },
+      { "name": "The Satu Cap Satu Nomor Rule", "body": "Merah cap dan oranye numerator masing-masing muncul sekali per halaman. Kelangkaannya yang membuat keduanya terbaca sebagai bukti.", "section": "colors" },
+      { "name": "The Lebar Adalah Hierarki Rule", "body": "Bedakan peran dengan sumbu lebar Archivo: sempit (62 sampai 82) untuk angka, label, dan judul; normal (96 sampai 100) untuk bacaan dan tombol; lebar (110 sampai 118) hanya untuk nama merek.", "section": "typography" },
+      { "name": "The Kalam Pendek Rule", "body": "Kalam hanya untuk isian satu baris dan pratinjau pesan. Tidak pernah untuk judul, paragraf, atau tombol.", "section": "typography" },
+      { "name": "The Hanya Kertas Terangkat Rule", "body": "Tombol, navigasi, dan bar tidak berbayang. Bayangan hanya milik benda kertas yang tergeletak di meja.", "section": "elevation" },
+      { "name": "The Miring Tipis Rule", "body": "Kertas diputar sedikit: nota -0.8deg (desktop), lembar teal -0.4deg, kartu nama -3deg, rangkap 2.2deg sampai 3deg dan -1.4deg sampai -2deg. Tombol dan teks di meja selalu lurus.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do letakkan setiap isi baru di atas benda kertas (nota, lembar, kartu) atau langsung di meja navy; tidak ada permukaan ketiga.",
+      "Do pakai Archivo dengan sumbu lebar sebagai pembeda peran (wdth 62 sampai 118) sebelum menambah ukuran atau warna.",
+      "Do tulis isian pelanggan dengan Kalam karbon biru, dan cetakan toko dengan Archivo tinta navy.",
+      "Do beri bayangan dua lapis hitam transparan hanya pada kertas, dan putar kertas tipis (di bawah 3deg, kartu nama 3deg).",
+      "Do jaga target sentuh minimal 44px dan cincin fokus 3px (amber di meja, karbon di kertas).",
+      "Do hormati prefers-reduced-motion: gerak hanya goresan centang dan cap, masing-masing sekali."
+    ],
+    "donts": [
+      "Don't pakai oranye numerator untuk teks kecil atau lebih dari satu nomor nota; kontrasnya hanya cukup untuk ukuran besar.",
+      "Don't tambah cap kedua; cap bulat hanya milik kolom Estimasi biaya.",
+      "Don't pakai Kalam untuk judul, paragraf, atau tombol.",
+      "Don't beri bayangan pada tombol atau navigasi, dan jangan pakai bayangan offset keras.",
+      "Don't ganti bukti dengan foto stok, ilustrasi generik, atau gambar orang; citra satu-satunya adalah logo asli.",
+      "Don't kembali ke susunan kategori (hero, kartu layanan berikon, \"kenapa kami\", tombol WhatsApp mengambang)."
+    ]
+  }
+}
