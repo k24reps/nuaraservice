@@ -1,11 +1,11 @@
 ---
 version: 1
-slug: "versi-impeccable-index-html"
-primary_target: "versi-impeccable/index.html"
+slug: "index-html"
+primary_target: "index.html"
 related_targets: []
 ---
 
-Scope: landing page satu halaman (versi-impeccable/index.html), mode Persuade. Pengunjung: mahasiswa UNJANI dan warga sekitar, kebanyakan dari HP. Aksi: chat WhatsApp dan rute ke workshop, setara. Bukti yang ada: rating 4,9/210 (teks), alur kerja nyata, logo. Tidak ada foto, testimoni, harga, jam buka.
+Scope: landing page satu halaman (index.html), mode Persuade. Pengunjung: mahasiswa UNJANI dan warga sekitar, kebanyakan dari HP. Aksi: chat WhatsApp dan rute ke workshop, setara. Bukti yang ada: rating 4,9/210 (teks), alur kerja nyata, logo. Tidak ada foto, testimoni, harga, jam buka.
 
 ## Direction contract
 

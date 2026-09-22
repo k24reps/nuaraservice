@@ -3,7 +3,7 @@
   "generatedAt": "2026-09-22T00:00:00Z",
   "title": "Design System: Nuara Service",
   "extensions": {
-    "source": "versi-impeccable/style.css (dunia Nota Servis Rangkap). Versi root dan versi-opus tidak termasuk.",
+    "source": "style.css (dunia Nota Servis Rangkap).",
     "colorMeta": {
       "counter": { "role": "primary", "displayName": "Navy Meja Konter", "canonical": "#062036", "tonalRamp": ["#020b13", "#062036", "#0b2a45", "#16456d", "#2f6796", "#6a95bb", "#b3cbe0", "#e8f0f7"] },
       "counter-raised": { "role": "neutral", "displayName": "Meja Terangkat", "canonical": "#0b2a45", "tonalRamp": ["#041220", "#0b2a45", "#123a5e", "#1e5282", "#3d71a3", "#7aa0c4", "#bcd0e3", "#eaf1f7"] },

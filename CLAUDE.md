@@ -2,7 +2,7 @@
 
 Fakta bisnis hanya boleh berasal dari pemilik. Jangan menambah harga, durasi garansi, jam buka, testimoni, atau angka lain yang belum dikonfirmasi pemilik.
 
-Versi yang dipakai: `versi-impeccable/`. Desain visual memakai skill `impeccable` (PRODUCT.md, DESIGN.md, surface brief di `.impeccable/surfaces/`). Dari antislop, pakai hanya skill non-UI: core (fakta dan kejujuran), `antislop-copywriting`, `antislop-human`, `antislop-layoutmobile`, `antislop-code`. Jangan pakai `antislop-ui`; urusan visual milik impeccable.
+Situs ada di root proyek (index.html, style.css, script.js, assets/) dan di-deploy ke Vercel dari GitHub. Desain visual memakai skill `impeccable` (PRODUCT.md, DESIGN.md, surface brief di `.impeccable/surfaces/`). Dari antislop, pakai hanya skill non-UI: core (fakta dan kejujuran), `antislop-copywriting`, `antislop-human`, `antislop-layoutmobile`, `antislop-code`. Jangan pakai `antislop-ui`; urusan visual milik impeccable.
 
 <!-- antislop:start -->
 ## antislop

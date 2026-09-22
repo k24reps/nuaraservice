@@ -161,7 +161,7 @@ components:
 
 # Design System: Nuara Service
 
-Dokumen ini mencatat dunia visual "Nota Servis Rangkap" dari `versi-impeccable/` (index.html, style.css, script.js). Semua token diambil dari CSS yang sudah dikirim. Versi lain di proyek ini (index.html dan style.css di root, serta `versi-opus/`) adalah pembanding terpisah dan tidak termasuk sistem ini.
+Dokumen ini mencatat dunia visual "Nota Servis Rangkap" dari halaman di root proyek (index.html, style.css, script.js). Semua token diambil dari CSS yang sudah dikirim.
 
 ## Overview
 

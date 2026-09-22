@@ -8,7 +8,7 @@ web
 
 ## Stack
 
-static HTML/CSS: satu halaman tanpa framework dan tanpa build step, siap di-deploy ke Netlify Drop atau GitHub Pages. Dipilih pemilik saat perencanaan versi pertama.
+static HTML/CSS: satu halaman tanpa framework dan tanpa build step. Kode di GitHub (repo privat), di-deploy ke Vercel. Dipilih pemilik saat perencanaan awal.
 
 ## Users
 
