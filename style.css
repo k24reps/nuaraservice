@@ -115,7 +115,9 @@ a { color: inherit; text-underline-offset: 0.22em; text-decoration-thickness: 1.
 .bar-wa svg { width: 20px; height: 20px; fill: currentColor; }
 
 /* ---------- Counter (hero) ---------- */
-.counter { padding: 32px 0 56px; }
+/* overflow-x: clip, bukan hidden: rangkap miring di bawah nota menjulur sekitar 8px melewati tepi layar HP,
+   dan hidden akan mematikan sticky pada .pitch di desktop */
+.counter { padding: 32px 0 56px; overflow-x: clip; }
 
 .counter-grid { display: grid; gap: 32px; }
 
@@ -124,7 +126,10 @@ a { color: inherit; text-underline-offset: 0.22em; text-decoration-thickness: 1.
   font-weight: 800;
   font-variation-settings: "wdth" 82;
   line-height: 1.02;
-  letter-spacing: -0.015em;
+  /* Spasi kata bawaan Archivo wdth 82 bobot 800 hanya 0.14em ("HP di" terasa rapat), jadi dilebarkan ke 0.22em.
+     Huruf dirapatkan 0.005em karena baris amber di kolom desktop hanya bersisa ~3px dan akan pecah jadi tiga baris. */
+  letter-spacing: -0.02em;
+  word-spacing: 0.08em;
 }
 
 .pitch h1 em {
@@ -378,6 +383,19 @@ a { color: inherit; text-underline-offset: 0.22em; text-decoration-thickness: 1.
 }
 
 .row-line input::placeholder { color: var(--ink-soft); font-weight: 400; }
+
+/* Isian yang sudah ditulis di workshop: kolom Perangkat pada nota halaman layanan */
+.fill {
+  margin: 0;
+  min-height: 40px;
+  padding: 4px 0;
+  border-bottom: 1.5px dotted var(--ink-soft);
+  font-family: var(--hand);
+  font-size: 1.2rem;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--carbon);
+}
 
 .row-estimasi {
   display: flex;
@@ -697,6 +715,58 @@ a { color: inherit; text-underline-offset: 0.22em; text-decoration-thickness: 1.
 .kartu-mark i:nth-child(2) { background: var(--amber); transform: translateY(-5px); }
 .kartu-mark i:nth-child(3) { background: var(--numerator); transform: translateY(-10px); }
 
+/* ---------- Servis per perangkat: baris tautan langsung di meja navy ---------- */
+.perangkat { padding: 16px 0 64px; }
+
+.perangkat-grid { display: grid; gap: 22px; }
+
+.perangkat-grid h2 {
+  font-size: clamp(1.7rem, 1.2rem + 2.2vw, 2.6rem);
+  font-weight: 900;
+  font-variation-settings: "wdth" 80;
+  line-height: 1.05;
+}
+
+.perangkat-list { list-style: none; margin: 0; padding: 0; }
+.perangkat-list li { border-top: 1px solid var(--counter-2); }
+.perangkat-list li:last-child { border-bottom: 1px solid var(--counter-2); }
+
+.perangkat-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 16px;
+  row-gap: 4px;
+  min-height: 44px;
+  margin: 0 -12px;
+  padding: 16px 12px;
+  text-decoration: none;
+  transition: background-color 0.2s var(--ease);
+}
+
+.perangkat-row:hover { background: var(--counter-2); }
+
+.perangkat-name { font-size: 1.15rem; font-weight: 800; line-height: 1.25; }
+
+.perangkat-isi {
+  grid-column: 1;
+  max-width: 52ch;
+  color: var(--on-counter-soft);
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+.perangkat-row svg {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  width: 22px;
+  height: 22px;
+  color: var(--on-counter-soft);
+  transition: color 0.2s var(--ease);
+}
+
+.perangkat-row:hover svg { color: var(--on-counter); }
+
 /* ---------- Footer ---------- */
 .foot {
   border-top: 1px solid var(--counter-2);
@@ -779,6 +849,7 @@ a { color: inherit; text-underline-offset: 0.22em; text-decoration-thickness: 1.
   }
   .bar-nav a:hover { color: var(--on-counter); background: var(--counter-2); }
   .lokasi-grid { grid-template-columns: 1fr 1fr; }
+  .perangkat-grid { grid-template-columns: 1fr 1.25fr; gap: 56px; align-items: start; }
 }
 
 /* ---------- >= 1080px: meja konter penuh ---------- */
@@ -792,5 +863,6 @@ a { color: inherit; text-underline-offset: 0.22em; text-decoration-thickness: 1.
   .ticks { grid-template-columns: 1fr 1fr; }
   .alur { padding: 32px 0 96px; }
   .steps { grid-template-columns: repeat(4, 1fr); }
+  .perangkat { padding: 24px 0 96px; }
   .lokasi { padding: 24px 0 104px; }
 }

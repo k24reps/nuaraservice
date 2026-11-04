@@ -7,7 +7,8 @@ const groups = [...form.querySelectorAll(".keluhan")];
 const other = document.getElementById("lainnya");
 
 function selectedDevice() {
-  return form.querySelector('input[name="perangkat"]:checked').value;
+  const picked = form.querySelector('input[name="perangkat"]:checked');
+  return picked ? picked.value : form.dataset.perangkat;
 }
 
 function activeGroup() {

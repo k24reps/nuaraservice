@@ -24,7 +24,7 @@ typography:
     fontSize: "clamp(2rem, 1.35rem + 3.2vw, 3.7rem)"
     fontWeight: 800
     lineHeight: 1.02
-    letterSpacing: "-0.015em"
+    letterSpacing: "-0.02em"
     fontVariation: "\"wdth\" 82"
   headline:
     fontFamily: "Archivo, Arial Narrow, sans-serif"
@@ -222,7 +222,7 @@ Palet diambil dari piksel logo (navy, amber, oranye, teal), ditambah karbon biru
 **Character:** Satu keluarga huruf cetak yang dilebarkan dan disempitkan seperti huruf timah di percetakan nota, ditemani tulisan tangan pendek dari pulpen karbon.
 
 ### Hierarchy
-- **Display** (800, clamp 2rem sampai 3.7rem, 1.02, wdth 82): judul penawaran di meja. Baris kedua (janji biaya) turun ke baris baru berwarna amber.
+- **Display** (800, clamp 2rem sampai 3.7rem, 1.02, jarak huruf -0.02em, jarak kata +0.08em, wdth 82): judul penawaran di meja. Baris kedua (janji biaya) turun ke baris baru berwarna amber. Jarak kata bawaan Archivo wdth 82 bobot 800 hanya 0.14em dan terasa rapat di judul pendek, jadi dilebarkan ke sekitar 0.22em; huruf dirapatkan sedikit supaya baris amber tetap satu baris di kolom desktop.
 - **Headline** (900, clamp 1.7rem sampai 2.6rem, 1.05, wdth 80): judul bagian (Setelah nota dikirim, Datang ke workshop).
 - **Title** (900, 1.05rem sampai 1.15rem, kapital, 0.03em sampai 0.04em, wdth 70 sampai 75): judul cetak di kertas: Tanda Terima Servis, label langkah, Tiket servis digital.
 - **Body** (400, 1rem, 1.55, wdth 96): paragraf. Lebar baris dibatasi 38ch sampai 52ch.

@@ -5,7 +5,7 @@ primary_target: "index.html"
 related_targets: []
 ---
 
-Scope: landing page satu halaman (index.html), mode Persuade. Pengunjung: mahasiswa UNJANI dan warga sekitar, kebanyakan dari HP. Aksi: chat WhatsApp dan rute ke workshop, setara. Bukti yang ada: rating 4,9 dari 215+ ulasan (teks), alur kerja nyata, logo, jam buka (daftar di bagian lokasi, sejak 2026-11-04). Tidak ada foto, testimoni, harga.
+Scope: landing page (index.html), mode Persuade. Pengunjung: mahasiswa UNJANI dan warga sekitar, kebanyakan dari HP. Aksi: chat WhatsApp dan rute ke workshop, setara. Bukti yang ada: rating 4,9 dari 215+ ulasan (teks), alur kerja nyata, logo, jam buka (daftar di bagian lokasi, sejak 2026-11-04). Sejak 2026-11-04 beranda punya bagian "Servis per perangkat": tiga baris tautan ke halaman layanan statis /servis-laptop-cimahi, /servis-hp-cimahi, dan /servis-tv-elektronik-cimahi, yang kontraknya ada di surface brief servis-laptop-cimahi-index-html. Tidak ada foto, testimoni, harga.
 
 ## Direction contract
 

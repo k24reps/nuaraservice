@@ -8,7 +8,7 @@ web
 
 ## Stack
 
-static HTML/CSS: satu halaman tanpa framework dan tanpa build step. Kode di GitHub (repo privat), di-deploy ke Vercel. Dipilih pemilik saat perencanaan awal.
+static HTML/CSS tanpa framework dan tanpa build step: beranda `index.html` dan tiga halaman layanan statis (`servis-laptop-cimahi`, `servis-hp-cimahi`, `servis-tv-elektronik-cimahi`, masing-masing folder berisi `index.html`), plus `sitemap.xml` dan `robots.txt` di root. Kode di GitHub (repo privat), di-deploy ke Vercel. Dipilih pemilik saat perencanaan awal.
 
 ## Users
 
@@ -44,8 +44,8 @@ Pelanggan bisa konsultasi awal lewat WhatsApp atau datang langsung ke workshop. 
 - Tiket FixMaster ditampilkan sebagai teks saja, tanpa tombol atau link.
 - Jam buka (listing Google Maps milik pemilik, dicek 2026-11-04): Senin sampai Kamis 09.00-21.00; Jumat 13.00-21.00; Sabtu dan Minggu 11.00-21.00. Tampil sebagai daftar di bagian "Datang ke workshop" (sejak 2026-11-04) dan di data terstruktur.
 - Profil Google Maps (kategori: Jasa Reparasi Komputer; nama di listing: NUARA SERVICE – Service HP, Laptop & Elektronik UNJANI): https://www.google.com/maps/place/NUARA+SERVICE+%E2%80%93+Service+HP,+Laptop+%26+Elektronik+UNJANI/data=!4m2!3m1!1s0x2e68e5c1cfdf5711:0x4ba547a0be3c727c
-- Data terstruktur (JSON-LD LocalBusiness) ada di head `index.html`. Isinya harus sama dengan listing Google Maps (nama, alamat, telepon, jam buka) dan layanan yang dikonfirmasi pemilik di atas. Jangan menambah aggregateRating, review, atau priceRange.
-- Belum ditentukan, jangan dikarang: daftar harga, durasi garansi. Belum dikonfirmasi sebagai layanan: iPhone secara khusus, Magic Com, Water Heater.
+- Data terstruktur (JSON-LD LocalBusiness) ada di head `index.html`. Isinya harus sama dengan listing Google Maps (nama, alamat, telepon, jam buka) dan layanan yang dikonfirmasi pemilik di atas. Jangan menambah aggregateRating, review, atau priceRange. Tiga halaman layanan membawa JSON-LD `Service` minimal yang menunjuk ke LocalBusiness yang sama lewat `@id` (`https://nuaraservice.my.id/#localbusiness`); isinya hanya layanan yang dikonfirmasi di atas, tanpa rating, ulasan, atau harga.
+- Belum ditentukan, jangan dikarang: daftar harga, durasi garansi, dan apakah mesin cuci dan kulkas dibawa ke workshop atau diservis di tempat pelanggan (langkah terakhir alur di halaman TV sengaja tidak menyebut pengambilan). Belum dikonfirmasi sebagai layanan: iPhone secara khusus, Magic Com, Water Heater.
 
 ## Brand Commitments
 
