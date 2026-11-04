@@ -300,6 +300,9 @@ Kertas teal miring berisi langkah bernomor dengan label bergaris bawah tinta. La
 ### Kartu Nama
 Alamat dan WA sebagai teks yang bisa disalin, dalam kartu putih 85:55 bergaris atas amber, miring -3deg.
 
+### Jam Buka
+Daftar tiga baris (Senin sampai Kamis, Jumat, Sabtu dan Minggu) langsung di meja navy, di antara paragraf lokasi dan tombol; tidak masuk kartu nama supaya rasio 85:55 terjaga. Label kecil kapital (tipe label, teks di meja redup), hari di kiri dan jam di kanan dengan angka tabular, dipisah garis tipis Meja Terangkat. Tanpa permukaan baru dan tanpa amber. Isinya harus sama dengan data terstruktur di head dan listing Google Maps.
+
 ## Do's and Don'ts
 
 ### Do:

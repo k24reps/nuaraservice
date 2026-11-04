@@ -1,0 +1,26 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "index.html"
+        ],
+        "createdAt": "2026-11-04T03:35:41.370Z",
+        "reason": "Keputusan Claude 2026-11-04 (belum dikonfirmasi pemilik): .nota-no punya padding-top 10px (<=639px) dan 14px (dasar), tanpa border di >=640px; diukur di browser pada 375, 600, 1280 px: anak berjarak 10-11px dari tepi atas. Temuan identik di commit sebelum edit SEO."
+      },
+      {
+        "rule": "nested-cards",
+        "value": "*",
+        "files": [
+          "index.html"
+        ],
+        "createdAt": "2026-11-04T03:35:41.676Z",
+        "reason": "Keputusan Claude 2026-11-04 (belum dikonfirmasi pemilik): satu-satunya p berbingkai/berlatar di dalam nota adalah p.stamp (Cap Bulat) dan p.tear (tab lembar pelanggan), komponen bertanda tangan di DESIGN.md. Temuan identik di commit sebelum edit SEO."
+      }
+    ]
+  }
+}

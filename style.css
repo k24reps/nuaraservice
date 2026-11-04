@@ -572,6 +572,33 @@ a { color: inherit; text-underline-offset: 0.22em; text-decoration-thickness: 1.
   font-size: 1.05rem;
 }
 
+/* Jam buka: langsung di meja navy, tanpa permukaan baru */
+.jam { margin-top: 22px; max-width: 50ch; }
+
+.jam-title {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 800;
+  font-variation-settings: "wdth" 75;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--on-counter-soft);
+}
+
+.jam dl { margin: 8px 0 0; }
+
+.jam-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 16px;
+  padding: 10px 0;
+  border-top: 1px solid var(--counter-2);
+}
+
+.jam-row:last-child { border-bottom: 1px solid var(--counter-2); }
+.jam dt { color: var(--on-counter-soft); }
+.jam dd { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }
+
 .lokasi-actions {
   margin-top: 24px;
   display: flex;

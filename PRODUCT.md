@@ -33,7 +33,7 @@ Pelanggan bisa konsultasi awal lewat WhatsApp atau datang langsung ke workshop. 
 ## Capabilities and Constraints
 
 - Nama: Nuara Service
-- Alamat workshop: Jl. Ibu Ganirah No. 115, Cibeber, Kec. Cimahi Selatan, Kota Cimahi, Jawa Barat. Posisi: di belakang kampus UNJANI Cimahi.
+- Alamat workshop: Jl. Ibu Ganirah No. 115, Cibeber, Kec. Cimahi Selatan, Kota Cimahi, Jawa Barat. Posisi: di belakang kampus UNJANI Cimahi. Kode pos 40531; patokan di listing Google Maps: dekat Cafe BTW (dicek 2026-11-04).
 - Area layanan: Kota Cimahi, terutama Cimahi Selatan, Cibeureum, Baros, dan Leuwigajah, sampai perbatasan Bandung Barat.
 - WhatsApp: 0821-1821-8747. Link CTA: https://wa.me/6282118218747?text=Halo%20Nuara%20Service,%20saya%20mau%20konsultasi%20kerusakan%20perangkat
 - Teks CTA pilihan pemilik: "Konsultasi Kerusakan Gratis" atau "Cek Estimasi Biaya via WhatsApp".
@@ -42,7 +42,10 @@ Pelanggan bisa konsultasi awal lewat WhatsApp atau datang langsung ke workshop. 
   2. HP / smartphone: ganti LCD & touchscreen pecah/blank; ganti baterai boros/kembung; port charger tidak masuk; bootloop, restart sendiri.
   3. Elektronik rumah tangga & audio-visual: TV LED/LCD (mati total, ada suara tanpa gambar, layar bergaris); mesin cuci & kulkas (masalah modul/kelistrikan).
 - Tiket FixMaster ditampilkan sebagai teks saja, tanpa tombol atau link.
-- Belum ditentukan, jangan dikarang: daftar harga, durasi garansi, jam buka, link Google Maps profil bisnis.
+- Jam buka (listing Google Maps milik pemilik, dicek 2026-11-04): Senin sampai Kamis 09.00-21.00; Jumat 13.00-21.00; Sabtu dan Minggu 11.00-21.00. Tampil sebagai daftar di bagian "Datang ke workshop" (sejak 2026-11-04) dan di data terstruktur.
+- Profil Google Maps (kategori: Jasa Reparasi Komputer; nama di listing: NUARA SERVICE – Service HP, Laptop & Elektronik UNJANI): https://www.google.com/maps/place/NUARA+SERVICE+%E2%80%93+Service+HP,+Laptop+%26+Elektronik+UNJANI/data=!4m2!3m1!1s0x2e68e5c1cfdf5711:0x4ba547a0be3c727c
+- Data terstruktur (JSON-LD LocalBusiness) ada di head `index.html`. Isinya harus sama dengan listing Google Maps (nama, alamat, telepon, jam buka) dan layanan yang dikonfirmasi pemilik di atas. Jangan menambah aggregateRating, review, atau priceRange.
+- Belum ditentukan, jangan dikarang: daftar harga, durasi garansi. Belum dikonfirmasi sebagai layanan: iPhone secara khusus, Magic Com, Water Heater.
 
 ## Brand Commitments
 
@@ -53,7 +56,7 @@ Pelanggan bisa konsultasi awal lewat WhatsApp atau datang langsung ke workshop. 
 
 ## Evidence on Hand
 
-- Rating Google 4,9 dari 210 ulasan, dikonfirmasi pemilik pada 2026-09-22. Ditampilkan sebagai teks; angka ini bisa berubah.
+- Rating Google 4,9 dengan 216 ulasan menurut listing Google Maps pada 2026-11-04 (sebelumnya 210, dikonfirmasi pemilik pada 2026-09-22). Di halaman ditulis "215+" (keputusan pemilik 2026-11-04) supaya tidak perlu diubah tiap ada ulasan baru; perbarui angka itu bila jumlah ulasan sudah jauh di atasnya. Ditampilkan sebagai teks. Tidak ditandai sebagai aggregateRating di data terstruktur: pedoman Google melarang rating dari situs lain ditandai sebagai rating situs sendiri.
 - Logo asli di `assets/logo.jpg`.
 - Tidak ada: foto workshop, teknisi, atau hasil kerja yang layak dipakai; testimoni atau kutipan ulasan; statistik lain; sertifikasi. Jangan memakai foto stok, ilustrasi generik, atau gambar orang sebagai pengganti.
 
