@@ -1,6 +1,6 @@
 # IPD (Implementation Plan Document) - Nuara Dashboard
 
-> Versi: 0.4 | Diperbarui: 2026-11-21 | Merujuk: PRD, TRD, AFD, DBD, `dashboard/AGENTS.md`
+> Versi: 0.5 | Diperbarui: 2026-11-21 | Merujuk: PRD, TRD, AFD, DBD, `dashboard/AGENTS.md`
 <!-- Versi 0.2 (42 langkah Next.js dari nol) dibatalkan 2026-11-21 (wawancara P13). Langkahnya disimpan di bagian Arsip dengan tanda [DIBATALKAN]; rujukan kriteria F-xx di sana tetap berguna untuk daftar selisih. -->
 
 ## Cara memakai
@@ -16,7 +16,7 @@
 | Fase | Tujuan | Langkah |
 |---|---|---|
 | A | Salinan FixMaster jalan sebagai Nuara Dashboard | L-43, L-44, L-45 |
-| B | UI dipindah ke dens-ui dengan warna Nuara, per halaman | L-46 s.d. L-56 |
+| B | UI dipindah ke dens-ui dengan warna Nuara, per halaman | L-46, L-47, L-58, L-48 s.d. L-56 |
 | C | Selisih PRD yang diputuskan Pemilik | ditentukan dari L-45 |
 | D | Rilis dan berhenti memakai FixMaster | L-57 |
 
@@ -50,8 +50,14 @@ Aturan bersama: satu langkah = satu kelompok halaman dipindah utuh, CSS Module l
   - Kerjakan: Tailwind v4 (`@tailwindcss/vite`) + dependensi dens-ui; tema `src/styles/nuara-theme.css` (token DBD sebagai `--nu-*`, bentuk dan bayangan dens-ui); komponen dens-ui di `src/components/dens/` (folder terpisah dari `components/ui/` karena `Button.tsx` vs `button.tsx` bentrok di Windows/macOS); popover, sheet, drawer (vaul), command (cmdk), combobox, sonner; katalog dev `/dev/komponen`; gerbang kontras `nuaraTheme.test.ts`.
   - Selesai jika: satu halaman uji di dev memakai komponen dens-ui; `audit-tokens` dan `audit-contrast` lolos; probe `audit-*` di halaman lama sama dengan sebelum langkah.
   - Hasil 2026-11-21: `/dev/komponen` tampil di 1280px dan 390px tanpa error JS dan tanpa luberan; `audit-tokens` lolos; `audit-contrast` 0 gagal (katalog 94 elemen); laporan `audit-mobile` dan `audit-zoom` identik dengan baseline; foto per piksel 8 halaman lama x 2 tema sama dengan baseline (sisa selisih hanya jam dan kursor berkedip); 1125 tes / 83 berkas, lint, build lolos.
-- [ ] **L-47 Kerangka aplikasi**: Sidebar, Topbar, MobileBottomNav, AppLayout, halaman masuk/daftar, wizard toko, PIN karyawan, splash.
-  - Termasuk: matikan tema gelap dan tombolnya untuk seluruh aplikasi (P14.1); putuskan pengganti toast (sonner dari L-46 atau sistem toast lama dengan tampilan baru); target sentuh 44px untuk tombol dens-ui (DBD 2: tombol bawaan 40px); body memakai font dan latar Nuara.
+- [x] **L-47 Kerangka aplikasi**
+  - Rujukan: DBD 2-5, wawancara P15
+  - Keputusan pra-langkah (P15): L-47 dipecah, layar masuk/PIN/wizard pindah ke L-58 (P15.1); toast memakai sonner lewat helper `toast.*` yang sama (P15.2); target sentuh 44px hanya di pointer kasar (P15.3); lonceng palsu disembunyikan, menjadi selisih G-11 (P15.4).
+  - Kerjakan: Sidebar (rail lipat, laci tablet, lencana jumlah, pemilih cabang `DropdownMenu`), Topbar (menu akun `DropdownMenu`, status sinkron, chip zoom; tombol tema dan lonceng dicopot), navigasi bawah + menu Lainnya (laci vaul), splash, stepper zoom; tema gelap dimatikan untuk seluruh aplikasi (store tema dihapus, `data-theme="light"`); toast sonner (`AppToaster`, portal ke body); target sentuh 44px di komponen dens-ui (`pointer-coarse:`); varian breakpoint `drawer`/`narrow`/`phone`/`compact` di app.css dengan kueri sama persis CSS lama; ikon menu lucide (`navIcons.ts`). Ukuran kerangka (`--sidebar-width`, `--topbar-height`, `--mobile-nav-height`) dan breakpoint lama dipertahankan.
+  - Selesai jika: kerangka tampil di desktop, tablet, ponsel tanpa error JS dan tanpa luberan; laci `inert` saat tertutup; Esc di menu cabang tidak menutup laci; target sentuh >= 44px di layar sentuh; probe `audit-*` dan `audit-contrast` bersih; tes, lint, build lolos.
+  - Hasil 2026-11-21: lihat Catatan L-47.
+- [ ] **L-58 Layar masuk, daftar, reset password, PIN karyawan, wizard toko**
+  - Dipecah dari L-47 (P15.1). Termasuk membuang maskot VOLT, rail diagnostik, dan teks "Precision Electronics Bench" dari halaman masuk; menyesuaikan teks yang ikut komponen baru.
 - [ ] **L-48 Servis: daftar tiket**
 - [ ] **L-49 Servis: detail tiket dan modal-modalnya** (status, estimasi, sparepart, garansi, notifikasi WA, cetak)
 - [ ] **L-50 Kasir & Stok**
@@ -85,6 +91,7 @@ Awal, dari pemeriksaan kode 2026-11-21; dilengkapi di L-45. Kolom Keputusan diis
 | G-08 | Fitur di luar PRD: tidak ada | Ada Supplier, Tugas, Kalkulator Biaya, Log Aktivitas, Glosarium, login PIN, penggajian (PRD 6: penggajian di luar scope) | |
 | G-09 | Satu workshop (P3.3) | Pemilih cabang/outlet tampil di sidebar | |
 | G-10 | Absensi: radius tetap 100 m, di luar radius ditolak, GPS ditolak tetap boleh dengan tanda (F-10) | Geofence per outlet, radius diatur Pemilik (perilaku GPS ditolak perlu dicek) | |
+| G-11 | Lonceng notifikasi di header dan layar Notifikasi S-20 (AFD bagian 1; kejadian dari F-02, F-03, F-07) | Lonceng FixMaster tanpa fungsi dengan titik merah tetap; disembunyikan sejak L-47 (P15.4) | |
 
 ## Definition of Done (berlaku untuk tiap langkah)
 - Sesuai spesifikasi di dokumen yang dirujuk
@@ -122,6 +129,11 @@ Awal, dari pemeriksaan kode 2026-11-21; dilengkapi di L-45. Kolom Keputusan diis
 - 2026-11-21 - L-46 - 19 variabel tema Tailwind bentrok dengan tokens.css FixMaster (`--text-sm`, `--radius-lg`, `--shadow-md`, `--font-sans`, ...). Ditulis langsung di `@theme inline` agar utilitas dens-ui tidak membaca angka FixMaster.
 - 2026-11-21 - L-46 - Skrip audit dan foto menunggu teks "MODE DEMO" dari demo publik yang dibuang di L-43; diganti menunggu tautan menu Servis. `audit-contrast` memeriksa `/` (wizard) dan `/dev/komponen` alih-alih landing. Skrip audit menerima `PW_CHROMIUM` (Chromium container cloud).
 - 2026-11-21 - L-46 - Wizard toko dipertahankan; dikonfirmasi Pemilik (A17).
+- 2026-11-21 - L-47 - Hasil: foto desktop 1440px (normal, rail terlipat, menu akun, menu cabang), tablet 834px (laci terbuka), ponsel iPhone 13 (navigasi bawah, laci Lainnya, toast) tanpa error JS dan tanpa luberan; laci `inert` saat tertutup dan tidak saat terbuka; Esc pertama menutup menu cabang saja, Esc kedua menutup laci dan fokus kembali ke tombol Menu (juga dikunci `drawerMenuEscape.test.tsx`, diuji dengan mutasi); semua tautan dan tombol kerangka >= 44px di layar sentuh; detektor impeccable 0 temuan.
+- 2026-11-21 - L-47 - Koreksi L-46: layer `nu-shield` (min-height 0 !important) ternyata juga mengalahkan `pointer-coarse:min-h-11` komponen dens-ui, sehingga tombol tetap 40px di ponsel. Diganti: aturan target sentuh `!important` di global.css kini mengecualikan lingkup dens-ui (`:not(:where([data-slot], [data-nu], ...))`), dan layer `nu-shield` dihapus.
+- 2026-11-21 - L-47 - Toast sonner awalnya tertutup laci vaul: `#root` memakai `isolation: isolate`, sedangkan laci dan dialog Radix berada di portal body. `AppToaster` dirender lewat portal ke body, sama seperti toast FixMaster dulu.
+- 2026-11-21 - L-47 - Putaran verifikasi menemukan tiga hal yang langsung diperbaiki: (1) gerbang `audit-contrast` diam-diam melewati teks berwarna `oklab()` dari opasitas Tailwind (11 label menu sidebar); pengurai warnanya kini lewat canvas, hasil 0 dilewati, 0 gagal; (2) tautan "Lewati ke isi halaman" 36px, kini 44px; (3) area sentuh checkbox/radio 42px karena `::after` diukur dari padding box, kini 44px. Probe `audit-zoom` sama dengan L-46 setelah positif palsu disaring; `audit-mobile` hanya berbeda di temuan tautan lewati tersebut (daftar temuan kecil dipotong 6 entri, jadi "Sewa" di Laporan sempat tergeser, bukan hilang).
+- 2026-11-21 - L-47 - Isi halaman yang belum dipindah sengaja tetap FixMaster (font Inter/Space Grotesk, kartu lama) di atas latar Nuara; hanya kerangka yang memakai `data-nu`. Label "Panel navigasi" di atas judul menu Lainnya dibuang (impeccable: tanpa label kecil di atas judul).
 
 ## Arsip: rencana Next.js (dibatalkan 2026-11-21)
 Langkah di bawah tidak dikerjakan. Disimpan karena rujukan kriteria F-xx dan keputusan di dalamnya dipakai untuk L-45.

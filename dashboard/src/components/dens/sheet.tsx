@@ -36,7 +36,7 @@ function SheetContent({
         {showCloseButton && (
           <SheetPrimitive.Close
             data-slot="sheet-close"
-            className="absolute right-3 top-3 grid size-8 place-content-center rounded-full text-muted-foreground transition-colors outline-none hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring [&_svg]:size-4"
+            className="absolute right-3 top-3 grid size-8 pointer-coarse:size-11 place-content-center rounded-full text-muted-foreground transition-colors outline-none hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring [&_svg]:size-4"
           >
             <XIcon />
             <span className="sr-only">Tutup</span>

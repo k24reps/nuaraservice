@@ -1,8 +1,11 @@
-import { EmptyValue } from '@/components/ui/EmptyValue';
-import { EMPTY_VALUE } from '@/lib/format';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Icon } from '@/components/ui';
+import { Ellipsis, LogOut, X } from 'lucide-react';
+import { EmptyValue } from '@/components/ui/EmptyValue';
+import { Button } from '@/components/dens/button';
+import { Drawer, DrawerContent, DrawerTitle } from '@/components/dens/drawer';
+import { Label } from '@/components/dens/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/dens/select';
 import { useCollection } from '@/hooks/useCollection';
 import { useNavSignals } from '@/hooks/useNavSignals';
 import { useSessionStore } from '@/stores/session';
@@ -10,20 +13,27 @@ import { useAuthStore } from '@/stores/auth';
 import { demoGuard } from '@/stores/demo';
 import { isSupabaseConfigured } from '@/data/supabase-client';
 import { getVisibleNavigation, resolveMobileNavigation, type ResolvedNavItem } from '@/lib/business/navigation';
-import { useT, type TranslationKey } from '@/i18n';
+import { useT } from '@/i18n';
+import { cn } from '@/lib/utils';
 import { ZoomStepper } from './DisplayControls';
-import styles from './MobileBottomNav.module.css';
+import { FALLBACK_NAV_ICON, NAV_ICONS } from './navIcons';
+import { NavCount } from './navSignal';
+import { ROLE_LABEL } from './roleLabel';
+import { ShopMark } from './Sidebar';
+import { Avatar } from './Topbar';
 
-const ROLE_LABEL: Record<string, TranslationKey> = {
-  owner: 'role.owner',
-  admin: 'role.admin',
-  karyawan: 'role.karyawan',
-};
+/** Nilai Select untuk "Semua Outlet": Radix Select tidak menerima nilai kosong. */
+const ALL_OUTLETS = '__all__';
 
 function pathIsActive(path: string, pathname: string): boolean {
   return path === '/' ? pathname === '/' : pathname.startsWith(path);
 }
 
+/**
+ * Navigasi bawah ponsel (<=720px) dan menu Lainnya. Selektor
+ * `nav[aria-label="Navigasi utama seluler"]`, `button[aria-controls="mobile-more-sheet"]`
+ * dan `#mobile-more-sheet` dipakai probe scripts/audit-mobile.mjs.
+ */
 export function MobileBottomNav() {
   const location = useLocation();
   const org = useSessionStore((state) => state.org);
@@ -37,10 +47,10 @@ export function MobileBottomNav() {
   const signals = useNavSignals();
   const t = useT();
   const [moreOpen, setMoreOpen] = useState(false);
-  const closeRef = useRef<HTMLButtonElement>(null);
+  const moreRef = useRef<HTMLButtonElement>(null);
 
   const visibleNavigation = useMemo(
-    () => employee ? getVisibleNavigation(employee.role) : [],
+    () => (employee ? getVisibleNavigation(employee.role) : []),
     [employee],
   );
   const primaryNavigation = useMemo(
@@ -54,21 +64,6 @@ export function MobileBottomNav() {
     ? outlets.filter((outlet) => allowedOutletIds.includes(outlet.id))
     : outlets;
 
-  useEffect(() => {
-    if (!moreOpen) return;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    closeRef.current?.focus();
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setMoreOpen(false);
-    };
-    document.addEventListener('keydown', closeOnEscape);
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      document.removeEventListener('keydown', closeOnEscape);
-    };
-  }, [moreOpen]);
-
   const handleLogout = () => {
     if (demoGuard('demo.logout')) return;
     setMoreOpen(false);
@@ -76,148 +71,181 @@ export function MobileBottomNav() {
     else signOutEmployee();
   };
 
-  const renderSignal = (path: string) => {
-    const signal = signals[path];
-    if (!signal || signal.tone === 'idle') return null;
-    return (
-      <span
-        className={[styles.signal, styles[`tone_${signal.tone}`], signal.pulse ? styles.pulse : ''].join(' ')}
-        aria-label={`${signal.count}`}
-      >
-        {signal.count}
-      </span>
-    );
-  };
-
   const mobileLabelFor = (item: ResolvedNavItem['item']) => t(item.shortLabelKey ?? item.labelKey);
 
   return (
     <>
-      {moreOpen && (
-        <>
-          <button
-            className={styles.backdrop}
-            type="button"
-            aria-label={t('common.close')}
-            onClick={() => setMoreOpen(false)}
-          />
-          <section id="mobile-more-sheet" className={styles.sheet} role="dialog" aria-modal="true" aria-labelledby="mobile-more-title">
-            <span className={styles.sheetHandle} aria-hidden />
-            <div className={styles.sheetHeader}>
-              <div>
-                <span className={styles.sheetKicker}>{t('nav.mobile.panel')}</span>
-                <h3 id="mobile-more-title">{t('nav.mobile.moreTitle')}</h3>
-              </div>
-              <button
-                ref={closeRef}
-                type="button"
-                className={styles.closeButton}
-                aria-label={t('common.close')}
-                onClick={() => setMoreOpen(false)}
-              >
-                <Icon name="times" aria-hidden />
-              </button>
-            </div>
+      <Drawer open={moreOpen} onOpenChange={setMoreOpen}>
+        <DrawerContent
+          id="mobile-more-sheet"
+          aria-describedby={undefined}
+          // Tombol Lainnya bukan DrawerTrigger (id dan aria-controls-nya tetap
+          // untuk probe), jadi fokus dikembalikan ke sana secara manual.
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            moreRef.current?.focus();
+          }}
+        >
+          <div className="flex items-center justify-between gap-3 px-5 pb-2 pt-3">
+            <DrawerTitle>{t('nav.mobile.moreTitle')}</DrawerTitle>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="-mr-2 size-11 text-muted-foreground"
+              aria-label={t('common.close')}
+              onClick={() => setMoreOpen(false)}
+            >
+              <X />
+            </Button>
+          </div>
 
-            <div className={styles.moreGrid}>
-              {moreNavigation.map((entry) => {
-                const { item } = entry;
-                const active = pathIsActive(item.to, location.pathname);
-                return (
-                  <Link
-                    key={item.to}
-                    to={item.to}
-                    className={[styles.moreItem, active ? styles.moreItemActive : ''].join(' ')}
-                    onClick={() => setMoreOpen(false)}
-                  >
-                    <span className={styles.moreIcon}>
-                      <Icon name={item.icon} aria-hidden />
-                    </span>
-                    <span className={styles.moreLabel}>{t(item.labelKey)}</span>
-                    {renderSignal(item.to)}
-                  </Link>
-                );
-              })}
-            </div>
+          <div className="flex min-h-0 flex-col gap-4 overflow-y-auto px-5 pb-[calc(var(--space-5)+env(safe-area-inset-bottom))]">
+            {moreNavigation.length > 0 && (
+              <nav aria-label={t('nav.more')} className="grid grid-cols-2 gap-2">
+                {moreNavigation.map(({ item }) => {
+                  const active = pathIsActive(item.to, location.pathname);
+                  const ItemIcon = NAV_ICONS[item.to] ?? FALLBACK_NAV_ICON;
+                  return (
+                    <Link
+                      key={item.to}
+                      to={item.to}
+                      aria-current={active ? 'page' : undefined}
+                      onClick={() => setMoreOpen(false)}
+                      className={cn(
+                        'flex min-h-14 items-center gap-2.5 rounded-xl bg-card px-2.5 text-sm font-medium ring-1 ring-border/70 outline-none transition-colors duration-150 hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring',
+                        active && 'bg-sidebar-accent font-semibold ring-transparent',
+                      )}
+                    >
+                      <span
+                        aria-hidden
+                        className={cn(
+                          'grid size-8 shrink-0 place-items-center rounded-lg [&_svg]:size-[18px]',
+                          active ? 'bg-primary text-primary-foreground' : 'bg-secondary text-foreground/75',
+                        )}
+                      >
+                        <ItemIcon strokeWidth={1.75} />
+                      </span>
+                      <span className="min-w-0 flex-1 truncate">{t(item.labelKey)}</span>
+                      <NavCount signal={signals[item.to]} />
+                    </Link>
+                  );
+                })}
+              </nav>
+            )}
 
-            <div className={styles.controlDeck}>
-              <div className={styles.businessReadout}>
-                <span className={styles.businessMark} aria-hidden>
-                  {org?.logoDataUrl ? <img src={org.logoDataUrl} alt="" /> : (org?.name ?? 'F').charAt(0).toUpperCase()}
-                </span>
-                <span>
-                  <small>{t('nav.mobile.businessUnit')}</small>
-                  <strong>{org?.name ?? <EmptyValue />}</strong>
+            <div className="flex flex-col gap-3 border-t border-border/70 pt-4">
+              <div className="flex items-center gap-3">
+                <ShopMark name={org?.name} logo={org?.logoDataUrl} className="size-10 rounded-xl" />
+                <span className="flex min-w-0 flex-col">
+                  <small className="text-xs text-muted-foreground">{t('nav.mobile.businessUnit')}</small>
+                  <strong className="line-clamp-2 text-sm font-semibold leading-snug">
+                    {org?.name ?? <EmptyValue />}
+                  </strong>
                 </span>
               </div>
 
               {reachableOutlets.length > 0 && (
-                <label className={styles.outletControl}>
-                  <span><span className={styles.outletLed} aria-hidden />{t('nav.mobile.activeOutlet')}</span>
-                  <select
-                    value={activeOutletId ?? ''}
-                    onChange={(event) => setActiveOutlet(event.target.value || null)}
+                <div className="grid gap-1.5">
+                  <Label htmlFor="mobile-outlet">{t('nav.mobile.activeOutlet')}</Label>
+                  <Select
+                    value={activeOutletId ?? ALL_OUTLETS}
+                    onValueChange={(value) => setActiveOutlet(value === ALL_OUTLETS ? null : value)}
                   >
-                    <option value="">{t('nav.mobile.allOutlets')}</option>
-                    {reachableOutlets.map((outlet) => (
-                      <option key={outlet.id} value={outlet.id}>{outlet.name}</option>
-                    ))}
-                  </select>
-                </label>
+                    <SelectTrigger id="mobile-outlet">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={ALL_OUTLETS}>{t('nav.mobile.allOutlets')}</SelectItem>
+                      {reachableOutlets.map((outlet) => (
+                        <SelectItem key={outlet.id} value={outlet.id}>
+                          {outlet.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               )}
 
               <ZoomStepper />
 
-              <div className={styles.operatorRow}>
-                <span className={styles.avatar}>
-                  {employee?.name.charAt(0).toUpperCase() ?? EMPTY_VALUE}
-                  <span aria-hidden />
-                </span>
-                <span className={styles.operatorInfo}>
-                  <strong>{employee?.name ?? <EmptyValue />}</strong>
-                  <small>{employee ? t(ROLE_LABEL[employee.role]) : ''}</small>
-                </span>
-                <button type="button" className={styles.logoutButton} onClick={handleLogout}>
-                  <Icon name="right-from-bracket" aria-hidden />
-                  {t('auth.logout')}
-                </button>
-              </div>
+              {employee && (
+                <div className="flex items-center gap-3 border-t border-border/70 pt-3">
+                  <Avatar name={employee.name} className="size-10" />
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <strong className="truncate text-sm font-semibold">{employee.name}</strong>
+                    <small className="text-xs text-muted-foreground">{t(ROLE_LABEL[employee.role])}</small>
+                  </span>
+                  <Button variant="outline" onClick={handleLogout}>
+                    <LogOut />
+                    {t('auth.logout')}
+                  </Button>
+                </div>
+              )}
             </div>
-          </section>
-        </>
-      )}
+          </div>
+        </DrawerContent>
+      </Drawer>
 
-      <nav className={styles.bottomNav} aria-label={t('nav.mobile.primary')}>
-        {primaryNavigation.map((entry) => {
-          const { item } = entry;
+      <nav
+        data-nu
+        aria-label={t('nav.mobile.primary')}
+        style={{ gridTemplateColumns: `repeat(${primaryNavigation.length + 1}, minmax(0, 1fr))` }}
+        className="fixed inset-x-2 bottom-2 z-[calc(var(--z-overlay)+2)] hidden min-h-(--mobile-nav-height) items-stretch gap-0.5 rounded-2xl bg-card p-1.5 pb-[calc(var(--space-1)+env(safe-area-inset-bottom))] shadow-raised ring-1 ring-border/60 phone:grid"
+      >
+        {primaryNavigation.map(({ item }) => {
           const active = pathIsActive(item.to, location.pathname);
+          const ItemIcon = NAV_ICONS[item.to] ?? FALLBACK_NAV_ICON;
           return (
             <Link
               key={item.to}
               to={item.to}
-              className={[styles.navItem, active ? styles.active : ''].join(' ')}
               aria-current={active ? 'page' : undefined}
               title={t(item.labelKey)}
+              className={bottomItemClass(active)}
             >
-              <span className={styles.navIcon}>
-                <Icon name={item.icon} weight={active ? 'fill' : 'regular'} aria-hidden />
-                {renderSignal(item.to)}
-              </span>
-              <span className={styles.navLabel}>{mobileLabelFor(item)}</span>
+              <BottomIcon active={active}>
+                <ItemIcon strokeWidth={active ? 2.1 : 1.75} />
+                <NavCount signal={signals[item.to]} className="absolute -right-2 -top-1.5 h-[18px] min-w-[18px] px-1 text-[10px]" />
+              </BottomIcon>
+              <span className="max-w-full truncate">{mobileLabelFor(item)}</span>
             </Link>
           );
         })}
         <button
+          ref={moreRef}
           type="button"
-          className={[styles.navItem, moreOpen || moreIsActive ? styles.active : ''].join(' ')}
+          className={bottomItemClass(moreOpen || moreIsActive)}
           aria-expanded={moreOpen}
           aria-controls="mobile-more-sheet"
           onClick={() => setMoreOpen((open) => !open)}
         >
-          <span className={styles.navIcon}><Icon name="bars" aria-hidden /></span>
-          <span className={styles.navLabel}>{t('nav.more')}</span>
+          <BottomIcon active={moreOpen || moreIsActive}>
+            <Ellipsis strokeWidth={moreOpen || moreIsActive ? 2.1 : 1.75} />
+          </BottomIcon>
+          <span className="max-w-full truncate">{t('nav.more')}</span>
         </button>
       </nav>
     </>
+  );
+}
+
+function bottomItemClass(active: boolean) {
+  return cn(
+    'flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-0.5 text-[11px] font-medium leading-none text-muted-foreground outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-ring',
+    active && 'font-semibold text-foreground',
+  );
+}
+
+/** Ikon menu bawah; menu aktif mendapat pil biru muda di belakang ikonnya. */
+function BottomIcon({ active, children }: { active: boolean; children: ReactNode }) {
+  return (
+    <span
+      className={cn(
+        'relative grid h-7 w-12 place-items-center rounded-full transition-colors duration-150 [&_svg]:size-5',
+        active && 'bg-sidebar-accent text-foreground',
+      )}
+    >
+      {children}
+    </span>
   );
 }

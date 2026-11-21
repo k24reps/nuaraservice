@@ -13,6 +13,45 @@ Catatan keputusan desain penting + bug nyata yang ditemukan saat verifikasi.
 
 ## Keputusan desain
 
+### Kerangka aplikasi pindah ke dens-ui (L-47, 21 Nov 2026)
+Sidebar, topbar, navigasi bawah ponsel + menu Lainnya, splash, dan stepper zoom ditulis ulang
+dengan Tailwind + dens-ui; CSS Module-nya (±1.600 baris) dihapus. Isi halaman tetap FixMaster
+sampai langkahnya masing-masing.
+- **Ukuran dan breakpoint lama dipertahankan** (`--sidebar-width` 278/78px, `--topbar-height`,
+  `--mobile-nav-height`, laci <=1024px, menu bawah <=720px), sehingga lebar isi halaman lama
+  tidak berubah. Breakpoint memakai varian kustom (`drawer:`, `narrow:`, `phone:`, `compact:`)
+  dengan kueri SAMA PERSIS dengan CSS lama: varian bawaan Tailwind memakai `width < x`, jadi
+  `max-[1024px]:` meleset tepat di 1024px. `sidebarInert.test.ts` kini mengunci `DRAWER_QUERY`
+  terhadap `@custom-variant drawer` di app.css.
+- **Urutan varian membalik spesifisitas lama.** Di CSS lama, `.hasMobileNav .content` (padding
+  bawah untuk menu bawah) menang atas `.content` di blok <=640px lewat spesifisitas. Di Tailwind,
+  `compact:` terdaftar setelah `phone:` sehingga akan menang dan isi terakhir tertutup menu
+  bawah; padding ringkas kini hanya dipasang bila tidak ada menu bawah.
+- **Pemilih cabang memakai `DropdownMenu` Radix** (portal, tidak terpotong `overflow: hidden`
+  rail yang diciutkan). Esc: Radix menandai event-nya `defaultPrevented` di fase capture, dan
+  `useDrawerFocus` melewatinya, jadi Esc pertama menutup menu saja. Dikunci
+  `drawerMenuEscape.test.tsx` (gagal bila pengecekan `defaultPrevented` dibuang).
+- **Toast sonner tertutup laci vaul.** `#root` memakai `isolation: isolate`; laci dan dialog
+  Radix ada di portal `body`, jadi toast di dalam `#root` kalah berapa pun z-index-nya.
+  `AppToaster` dirender lewat portal ke `body`. Helper `stores/toast.ts` tetap satu-satunya pintu
+  (266 panggilan di 39 berkas tidak berubah); tes membaca panggilan sonner lewat `vi.mock`.
+- **Tema gelap dimatikan** (P14.1): store tema dihapus, `data-theme="light"` di index.html,
+  tombol tema di topbar, halaman masuk, dan reset password dicopot.
+- **Lonceng palsu disembunyikan** (P15.4, selisih G-11): tombol tanpa fungsi dengan titik merah
+  tetap.
+- Hanya elemen kerangka yang diberi `data-nu`; `<main>` tidak, karena isinya masih halaman lama
+  dan `data-nu` akan menerapkan reset dens-ui ke sana.
+- **Gerbang kontras punya celah.** Warna beropasitas Tailwind (`text-sidebar-foreground/75`)
+  dihitung browser sebagai `oklab(...)`; pengurai `audit-contrast.mjs` hanya membaca `rgb()`,
+  jadi teksnya dilewati diam-diam ("dilewati 11"). Pengurai kini memakai canvas 1x1 untuk format
+  lain. Pelajaran: angka "dilewati" yang naik adalah sinyal, bukan derau.
+- **Area sentuh `::after` diukur dari padding box.** Checkbox 18px dengan border 1px punya isi
+  16px, jadi `-inset-[13px]` hanya memberi 42px; yang benar `-inset-[14px]`. Diukur dengan
+  `getComputedStyle(el, '::after')` di emulasi iPhone.
+- Verifikasi: foto desktop/tablet/ponsel, ukur DOM (target sentuh >= 44px di iPhone 13 emulasi,
+  `inert` laci, Esc), probe `audit-mobile`/`audit-zoom` (zoom sama dengan L-46 setelah positif
+  palsu disaring), `audit-contrast` 0 dilewati 0 gagal, detektor impeccable 0 temuan, 1126 tes.
+
 ### Tailwind + dens-ui berdampingan dengan CSS FixMaster (L-46, 21 Nov 2026)
 Fondasi Fase B: komponen dens-ui (Tailwind v4 + Radix) di `src/components/dens/`, tema Nuara di
 `src/styles/nuara-theme.css`, pintu masuk CSS `src/styles/app.css`. Empat jebakan yang terukur,
@@ -37,8 +76,10 @@ bukan teori:
   elemen global.css (judul `h2` di dialog dens-ui tidak lagi memakai Space Grotesk).
 - **`!important` di global.css.** Aturan target sentuh memaksa `min-height`/`min-width` 44px
   `!important` pada semua `button`; checkbox dan switch Radix adalah `<button>`, jadi tampil
-  44x44px di ponsel. `!important` hanya bisa dikalahkan `!important` dari layer yang LEBIH AWAL:
-  layer `nu-shield` sebelum `legacy`.
+  44x44px di ponsel. `!important` hanya bisa dikalahkan `!important` dari layer yang LEBIH AWAL;
+  L-46 memakai layer `nu-shield` (min-height 0 !important) sebelum `legacy`. **Dikoreksi di L-47:**
+  perisai itu juga mengalahkan `pointer-coarse:min-h-11` milik dens-ui, jadi aturan global.css-nya
+  yang diubah untuk mengecualikan lingkup dens-ui, dan `nu-shield` dihapus.
 - Tailwind memindai seluruh proyek secara bawaan, sehingga kata `hidden`/`grid` di kode FixMaster
   bisa melahirkan utilitas yang menimpa kelas global lama. `source(none)` + `@source` hanya ke
   `components/dens` dan `dev`; halaman yang dipindah menambah foldernya sendiri.

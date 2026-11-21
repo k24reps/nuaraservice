@@ -83,7 +83,7 @@
 
 Catatan: accent #FAA403 di atas putih hanya 2.0:1, jadi tidak dipakai untuk teks atau cincin fokus di surface.
 
-Dark mode: tidak (P9.5, ditegaskan P14.1). Tema dens-ui hanya terang; tema gelap FixMaster dan tombolnya dimatikan di L-47.
+Dark mode: tidak (P9.5, ditegaskan P14.1). Sejak L-47 seluruh aplikasi hanya tema terang; tombol ganti tema dicopot.
 
 **Tipografi**
 - Font dashboard (P13.3, P14.2, sejak 2026-11-21): Figtree (variable, dipaket lewat `@fontsource-variable/figtree`) untuk teks; JetBrains Mono untuk nomor tiket, Rupiah, ID, dan label kecil kapital. Mengikuti dens-ui, menggantikan Archivo untuk dashboard staf.
@@ -98,7 +98,7 @@ Dark mode: tidak (P9.5, ditegaskan P14.1). Tema dens-ui hanya terang; tema gelap
 - Bayangan dashboard (P13.3): bayangan lembut dens-ui, diwarnai navy (`rgb(6 32 54 / ...)`): `shadow-panel` untuk kartu, `shadow-raised` untuk menu, dialog, toast. Tracking: bayangan kertas DESIGN.md.
 - Token tema dashboard ada di `dashboard/src/styles/nuara-theme.css` (variabel `--nu-*`); kontras pasangan warnanya diuji `nuaraTheme.test.ts`.
 - Grid & lebar maks konten: sidebar 240px; konten maks 1280px; gutter 16px (< 640px) dan 24px (>= 640px). Tracking: satu kolom maks 560px.
-- Kepadatan sedang: baris tabel 48px (10-15 tiket per layar laptop 768px tinggi); target sentuh minimal 44px di semua ukuran. Tombol dens-ui bawaan setinggi 40px; penyesuaian target sentuh di L-47.
+- Kepadatan sedang: baris tabel 48px (10-15 tiket per layar laptop 768px tinggi); target sentuh minimal 44px di layar sentuh (pointer kasar, P15.3): tombol, isian, dan item menu dens-ui naik ke 44px, checkbox/radio/switch mendapat area sentuh 44px tanpa membesar tampilannya; di perangkat bermouse kontrol tetap 40px.
 
 ## 3. Komponen
 Sumber: `dashboard/src/components/dens/` (dens-ui v0.2.0 + tambahan pola shadcn: popover, sheet, drawer, command, combobox, sonner). Katalog hidup di dev server: `/dev/komponen`. Badge tahap memakai varian dens-ui: info (Diterima, Diagnosa, Pengerjaan, Dikembalikan), highlight (Konfirmasi biaya), warning (Tunggu part), success (Selesai, Diambil), destructive-soft (Dibatalkan).
@@ -113,7 +113,7 @@ Sumber: `dashboard/src/components/dens/` (dens-ui v0.2.0 + tambahan pola shadcn:
 | Langkah tahap (stepper) | 7 tahap + Dibatalkan dan Dikembalikan, tahap dilewati ditandai "dilewati" | selesai, aktif, belum, dilewati | S-06, S-07 |
 | Riwayat (timeline) | tahap + catatan internal (S-06); tahap saja (S-07) | default, kosong | S-06, S-07, S-13 |
 | Modal / Dialog | konfirmasi (batal tiket, mundur tahap, tahap final Diambil/Dikembalikan, nonaktif akun, samarkan pelanggan, koreksi saldo), form (estimasi, Selesai + garansi, pembayaran split, kembalikan kelebihan, barang masuk, pengeluaran, tambah sparepart cepat) | buka, fokus terkunci, loading, error | S-03, S-04, S-06, S-11, S-13, S-14, S-15, S-16, S-18 |
-| Toast | sukses, error, info | muncul 4 detik, bisa ditutup, diumumkan `aria-live` | S-02, S-04, S-05, S-06, S-11, S-12, S-13, S-14, S-15, S-16, S-18, S-19 |
+| Toast | sukses, error, peringatan, info (sonner, P15.2) | muncul 4 detik, bisa ditutup, diumumkan `aria-live` | S-02, S-04, S-05, S-06, S-11, S-12, S-13, S-14, S-15, S-16, S-18, S-19 |
 | Navigasi | sidebar (>= 1024px), tab bawah 4 item (< 1024px), header + lonceng notifikasi | aktif, hover, focus, badge jumlah | S-02, S-03, S-04, S-05, S-06, S-10, S-11, S-12, S-13, S-14, S-15, S-16, S-17, S-18, S-19, S-20 |
 | Pita offline | "Tidak ada koneksi" di atas layar | tampil, hilang saat online | S-03, S-04, S-05, S-06, S-07, S-14, S-15, S-16 |
 | Empty state | teks singkat + tombol aksi, tanpa ilustrasi | - | S-03, S-04, S-10, S-11, S-12, S-13, S-14, S-15, S-16, S-17, S-20 |

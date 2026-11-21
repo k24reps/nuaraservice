@@ -175,23 +175,3 @@
     caret-color: var(--nu-primary);
   }
 }
-
-/*
- * global.css memaksa min-height/min-width 44px dengan !important pada semua
- * tombol dan isian di layar sentuh. Checkbox dan switch Radix adalah <button>,
- * jadi tanpa ini keduanya tampil 44x44px di ponsel. !important dari layer yang
- * LEBIH AWAL (nu-shield, sebelum legacy) mengalahkan !important di legacy.
- * Nilainya = nilai komponen dens-ui (textarea: min-h-24). Target sentuh dens-ui
- * diatur per komponen (IPD L-47), bukan lewat aturan global ini.
- */
-@layer nu-shield {
-  @media (max-width: 720px), (hover: none), (pointer: coarse) {
-    :where([data-nu], [data-nu] *, [data-slot], [data-slot] *, [data-sonner-toaster], [data-sonner-toaster] *):is(button, input, select, summary) {
-      min-height: 0 !important;
-      min-width: 0 !important;
-    }
-    :where([data-nu], [data-nu] *, [data-slot], [data-slot] *):is(textarea) {
-      min-height: 6rem !important;
-    }
-  }
-}

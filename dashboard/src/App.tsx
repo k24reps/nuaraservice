@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Analytics } from '@vercel/analytics/react';
 import { RouterProvider } from 'react-router-dom';
 import { router } from './app/router';
-import { ToastContainer } from './components/ui';
+import { AppToaster } from './components/layout/AppToaster';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { sanitizeAnalyticsEvent } from './lib/analytics';
 
@@ -54,7 +54,7 @@ export function App() {
         ) : (
           <RouterProvider router={router} />
         )}
-        <ToastContainer />
+        <AppToaster />
         <Analytics beforeSend={sanitizeAnalyticsEvent} />
       </QueryClientProvider>
     </ErrorBoundary>

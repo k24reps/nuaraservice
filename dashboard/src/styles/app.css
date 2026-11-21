@@ -5,7 +5,6 @@
    Urutan cascade layer, dari terlemah ke terkuat:
 
      theme      variabel tema Tailwind
-     nu-shield  !important yang harus mengalahkan !important global.css
      legacy     global.css + tokens.css FixMaster
      nu-base    reset dan perisai dens-ui, dibatasi ke data-slot/data-nu
      components (cadangan)
@@ -17,7 +16,7 @@
    Utilitas di atas legacy, sehingga `button { background: none }` milik
    FixMaster tidak mengalahkan `bg-primary` pada tombol dens-ui.
    ========================================================================== */
-@layer theme, nu-shield, legacy, nu-base, components, utilities;
+@layer theme, legacy, nu-base, components, utilities;
 
 @import "tailwindcss/theme.css" layer(theme);
 @import "./global.css" layer(legacy);
@@ -27,8 +26,20 @@
 @import "./nuara-theme.css";
 @import "./dens-base.css";
 
+/* Breakpoint kerangka (L-47). Kuerinya SAMA PERSIS dengan media query CSS
+   FixMaster yang masih dipakai halaman lama, supaya kerangka dan isi halaman
+   berpindah tata letak di lebar yang sama. Varian bawaan Tailwind (max-lg:,
+   dst.) memakai `width < x`, bukan `max-width: x`, jadi tidak dipakai di sini.
+   `drawer` juga dikunci terhadap DRAWER_QUERY di Sidebar.tsx (sidebarInert.test.ts). */
+@custom-variant drawer (@media (max-width: 1024px));
+@custom-variant narrow (@media (max-width: 768px));
+@custom-variant phone (@media (max-width: 720px));
+@custom-variant compact (@media (max-width: 640px));
+
 /* Kelas Tailwind hanya dibuat dari folder ini. Kata seperti "hidden" atau
    "grid" di kode FixMaster tidak boleh melahirkan utilitas yang mengalahkan
    kelas global lama. Tambahkan folder halaman saat halamannya dipindah. */
 @source "../components/dens";
+@source "../components/layout";
+@source "../app";
 @source "../dev";

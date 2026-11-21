@@ -156,16 +156,16 @@ textarea:disabled {
   cursor: not-allowed;
 }
 
-/* Coarse pointers need a dependable hit area even for legacy raw controls. */
+/* Coarse pointers need a dependable hit area even for legacy raw controls.
+   Komponen dens-ui (data-slot) dan halaman yang sudah dipindah (data-nu)
+   dikecualikan: target sentuhnya diatur per komponen dengan pointer-coarse:,
+   dan !important di sini akan mengalahkannya (checkbox/switch Radix adalah
+   <button> dan ikut membesar jadi 44x44px). Nuara L-47. */
 @media (max-width: 720px), (hover: none), (pointer: coarse) {
-  button,
-  input,
-  select,
-  textarea,
-  summary {
+  :is(button, input, select, textarea, summary):not(:where([data-nu], [data-nu] *, [data-slot], [data-slot] *, [data-sonner-toaster], [data-sonner-toaster] *)) {
     min-height: var(--control-h) !important;
   }
-  button {
+  button:not(:where([data-nu], [data-nu] *, [data-slot], [data-slot] *, [data-sonner-toaster], [data-sonner-toaster] *)) {
     min-width: var(--control-h) !important;
   }
 }

@@ -1,5 +1,7 @@
 import { useRef, type KeyboardEvent } from 'react';
-import { Icon } from '@/components/ui';
+import { Minus, Plus } from 'lucide-react';
+import { Button } from '@/components/dens/button';
+import { cn } from '@/lib/utils';
 import { useT } from '@/i18n';
 import {
   DENSITIES,
@@ -187,49 +189,58 @@ export function ZoomStepper() {
   const atMin = zoom === ZOOM_LEVELS[0];
   const atMax = zoom === ZOOM_LEVELS[ZOOM_LEVELS.length - 1];
   const pct = zoomPercent(zoom);
+  const tone = zoomTone(zoom);
+  const stepClass = 'size-11 aria-disabled:cursor-not-allowed aria-disabled:opacity-45';
 
   return (
-    <div className={styles.stepper} data-tone={zoomTone(zoom)}>
-      <span className={styles.stepperLabel}>
-        <span className={styles.led} aria-hidden />
+    <div
+      data-tone={tone}
+      className="flex min-h-12 items-center justify-between gap-3 rounded-xl bg-surface py-1 pl-3 pr-1 ring-1 ring-border/70"
+    >
+      <span className="flex items-center gap-2 text-sm font-medium">
+        <span
+          aria-hidden
+          className={cn(
+            'size-2 shrink-0 rounded-full',
+            tone === 'below' ? 'bg-highlight' : tone === 'up' ? 'bg-primary' : 'bg-success-foreground',
+          )}
+        />
         {t('display.zoom.title')}
       </span>
-      <div
-        className={styles.stepperControls}
-        role="group"
-        aria-label={t('display.zoom.title')}
-      >
-        <button
-          type="button"
-          className={styles.stepperBtn}
+      <div className="flex items-center gap-1" role="group" aria-label={t('display.zoom.title')}>
+        <Button
+          variant="outline"
+          size="icon"
+          className={stepClass}
           aria-label={t('display.zoom.out')}
           aria-disabled={atMin || undefined}
           onClick={() => !atMin && stepZoom(-1)}
         >
-          <Icon name="minus" aria-hidden />
-        </button>
+          <Minus />
+        </Button>
         {zoom === 1 ? (
-          <span className={styles.stepperValue}>{pct}</span>
+          <span className="grid h-11 min-w-16 place-items-center font-mono text-sm font-semibold tabular-nums">{pct}</span>
         ) : (
-          <button
-            type="button"
-            className={styles.stepperValue}
+          <Button
+            variant="ghost"
+            className="h-11 min-w-16 px-2 font-mono tabular-nums"
             aria-label={`${pct}. ${t('display.zoom.reset')}`}
             title={t('display.zoom.reset')}
             onClick={resetZoom}
           >
             {pct}
-          </button>
+          </Button>
         )}
-        <button
-          type="button"
-          className={styles.stepperBtn}
+        <Button
+          variant="outline"
+          size="icon"
+          className={stepClass}
           aria-label={t('display.zoom.in')}
           aria-disabled={atMax || undefined}
           onClick={() => !atMax && stepZoom(1)}
         >
-          <Icon name="plus" aria-hidden />
-        </button>
+          <Plus />
+        </Button>
       </div>
     </div>
   );

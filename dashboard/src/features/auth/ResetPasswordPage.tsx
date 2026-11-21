@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { Button, Input, Icon, PasswordStrength } from '@/components/ui';
 import { FormError } from '@/components/ui/Form';
 import { getSupabase, authUpdatePassword } from '@/data/supabase-client';
-import { useThemeStore } from '@/stores/theme';
 import { toast } from '@/stores/toast';
 import styles from './AuthPage.module.css';
 
@@ -20,8 +19,6 @@ type Phase = 'checking' | 'ready' | 'no-session' | 'done';
  */
 export function ResetPasswordPage() {
   const navigate = useNavigate();
-  const theme = useThemeStore((s) => s.theme);
-  const toggleTheme = useThemeStore((s) => s.toggleTheme);
 
   // No Supabase client → no recovery possible; start in the invalid-link state
   // (computed lazily so the effect below never setStates synchronously).
@@ -134,15 +131,6 @@ export function ResetPasswordPage() {
             />
             <span className={styles.terminalLabel}>Terminal Akses</span>
             <span className={styles.modeTag}>reset</span>
-            <button
-              type="button"
-              className={styles.themeBtn}
-              onClick={toggleTheme}
-              aria-label={theme === 'dark' ? 'Mode terang' : 'Mode gelap'}
-              title={theme === 'dark' ? 'Mode terang' : 'Mode gelap'}
-            >
-              <Icon name={theme === 'dark' ? 'sun' : 'moon'} aria-hidden />
-            </button>
           </div>
 
           <h1 className={styles.heading}>Password Baru</h1>

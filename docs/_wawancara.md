@@ -1,6 +1,6 @@
 # Log Wawancara - Dashboard Nuara Service
 
-> Status: selesai | Putaran terakhir selesai: P14 (2026-11-21, fondasi dens-ui) | Pertanyaan dijawab: 235 (222 sampai 2026-11-04 + 8 di P13 + 5 di P14) | Sumber terserah: 16, semuanya sudah disetujui atau diubah user; [ASUMSI] tersisa: 0 | Diperbarui: 2026-11-21
+> Status: selesai | Putaran terakhir selesai: P15 (2026-11-21, kerangka aplikasi) | Pertanyaan dijawab: 239 (222 sampai 2026-11-04 + 8 di P13 + 5 di P14 + 4 di P15) | Sumber terserah: 16, semuanya sudah disetujui atau diubah user; [ASUMSI] tersisa: 0 | Diperbarui: 2026-11-21
 <!-- Status: berjalan -> siap-tulis (P12 dikonfirmasi) -> selesai (dokumen ditulis).
 Sumber: user = dipilih atau diketik user (termasuk memilih opsi Rekomendasi);
 terserah = user menyerahkan, AI memakai rekomendasi -> [ASUMSI];
@@ -202,6 +202,10 @@ Konteks repo (Fase 1): landing page statis di root (index.html, style.css, scrip
 | P14.2 | Font dashboard | Figtree + JetBrains Mono (font dens-ui), menggantikan Archivo; halaman tracking tetap font nota landing | user | DBD 2 |
 | P14.3 | CSS lama vs Tailwind | CSS lama ke cascade layer di bawah utilitas Tailwind; dibuktikan probe sebelum/sesudah. Pelaksanaan: preflight akhirnya dibatasi ke komponen dens-ui karena terukur mengubah halaman lama (IPD Catatan L-46) | user | TRD 2, 9; IPD L-46 |
 | P14.4 | Toast, drawer, combobox | Pasang semua sekarang (sonner, vaul, cmdk) walau belum dipakai halaman mana pun | user | IPD L-46 |
+| P15.1 | Cakupan L-47 | Dipecah: L-47 = kerangka (sidebar, topbar, navigasi bawah, splash, tema, toast, target sentuh); langkah baru L-58 = layar masuk/daftar, reset password, PIN, wizard | user | IPD L-47, L-58 |
+| P15.2 | Toast | Sonner; helper `toast.success()` dsb. diteruskan ke sonner sehingga pemanggil tidak berubah; sistem toast FixMaster dihapus | user | TRD 1-2, IPD L-47 |
+| P15.3 | Target sentuh 44px | Hanya di layar sentuh (pointer kasar); di perangkat bermouse kontrol tetap 40px | user | DBD 2, 5 |
+| P15.4 | Lonceng notifikasi | Disembunyikan sampai fitur notifikasi dibuat; masuk Daftar Selisih G-11 | user | IPD G-11 |
 
 ## Perubahan (mode update)
 | Tanggal | Kode | Perubahan | Jawaban | Dokumen terdampak |
@@ -224,3 +228,4 @@ Konteks repo (Fase 1): landing page statis di root (index.html, style.css, scrip
 | 2026-11-04 | A16 (review asumsi) | 8 asumsi baru (A3a, A6a, A15a sampai A15f) disetujui apa adanya; tanda [ASUMSI] dihapus dari PRD 8 dan sumber di log menjadi user | "Setujui semua" | PRD 8; log |
 | 2026-11-21 | A17 (P13) | Rencana Next.js + Drizzle dibatalkan; dasar kode = salinan FixMaster di `dashboard/`, UI dens-ui dengan warna Nuara, satu toko per database (migrasi 0105). Penyimpangan dari P13.4 (dikonfirmasi Pemilik di P14.0): wizard pengaturan awal toko FixMaster dipertahankan, karena itu satu-satunya jalan membuat toko pertama dan akun Pemilik; yang dibuang hanya jalur SaaS di sekitarnya (landing, pilihan paket, trial) | wawancara P13 | TRD; IPD; CLAUDE.md; catatan kepala PRD, AFD, BSD, DBD |
 | 2026-11-21 | A18 (P14) | Fondasi dens-ui: hanya tema terang (gelap dimatikan L-47), font Figtree + JetBrains Mono, bentuk dan bayangan dens-ui menggantikan rancangan Archivo/radius kecil/datar di DBD; sonner, vaul, cmdk dipasang | wawancara P14 | DBD 2-3, 6-7; TRD 1-3, 9; IPD L-46, L-47 |
+| 2026-11-21 | A19 (P15) | Kerangka aplikasi dipindah ke dens-ui; layar masuk/PIN/wizard menjadi langkah baru L-58; toast sonner; target sentuh 44px hanya di pointer kasar; lonceng palsu disembunyikan (G-11); tema gelap dimatikan untuk seluruh aplikasi (P14.1) | wawancara P15 | IPD L-47, L-58, G-11; DBD 2-3, 5; TRD 1-2 |

@@ -12,7 +12,8 @@ import { useZoomStore, zoomShortcut } from '@/stores/zoom';
 import { useZoomRail } from './useZoomRail';
 import { isBackupDue } from '@/lib/business/backup';
 import { toast } from '@/stores/toast';
-import styles from './AppLayout.module.css';
+import { Skeleton } from '@/components/dens/skeleton';
+import { cn } from '@/lib/utils';
 
 /**
  * Pintasan pembesaran (lihat `zoomShortcut`). Tidak aktif di kolom isian: di
@@ -122,9 +123,13 @@ export function AppLayout() {
   const hasMobileNav = !serviceDetail;
 
   return (
-    <div className={[styles.layout, collapsed ? styles.collapsed : '', hasMobileNav ? styles.hasMobileNav : ''].join(' ')}>
+    <div className="min-h-(--app-vh) bg-background">
       {/* Pertama di urutan Tab: sidebar berisi belasan tautan sebelum isi halaman. */}
-      <a href="#konten" className={styles.skip}>
+      <a
+        href="#konten"
+        data-nu
+        className="absolute -top-16 left-3 z-(--z-toast) inline-flex min-h-11 items-center rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-raised transition-[top] duration-150 focus:top-3"
+      >
         {t('common.skipToContent')}
       </a>
       <Sidebar
@@ -135,7 +140,15 @@ export function AppLayout() {
         drawerId={drawerId}
         toggleRef={toggleRef}
       />
-      <div className={styles.main}>
+      {/* Ruang kiri = lebar sidebar + jarak, sama dengan kerangka FixMaster, jadi
+          lebar isi halaman lama tidak berubah. --app-vh, bukan 100vh: `zoom` pada
+          :root ikut menskala unit viewport (Zoom-Aware Viewport Rule). */}
+      <div
+        className={cn(
+          'ml-[calc(var(--sidebar-width)+var(--space-4))] flex min-h-(--app-vh) flex-col transition-[margin] duration-200 ease-out-expo drawer:ml-0',
+          collapsed && 'ml-[calc(var(--sidebar-collapsed)+var(--space-4))]',
+        )}
+      >
         <Topbar
           title={title}
           subtitle={subtitle}
@@ -144,12 +157,25 @@ export function AppLayout() {
           drawerId={drawerId}
           toggleRef={toggleRef}
         />
-        <main ref={contentRef} id="konten" tabIndex={-1} className={styles.content}>
+        <main
+          ref={contentRef}
+          id="konten"
+          tabIndex={-1}
+          className={cn(
+            'mx-auto w-full max-w-(--content-max) flex-1 animate-fade-in px-(--space-8) pb-(--space-10) pt-(--space-6) outline-none compact:px-(--space-4) compact:pt-(--space-3)',
+            // Di ponsel ruang bawah untuk menu bawah harus menang atas padding
+            // ringkas <=640px; di CSS lama itu lewat spesifisitas.
+            hasMobileNav
+              ? 'phone:pb-[calc(var(--mobile-nav-height)+var(--space-6)+env(safe-area-inset-bottom))]'
+              : 'compact:pb-(--space-8)',
+          )}
+        >
           <ErrorBoundary resetKey={location.pathname}>
             <Suspense
               fallback={
-                <div className={styles.routeFallback} aria-label="Memuat halaman" role="status">
-                  <span className={styles.routeSpinner} />
+                <div data-nu role="status" aria-label="Memuat halaman" className="grid gap-4 bg-transparent">
+                  <Skeleton className="h-24 rounded-2xl" />
+                  <Skeleton className="h-72 rounded-2xl" />
                 </div>
               }
             >

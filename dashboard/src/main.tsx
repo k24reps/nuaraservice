@@ -1,7 +1,6 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
-import { initTheme } from './stores/theme';
 import { initZoom } from './stores/zoom';
 import { initSettings } from './stores/settings';
 import { initErrorTracking } from './lib/report';
@@ -9,7 +8,6 @@ import { registerServiceWorker } from './lib/sw-register';
 import { installPreloadErrorRecovery } from './lib/lazyChunk';
 import './styles/app.css';
 
-initTheme();
 initZoom();
 initSettings();
 // Opt-in remote error tracking (no-op unless VITE_SENTRY_DSN is set).

@@ -1,9 +1,15 @@
-import { useEffect, useRef, useState, type RefObject } from 'react';
-import { useThemeStore } from '@/stores/theme';
+import type { RefObject } from 'react';
+import { LogOut, Menu, RotateCcw } from 'lucide-react';
+import { Button } from '@/components/dens/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/dens/dropdown-menu';
 import { useZoomStore } from '@/stores/zoom';
 import { ZoomAnnouncer } from './DisplayControls';
 import { zoomPercent, zoomTone } from './zoomDisplay';
-import { Icon } from '@/components/ui';
 import { useRealtimeStore } from '@/stores/realtime';
 import { useSessionStore } from '@/stores/session';
 import { useAuthStore } from '@/stores/auth';
@@ -11,13 +17,8 @@ import { demoGuard } from '@/stores/demo';
 import { isSupabaseConfigured } from '@/data/supabase-client';
 import { useT, type TranslationKey } from '@/i18n';
 import { interpolate } from '@/lib/business/notify';
-import styles from './Topbar.module.css';
-
-const ROLE_LABEL: Record<string, TranslationKey> = {
-  owner: 'role.owner',
-  admin: 'role.admin',
-  karyawan: 'role.karyawan',
-};
+import { cn } from '@/lib/utils';
+import { ROLE_LABEL } from './roleLabel';
 
 interface TopbarProps {
   title: string;
@@ -44,10 +45,15 @@ const SYNC_TITLE: Record<SyncStatus, TranslationKey> = {
   offline: 'topbar.syncOfflineTitle',
 };
 
+const SYNC_TONE: Record<SyncStatus, string> = {
+  connecting: 'bg-highlight-soft text-foreground [&>span]:bg-highlight',
+  live: 'bg-success text-success-foreground [&>span]:bg-success-foreground',
+  offline: 'bg-destructive-soft text-destructive [&>span]:bg-destructive',
+};
+
 /**
- * Bench-style realtime connection indicator: a status LED + mono readout.
- * Only rendered in cloud mode once a channel has reported status (`active`),
- * so local/demo sessions stay clean. Mirrors the "Live Diagnostic Rail" motif.
+ * Status sambungan realtime. Hanya tampil di mode server setelah kanal
+ * melapor (`active`), jadi sesi lokal tetap bersih.
  */
 function SyncBadge() {
   const status = useRealtimeStore((s) => s.status);
@@ -56,12 +62,15 @@ function SyncBadge() {
   if (!active) return null;
   return (
     <span
-      className={styles.sync}
       data-status={status}
       title={t(SYNC_TITLE[status])}
+      className={cn(
+        'inline-flex h-8 items-center gap-1.5 rounded-full px-3 font-mono text-[11px] font-semibold tracking-[0.08em]',
+        SYNC_TONE[status],
+      )}
     >
-      <span className={styles.syncLed} aria-hidden />
-      <span className={styles.syncText}>{t(SYNC_LABEL[status])}</span>
+      <span aria-hidden className={cn('size-1.5 rounded-full', status === 'connecting' && 'animate-pulse')} />
+      <span className="compact:sr-only">{t(SYNC_LABEL[status])}</span>
     </span>
   );
 }
@@ -69,9 +78,8 @@ function SyncBadge() {
 /**
  * Penanda pembesaran: hanya muncul saat tampilan TIDAK di 100%, supaya
  * pengguna yang membandingkan layar dengan rekan tahu sebabnya dan bisa
- * kembali dengan satu klik. Mengatur level ada di Pengaturan › Sistem ›
- * Tampilan, menu Lainnya, dan pintasan Ctrl+Alt + = / − / 0. Di 100% topbar
- * tidak membawa kontrol yang jarang dipakai.
+ * kembali dengan satu klik. Level diatur di Pengaturan › Sistem › Tampilan,
+ * menu Lainnya, dan pintasan Ctrl+Alt + = / − / 0.
  */
 function ZoomChip() {
   const t = useT();
@@ -80,49 +88,30 @@ function ZoomChip() {
   if (zoom === 1) return null;
   const pct = zoomPercent(zoom);
   return (
-    <button
-      type="button"
-      className={styles.zoomChip}
+    <Button
+      variant="outline"
+      size="sm"
       data-tone={zoomTone(zoom)}
       onClick={resetZoom}
       aria-label={`${t('display.zoom.title')} ${pct}. ${t('display.zoom.reset')}`}
       title={t('display.zoom.reset')}
+      className="font-mono tabular-nums phone:hidden data-[tone=below]:ring-1 data-[tone=below]:ring-highlight"
     >
-      <span className={styles.zoomLed} aria-hidden />
-      <span className={styles.zoomPct}>{pct}</span>
-      <Icon name="arrows-rotate" className={styles.zoomReset} aria-hidden />
-    </button>
+      {pct}
+      <RotateCcw className="text-muted-foreground" />
+    </Button>
   );
 }
 
 /**
- * Akun: avatar membuka nama, peran, dan Keluar. Dulu kartu pengguna di dasar
- * sidebar; dipindah ke sini supaya rail hanya berisi navigasi dan unit usaha.
- * Di ponsel (≤720px) disembunyikan: Keluar sudah ada di menu "Lainnya".
+ * Akun: avatar membuka nama, peran, dan Keluar. Di ponsel (<=720px)
+ * disembunyikan: Keluar sudah ada di menu Lainnya.
  */
 function AccountMenu() {
   const employee = useSessionStore((s) => s.currentEmployee);
   const signOut = useSessionStore((s) => s.signOutEmployee);
   const authSignOut = useAuthStore((s) => s.signOut);
   const t = useT();
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const onDoc = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false);
-    };
-    document.addEventListener('mousedown', onDoc);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('mousedown', onDoc);
-      document.removeEventListener('keydown', onKey);
-    };
-  }, [open]);
 
   if (!employee) return null;
   const role = t(ROLE_LABEL[employee.role]);
@@ -130,41 +119,52 @@ function AccountMenu() {
   // Cloud: true sign-out of the Supabase account (→ AuthPage).
   // Local: switch user (re-enter PIN) — there is no cloud account.
   const handleLogout = () => {
-    setOpen(false);
     if (demoGuard('demo.logout')) return;
     if (isSupabaseConfigured) void authSignOut();
     else signOut();
   };
 
   return (
-    <div className={styles.account} ref={ref}>
-      <button
-        type="button"
-        className={[styles.iconBtn, styles.accountBtn].join(' ')}
-        onClick={() => setOpen((o) => !o)}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-label={interpolate(t('topbar.account'), { name: employee.name })}
-        title={`${employee.name} · ${role}`}
-      >
-        <span className={styles.avatar}>
-          {employee.name.charAt(0).toUpperCase()}
-          <span className={styles.onlineLed} aria-hidden />
-        </span>
-      </button>
-      {open && (
-        <div className={styles.accountMenu} role="menu">
-          <div className={styles.accountHead}>
-            <strong className={styles.accountName}>{employee.name}</strong>
-            <small className={styles.accountRole}>{role}</small>
-          </div>
-          <button type="button" role="menuitem" className={styles.accountItem} onClick={handleLogout}>
-            <Icon name="right-from-bracket" aria-hidden />
-            {t('auth.logout')}
-          </button>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="phone:hidden"
+          aria-label={interpolate(t('topbar.account'), { name: employee.name })}
+          title={`${employee.name} · ${role}`}
+        >
+          <Avatar name={employee.name} />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="min-w-56">
+        <div className="flex flex-col gap-0.5 px-2.5 pb-2 pt-1.5">
+          <strong className="truncate text-sm font-semibold">{employee.name}</strong>
+          <small className="text-xs text-muted-foreground">{role}</small>
         </div>
+        <div aria-hidden className="-mx-1 my-1 h-px bg-border" />
+        <DropdownMenuItem onSelect={handleLogout}>
+          <LogOut />
+          {t('auth.logout')}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+/** Inisial staf di lingkaran navy, dengan titik hijau "sedang masuk". */
+export function Avatar({ name, className }: { name: string; className?: string }) {
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        'relative grid size-8 place-items-center rounded-full bg-primary text-sm font-semibold text-primary-foreground',
+        className,
       )}
-    </div>
+    >
+      {name.charAt(0).toUpperCase()}
+      <span className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full bg-success-foreground ring-2 ring-card" />
+    </span>
   );
 }
 
@@ -176,52 +176,37 @@ export function Topbar({
   drawerId,
   toggleRef,
 }: TopbarProps) {
-  const theme = useThemeStore((s) => s.theme);
-  const toggleTheme = useThemeStore((s) => s.toggleTheme);
   const t = useT();
 
   return (
-    <header className={styles.topbar}>
-      <button
+    <header
+      data-nu
+      className="sticky top-(--app-inset-top) z-(--z-sticky) mx-4 mt-3.5 flex h-(--topbar-height) items-center gap-4 rounded-2xl bg-card px-5 shadow-panel ring-1 ring-border/60 compact:top-2 compact:mx-2 compact:mt-2 compact:h-[60px] compact:gap-3 compact:px-3"
+    >
+      <Button
         ref={toggleRef}
-        className={styles.mobileToggle}
+        variant="ghost"
+        size="icon"
+        className="-ml-1.5 hidden drawer:inline-flex phone:hidden"
         onClick={onToggleMobile}
         aria-label={t('topbar.menu')}
         aria-expanded={mobileOpen}
         aria-controls={drawerId}
       >
-        <Icon name="bars" aria-hidden />
-      </button>
+        <Menu />
+      </Button>
 
-      <div className={styles.titleWrap}>
-        <h1 className={styles.title}>{title}</h1>
-        {subtitle && <p className={styles.subtitle}>{subtitle}</p>}
+      <div className="flex min-w-0 flex-1 flex-col">
+        <h1 className="truncate text-xl font-semibold leading-tight tracking-[-0.015em] narrow:text-lg">{title}</h1>
+        {subtitle && (
+          <p className="mt-0.5 truncate text-sm text-muted-foreground narrow:hidden">{subtitle}</p>
+        )}
       </div>
 
-      <div className={styles.actions}>
+      <div className="flex shrink-0 items-center gap-2">
         <SyncBadge />
-
-        {/* Language toggle removed: only ~5% of UI text is wired to i18n, so
-            switching to English produced a jarring mixed-language UI. Re-add
-            when the app is actually translated (see [[i18n coverage]]). */}
-
         <ZoomChip />
         <ZoomAnnouncer />
-
-        <button
-          className={styles.iconBtn}
-          onClick={toggleTheme}
-          aria-label={t('settings.theme')}
-          title={theme === 'dark' ? t('settings.theme.light') : t('settings.theme.dark')}
-        >
-          <Icon name={theme === 'dark' ? 'sun' : 'moon'} aria-hidden />
-        </button>
-
-        <button className={styles.iconBtn} aria-label={t('topbar.notifications')}>
-          <Icon name="bell" aria-hidden />
-          <span className={styles.notifDot} />
-        </button>
-
         <AccountMenu />
       </div>
     </header>

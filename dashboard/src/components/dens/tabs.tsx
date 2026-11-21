@@ -18,8 +18,8 @@ function Tabs({ className, ...props }: React.ComponentProps<typeof TabsPrimitive
 const tabsListVariants = cva("inline-flex w-fit items-center", {
   variants: {
     variant: {
-      pill: "h-10 gap-0.5 rounded-full bg-muted p-1 ring-1 ring-inset ring-border/60",
-      line: "h-10 gap-5 border-b border-border",
+      pill: "h-10 pointer-coarse:h-11 gap-0.5 rounded-full bg-muted p-1 ring-1 ring-inset ring-border/60",
+      line: "h-10 pointer-coarse:h-11 gap-5 border-b border-border",
     },
   },
   defaultVariants: { variant: "pill" },

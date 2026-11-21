@@ -55,7 +55,7 @@ function Combobox({
           disabled={disabled}
           data-slot="combobox-trigger"
           className={cn(
-            "flex h-10 w-full items-center justify-between gap-2 rounded-lg border border-input bg-card px-3.5 text-left text-sm shadow-[0_1px_2px_rgb(6_32_54/0.05)] transition-[border-color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/20 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive",
+            "flex h-10 pointer-coarse:h-11 w-full items-center justify-between gap-2 rounded-lg border border-input bg-card px-3.5 text-left text-sm shadow-[0_1px_2px_rgb(6_32_54/0.05)] transition-[border-color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/20 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive",
             !selected && "text-muted-foreground",
             className
           )}

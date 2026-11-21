@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import sidebarRaw from './Sidebar.tsx?raw';
-import cssRaw from './Sidebar.module.css?raw';
+import appCssRaw from '@/styles/app.css?raw';
 import topbarRaw from './Topbar.tsx?raw';
 import layoutRaw from './AppLayout.tsx?raw';
 
 // Checkout Windows (core.autocrlf) memberi CRLF pada ?raw.
 const lf = (s: string) => s.replace(/\r\n/g, '\n');
 const sidebar = lf(sidebarRaw);
-const css = lf(cssRaw);
+const appCss = lf(appCssRaw);
 const topbar = lf(topbarRaw);
 const layout = lf(layoutRaw);
 const count = (s: string, needle: string) => s.split(needle).length - 1;
@@ -28,20 +28,19 @@ describe('sidebar: inert hanya saat laci ponsel tertutup', () => {
     expect(sidebar).not.toMatch(/inert=\{[^}]*collapsed/);
   });
 
-  it('kueri laci di TSX sama persis dengan @media laci di CSS', () => {
+  it('kueri laci di TSX sama persis dengan varian `drawer` di styles/app.css', () => {
     const q = sidebar.match(/const DRAWER_QUERY = '(\([^']+\))';/);
     expect(q, 'DRAWER_QUERY tak ditemukan').not.toBeNull();
-    const query = q![1];
-    // CSS yang menggeser aside keluar layar ada di blok @media dengan kueri yang sama.
-    const block = css.slice(css.indexOf(`@media ${query} {`));
-    expect(block.startsWith(`@media ${query} {`)).toBe(true);
-    expect(block).toMatch(/\.sidebar \{\s*transform: translateX\(calc\(-100% - var\(--space-2\)\)\);/);
-    expect(block).toMatch(/\.sidebar\.mobileOpen \{\s*transform: translateX\(0\);/);
+    expect(appCss).toContain(`@custom-variant drawer (@media ${q![1]});`);
   });
 
-  it('di luar blok laci aside tak digeser keluar layar (rail desktop tak boleh tersembunyi)', () => {
-    const outside = css.slice(0, css.indexOf('@media (max-width: 1024px) {'));
-    expect(outside).not.toMatch(/\.sidebar \{[^}]*translateX\(calc\(-100%/);
+  it('aside digeser keluar layar HANYA lewat varian drawer, dan kembali saat laci terbuka', () => {
+    expect(sidebar).toContain('drawer:-translate-x-[calc(100%+var(--space-2))]');
+    expect(sidebar).toMatch(/mobileOpen && 'drawer:translate-x-0/);
+    // Rail desktop tak boleh tersembunyi: tiap pergeseran negatif berawalan drawer:.
+    const shifts = sidebar.match(/\S*-translate-x-\S*/g) ?? [];
+    expect(shifts.length).toBeGreaterThan(0);
+    for (const cls of shifts) expect(cls, cls).toMatch(/^'?drawer:/);
   });
 });
 
@@ -71,10 +70,9 @@ describe('sidebar: pengelolaan fokus laci terpasang', () => {
     expect(layout).toContain('mobileOpen={mobileOpen}');
   });
 
-  it('Esc di menu cabang menutup menunya dulu dan tak ikut menutup laci', () => {
-    const handler = sidebar.slice(sidebar.indexOf('onKeyDown={(e) => {'));
-    expect(handler).toMatch(/e\.key !== 'Escape' \|\| !open/);
-    // preventDefault sebelum setOpen: useDrawerFocus melewati Esc yang sudah ditangani.
-    expect(handler.indexOf('e.preventDefault()')).toBeLessThan(handler.indexOf('setOpen(false)'));
+  it('menu cabang memakai DropdownMenu Radix (perilaku Esc diuji di drawerMenuEscape.test.tsx)', () => {
+    const branch = sidebar.slice(sidebar.indexOf('function BranchSelector('));
+    expect(branch).toContain('<DropdownMenu>');
+    expect(branch).toContain('<DropdownMenuContent');
   });
 });

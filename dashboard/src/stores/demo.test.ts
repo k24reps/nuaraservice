@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { toast as sonner } from 'sonner';
 import { demoGuard, useDemoStore } from './demo';
-import { useToastStore } from './toast';
 import { useSettingsStore } from './settings';
 import { translate } from '@/i18n';
 
@@ -10,10 +10,22 @@ import { translate } from '@/i18n';
  * salah ketik sebagai teks akan tampil ke pengguna sebagai kuncinya sendiri.
  */
 
-const messages = () => useToastStore.getState().toasts.map((t) => t.message);
+vi.mock('sonner', () => ({
+  toast: { success: vi.fn(), error: vi.fn(), warning: vi.fn(), info: vi.fn() },
+}));
+
+/** Semua pesan yang dikirim ke sonner, apa pun nadanya, sesuai urutan. */
+const messages = () =>
+  (['success', 'error', 'warning', 'info'] as const)
+    .flatMap((tone) => vi.mocked(sonner[tone]).mock.invocationCallOrder.map((order, i) => ({
+      order,
+      message: vi.mocked(sonner[tone]).mock.calls[i][0] as string,
+    })))
+    .sort((a, b) => a.order - b.order)
+    .map((m) => m.message);
 
 beforeEach(() => {
-  useToastStore.setState({ toasts: [] });
+  vi.clearAllMocks();
   useDemoStore.setState({ isDemo: true });
   useSettingsStore.setState({ language: 'id' });
 });

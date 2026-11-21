@@ -30,9 +30,21 @@ const browser = await chromium.launch(
 );
 
 const scan = () => {
+  // Tailwind 4 menulis warna beropasitas (`text-foreground/75`) sebagai
+  // color-mix, yang dihitung browser menjadi `oklab(...)`/`color(srgb ...)`.
+  // Format selain rgb() dibaca lewat canvas 1x1; tanpa ini teksnya dilewati
+  // diam-diam (L-47: 11 label menu sidebar tidak pernah diperiksa).
+  const ctx2d = new OffscreenCanvas(1, 1).getContext('2d', { willReadFrequently: true });
   const parse = (c) => {
     const m = /rgba?\(([\d.]+),\s*([\d.]+),\s*([\d.]+)(?:,\s*([\d.]+))?\)/.exec(c);
-    return m ? [+m[1], +m[2], +m[3], m[4] === undefined ? 1 : +m[4]] : null;
+    if (m) return [+m[1], +m[2], +m[3], m[4] === undefined ? 1 : +m[4]];
+    if (!c || c === 'transparent') return null;
+    ctx2d.clearRect(0, 0, 1, 1);
+    ctx2d.fillStyle = '#000';
+    ctx2d.fillStyle = c;
+    ctx2d.fillRect(0, 0, 1, 1);
+    const [r, g, b, a] = ctx2d.getImageData(0, 0, 1, 1).data;
+    return [r, g, b, a / 255];
   };
   const lum = ([r, g, b]) => {
     const f = (c) => {
@@ -162,7 +174,8 @@ const report = async (page, label) => {
        fg ${f.fg}  titik terburuk ${f.bg}  .${f.cls}`);
   }
 };
-for (const theme of ['dark', 'light']) {
+// Nuara hanya punya tema terang sejak L-47 (P14.1).
+for (const theme of ['light']) {
   for (const [path, name] of routes) {
     const page = await browser.newPage({ viewport: { width: 1440, height: 960 } });
     await page.goto(BASE + path, { waitUntil: 'networkidle' });
@@ -194,7 +207,7 @@ for (const theme of ['dark', 'light']) {
 // 'Kasir' cocok dengan "Kasir & Stok" (Inventori dilebur ke sana 10 Nov 2026).
 const MENUS = ['Servis', 'Kalkulator Biaya', 'Kasir', 'Pelanggan', 'Supplier', 'Keuangan',
   'Tugas', 'Absensi', 'Laporan', 'Log Aktivitas', 'Pengaturan'];
-for (const theme of ['dark', 'light']) {
+for (const theme of ['light']) {
   const page = await browser.newPage({ viewport: { width: 1440, height: 960 } });
   await page.goto(BASE + '/demo', { waitUntil: 'networkidle' });
   await page.evaluate((t) => localStorage.setItem('fixmaster-theme', t), theme);

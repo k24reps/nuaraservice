@@ -63,12 +63,24 @@ tetap relevan, tetapi bagian merek, harga, dan infrastruktur FixMaster tidak ber
   lama merembes): (1) elemen akarnya diberi atribut `data-nu`; (2) foldernya ditambah ke daftar
   `@source` di `src/styles/app.css`; (3) foto per piksel halaman lain + probe `audit-*` sama
   dengan sebelum langkah.
-- **Arsitektur CSS Fase B** (`src/styles/app.css`): layer `theme` < `nu-shield` < `legacy`
-  (global.css) < `nu-base` (reset dens-ui) < `utilities`; CSS Module tidak berlayer dan selalu
-  menang. Preflight Tailwind sengaja TIDAK global (`dens-base.css`, terbatas ke
-  `[data-slot]`/`[data-nu]`): versi global terukur mengubah halaman lama. Nama variabel tema
-  Tailwind yang juga dipakai tokens.css (`--text-sm`, `--radius-lg`, ...) ditulis langsung di
+- **Arsitektur CSS Fase B** (`src/styles/app.css`): layer `theme` < `legacy` (global.css) <
+  `nu-base` (reset dens-ui) < `utilities`; CSS Module tidak berlayer dan selalu menang.
+  Preflight Tailwind sengaja TIDAK global (`dens-base.css`, terbatas ke `[data-slot]`/`[data-nu]`):
+  versi global terukur mengubah halaman lama. Aturan `!important` di global.css yang mengenai
+  elemen dens-ui harus mengecualikan lingkup itu (`:not(:where([data-slot], [data-nu], ...))`),
+  seperti aturan target sentuh 44px: `!important` tidak bisa dikalahkan utilitas. Nama variabel
+  tema Tailwind yang juga dipakai tokens.css (`--text-sm`, `--radius-lg`, ...) ditulis langsung di
   `@theme inline`; tambahkan di sana bila menemukan bentrokan baru.
+- **Breakpoint kerangka**: varian kustom `drawer:` (<=1024px), `narrow:` (<=768px), `phone:`
+  (<=720px), `compact:` (<=640px), kuerinya sama persis dengan media query CSS lama. Jangan
+  memakai `max-lg:` dan sejenisnya untuk breakpoint yang harus sejalan dengan halaman lama
+  (Tailwind memakai `width < x`, bukan `max-width: x`).
+- **Target sentuh**: kontrol dens-ui baru wajib `pointer-coarse:` ke 44px (tombol/isian/item menu:
+  `pointer-coarse:min-h-11`; kontrol kecil: area `::after` 44px). Di perangkat bermouse 40px boleh.
+- **Toast**: selalu lewat `toast.success/error/warning/info` dari `@/stores/toast` (sonner di
+  baliknya), jangan impor sonner langsung.
+- **Portal dan `#root`**: `#root` memakai `isolation: isolate`, jadi lapisan yang harus tampil di
+  atas dialog atau laci (toast) dirender lewat portal ke `body`.
 - Motif visual FixMaster ("Precision Electronics Bench", maskot VOLT, rail diagnostik) **tidak**
   dipakai untuk UI baru dan hilang dengan sendirinya saat halaman dipindah.
 - **Teks UI baru**: lewat `useT()` + translation key, Bahasa Indonesia, kalimat netral tanpa

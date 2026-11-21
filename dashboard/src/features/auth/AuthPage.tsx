@@ -4,7 +4,6 @@ import { Button, Input, Icon, Mascot, PasswordStrength } from '@/components/ui';
 import { FormError } from '@/components/ui/Form';
 import { useT, type TranslationKey } from '@/i18n';
 import { useAuthStore } from '@/stores/auth';
-import { useThemeStore } from '@/stores/theme';
 import { toast } from '@/stores/toast';
 import { trackEvent } from '@/lib/analytics';
 import type { AuthSource, PublicAuthMode, SignupPlan } from './auth-intent';
@@ -79,8 +78,6 @@ export function AuthPage({
   const signIn = useAuthStore((s) => s.signIn);
   const signUp = useAuthStore((s) => s.signUp);
   const resetPassword = useAuthStore((s) => s.resetPassword);
-  const theme = useThemeStore((s) => s.theme);
-  const toggleTheme = useThemeStore((s) => s.toggleTheme);
 
   const [mode, setMode] = useState<Mode>(initialMode);
   const [email, setEmail] = useState('');
@@ -248,15 +245,6 @@ export function AuthPage({
             <span className={[styles.led, styles.ledLive].join(' ')} aria-hidden />
             <span className={styles.terminalLabel}>{t('authPage.terminal')}</span>
             <span className={styles.modeTag}>{t(title.tag)}</span>
-            <button
-              type="button"
-              className={styles.themeBtn}
-              onClick={toggleTheme}
-              aria-label={theme === 'dark' ? t('authPage.themeLight') : t('authPage.themeDark')}
-              title={theme === 'dark' ? t('authPage.themeLight') : t('authPage.themeDark')}
-            >
-              <Icon name={theme === 'dark' ? 'sun' : 'moon'} aria-hidden />
-            </button>
           </div>
 
           <h1 className={styles.heading}>{t(title.heading)}</h1>

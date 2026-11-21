@@ -3,7 +3,11 @@ import { buildPrintDocument, openPrintWindow, printScript, PRINT_CONTROLS_STYLE 
 import { pageHeightMm } from './business/receiptPaper';
 import { translate } from '@/i18n';
 import { useSettingsStore } from '@/stores/settings';
-import { useToastStore } from '@/stores/toast';
+import { toast as sonner } from 'sonner';
+
+vi.mock('sonner', () => ({
+  toast: { success: vi.fn(), error: vi.fn(), warning: vi.fn(), info: vi.fn() },
+}));
 
 describe('buildPrintDocument', () => {
   it('menyisipkan judul yang di-escape, gaya, dan isi', () => {
@@ -293,23 +297,23 @@ describe('openPrintWindow: bilah di jendela cetak', () => {
 describe('openPrintWindow: popup diblokir', () => {
   afterEach(() => {
     vi.restoreAllMocks();
-    useToastStore.setState({ toasts: [] });
+    vi.mocked(sonner.error).mockClear();
     useSettingsStore.setState({ language: 'id' });
   });
 
   it('mengembalikan false dan memberi petunjuk yang bisa ditindaklanjuti, bukan sekadar "diblokir"', () => {
     vi.spyOn(window, 'open').mockReturnValue(null);
     expect(openPrintWindow({ title: 't', style: '', body: '', demoMessage: 'demo' })).toBe(false);
-    const [t] = useToastStore.getState().toasts;
-    expect(t.tone).toBe('error');
-    expect(t.message).toBe(translate('id', 'print.popupBlocked'));
-    expect(t.message).toMatch(/izinkan popup/i);
+    expect(sonner.error).toHaveBeenCalledTimes(1);
+    const message = vi.mocked(sonner.error).mock.calls[0][0];
+    expect(message).toBe(translate('id', 'print.popupBlocked'));
+    expect(message).toMatch(/izinkan popup/i);
   });
 
   it('pesannya mengikuti bahasa aplikasi', () => {
     useSettingsStore.setState({ language: 'en' });
     vi.spyOn(window, 'open').mockReturnValue(null);
     openPrintWindow({ title: 't', style: '', body: '', demoMessage: 'demo' });
-    expect(useToastStore.getState().toasts[0].message).toBe(translate('en', 'print.popupBlocked'));
+    expect(vi.mocked(sonner.error).mock.calls[0][0]).toBe(translate('en', 'print.popupBlocked'));
   });
 });

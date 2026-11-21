@@ -1,18 +1,15 @@
-/* Rona LED bersama untuk gauge dan stepper: hijau di 100% (nominal), cyan
+/* Rona LED gauge: hijau di 100% (nominal), cyan
    VOLT saat diperbesar, jingga saat teks jatuh di bawah lantai 12px. Amber
    brand sengaja tidak dipakai: ia milik aksi utama (One Amber Rule). */
-.gauge,
-.stepper {
+.gauge {
   --tone: var(--success);
   --tone-text: var(--success-text);
 }
-.gauge[data-tone='up'],
-.stepper[data-tone='up'] {
+.gauge[data-tone='up'] {
   --tone: var(--accent);
   --tone-text: var(--accent-text);
 }
-.gauge[data-tone='below'],
-.stepper[data-tone='below'] {
+.gauge[data-tone='below'] {
   --tone: var(--warning);
   --tone-text: var(--warning-text);
 }
@@ -220,66 +217,4 @@
 .densityCell[aria-checked='true'] .densityGlyph > span {
   background: var(--brand-text);
   opacity: 1;
-}
-
-/* ---------- stepper menu Lainnya (sentuh) ---------- */
-.stepper {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: center;
-  gap: var(--space-3);
-  min-height: 48px;
-  padding: 7px 10px;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
-  background: var(--bg-base);
-}
-
-.stepperLabel {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-}
-
-.stepperControls {
-  justify-self: end;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.stepperBtn {
-  width: 44px;
-  height: 44px;
-  display: grid;
-  place-items: center;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
-  background: var(--bg-surface-2);
-  color: var(--text-secondary);
-}
-.stepperBtn[aria-disabled] {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-
-.stepperValue {
-  min-width: 64px;
-  height: 44px;
-  display: grid;
-  place-items: center;
-  border-radius: var(--radius-sm);
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
-  font-weight: var(--fw-bold);
-  font-variant-numeric: tabular-nums;
-  color: var(--tone-text);
-}
-button.stepperValue {
-  border: 1px solid var(--border);
 }

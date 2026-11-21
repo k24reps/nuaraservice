@@ -5,7 +5,7 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-full text-sm font-semibold transition-[background-color,color,box-shadow,transform] duration-150 ease-out outline-none select-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:translate-y-px disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-full text-sm font-semibold transition-[background-color,color,box-shadow,transform] duration-150 ease-out outline-none select-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:translate-y-px disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 pointer-coarse:min-h-11",
   {
     variants: {
       variant: {
@@ -28,8 +28,8 @@ const buttonVariants = cva(
         sm: "h-8 px-3.5 text-[13px] has-[>svg]:px-3",
         default: "h-10 px-5 has-[>svg]:px-4",
         lg: "h-12 px-7 text-[15px] has-[>svg]:px-6",
-        icon: "size-10",
-        "icon-sm": "size-8",
+        icon: "size-10 pointer-coarse:size-11",
+        "icon-sm": "size-8 pointer-coarse:size-11",
       },
     },
     defaultVariants: {

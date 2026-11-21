@@ -1,6 +1,6 @@
 # TRD (Technical Requirements Document) - Nuara Dashboard
 
-> Versi: 0.4 | Diperbarui: 2026-11-21 | Merujuk: PRD.md, IPD.md, `dashboard/AGENTS.md`
+> Versi: 0.5 | Diperbarui: 2026-11-21 | Merujuk: PRD.md, IPD.md, `dashboard/AGENTS.md`
 <!-- Proyek existing: landing page statis di root repo tetap apa adanya. Dashboard ada di folder dashboard/.
 Versi 0.2 (Next.js + Drizzle, dibangun dari nol) dibatalkan 2026-11-21 (wawancara P13): dasar kode diganti salinan FixMaster. Isi versi 0.2 ada di riwayat git (commit 215e799). -->
 
@@ -26,8 +26,10 @@ SPA statis di Vercel. Browser memakai `@supabase/supabase-js` dengan kunci publi
 - Satu toko: skema tetap multi-organisasi (tidak dibongkar, P13.5), tetapi `create_organization` menolak toko kedua (0105). Akun pertama yang menyelesaikan wizard menjadi Pemilik.
 - Tracking pelanggan: rute publik `/t/<kode>` (kode acak per tiket, migrasi 0100) dan `/track`, dilayani host yang sama dengan dashboard, lewat RPC `track_service_by_code` yang bisa dipanggil anon dengan kolom terbatas.
 - Backup: `auto-backup` (pg_cron harian) menyimpan salinan JSON per toko di Storage; `backup-email` (pg_cron Senin) mengirim tautan unduh ke Pemilik bila Resend diisi.
+- Toast: helper `src/stores/toast.ts` (`toast.success/error/warning/info`) meneruskan ke sonner; `<AppToaster />` dirender lewat portal ke body (P15.2).
+- Tema: hanya terang; `data-theme="light"` di index.html (P14.1).
 - Harness pengembangan (hanya dev server, tidak ada di build produksi): `/demo` (`src/dev/DevSandbox.tsx`) = aplikasi lengkap berisi data contoh di RAM untuk skrip foto dan probe UI; `/dev/komponen` (`src/dev/ComponentShowcase.tsx`) = katalog komponen dens-ui bertema Nuara.
-- CSS selama Fase B (`src/styles/app.css`): urutan cascade layer `theme`, `nu-shield`, `legacy` (global.css + tokens.css FixMaster), `nu-base` (reset dens-ui), `utilities`. Preflight Tailwind tidak dipasang global; salinannya di `dens-base.css` dibatasi ke `[data-slot]` (komponen dens-ui) dan `[data-nu]` (akar halaman yang dipindah). Utilitas hanya dibuat dari folder yang didaftarkan `@source`. Variabel tema memakai awalan `--nu-` karena tokens.css sudah memakai `--brand`, `--border`, dst.
+- CSS selama Fase B (`src/styles/app.css`): urutan cascade layer `theme`, `legacy` (global.css + tokens.css FixMaster), `nu-base` (reset dens-ui), `utilities`. Aturan target sentuh `!important` di global.css mengecualikan lingkup dens-ui. Breakpoint kerangka memakai varian kustom `drawer` (<=1024px), `narrow` (<=768px), `phone` (<=720px), `compact` (<=640px) dengan kueri sama persis CSS lama. Preflight Tailwind tidak dipasang global; salinannya di `dens-base.css` dibatasi ke `[data-slot]` (komponen dens-ui) dan `[data-nu]` (akar halaman yang dipindah). Utilitas hanya dibuat dari folder yang didaftarkan `@source`. Variabel tema memakai awalan `--nu-` karena tokens.css sudah memakai `--brand`, `--border`, dst.
 
 Keputusan penting:
 | Keputusan | Alternatif ditolak | Alasan |

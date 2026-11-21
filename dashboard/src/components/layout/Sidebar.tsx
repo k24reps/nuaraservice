@@ -1,7 +1,14 @@
-import { EmptyValue } from '@/components/ui/EmptyValue';
 import { NavLink, useLocation } from 'react-router-dom';
-import { useState, useRef, useEffect, useLayoutEffect, type ReactNode, type RefObject } from 'react';
-import { Icon } from '@/components/ui';
+import { useLayoutEffect, useRef, type ReactNode, type RefObject } from 'react';
+import { CheckIcon, ChevronsUpDownIcon, Layers, PanelLeftClose, PanelLeftOpen, Store, X } from 'lucide-react';
+import { EmptyValue } from '@/components/ui/EmptyValue';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/dens/dropdown-menu';
+import { Button } from '@/components/dens/button';
 import { getVisibleNavigation } from '@/lib/business/navigation';
 import { useSessionStore } from '@/stores/session';
 import { useCollection } from '@/hooks/useCollection';
@@ -9,17 +16,19 @@ import { useT } from '@/i18n';
 import { useNavSignals } from '@/hooks/useNavSignals';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { useDrawerFocus } from '@/hooks/useDrawerFocus';
+import { cn } from '@/lib/utils';
 import type { Outlet, ID } from '@/data/types';
-import styles from './Sidebar.module.css';
+import { FALLBACK_NAV_ICON, NAV_ICONS } from './navIcons';
+import { NavCount, NavDot } from './navSignal';
 
 /**
  * Di bawah lebar ini sidebar jadi laci yang digeser keluar layar (transform),
  * bukan disembunyikan: tautannya tetap ada di urutan Tab dan di pohon pembaca
- * layar. Harus SAMA PERSIS dengan `@media` di Sidebar.module.css; kalau salah
- * satunya bergeser, laci yang tampil ikut inert atau laci tersembunyi tetap
- * terjangkau (dikunci sidebarInert.test.ts). Media query, bukan @container:
- * ini menyangkut perangkat, dan CSS-nya pun media query, jadi keduanya
- * bergeser (atau tidak) bersama zoom aplikasi.
+ * layar. Harus SAMA PERSIS dengan varian `drawer` di styles/app.css; kalau
+ * salah satunya bergeser, laci yang tampil ikut inert atau laci tersembunyi
+ * tetap terjangkau (dikunci sidebarInert.test.ts). Media query, bukan
+ * @container: ini menyangkut perangkat, jadi keduanya bergeser (atau tidak)
+ * bersama zoom aplikasi.
  */
 const DRAWER_QUERY = '(max-width: 1024px)';
 
@@ -56,6 +65,8 @@ export function Sidebar({
   const isDrawer = useMediaQuery(DRAWER_QUERY);
   const drawerClosed = isDrawer && !mobileOpen;
   const drawerOpen = isDrawer && mobileOpen;
+  // Laci selalu lebar penuh: rail ciut hanya berlaku di desktop.
+  const rail = collapsed && !isDrawer;
   // Terbuka: fokus masuk, Tab berputar di laci, Esc menutup. Tertutup: fokus
   // kembali ke tombol menu. Di rail desktop hook ini tak melakukan apa-apa.
   const asideRef = useRef<HTMLElement>(null);
@@ -65,18 +76,14 @@ export function Sidebar({
     returnRef: toggleRef,
     onClose: onCloseMobile,
   });
-  // Nama, peran, dan Keluar kini di menu akun Topbar (AccountMenu), bukan kartu
-  // di dasar rail: sidebar hanya navigasi dan unit usaha.
 
   // Role-gating (managerOnly/ownerOnly) HIDES items — it mirrors server RLS,
-  // so showing them would just lead to failures. Tidak ada lagi kanal
-  // terkunci paket sejak harga per unit.
+  // so showing them would just lead to failures.
   const visibleNav = employee ? getVisibleNavigation(employee.role) : [];
 
-  // Kanal aktif selalu terlihat. Di 1366×768 (demo) Log dan Pengaturan berada
-  // di bawah tepi rail, jadi halaman yang sedang dibuka tak punya tanda di
-  // menu. Jarak 28px melewati tepi pudar 24px. Di ujung gulir tepi pudarnya
-  // hilang, jadi kanal yang muat di sana ditempel ke ujung: kembali ke Servis
+  // Kanal aktif selalu terlihat. Di 1366×768 Log dan Pengaturan berada di bawah
+  // tepi rail, jadi halaman yang sedang dibuka tak punya tanda di menu. Di ujung
+  // gulir, kanal yang muat di sana ditempel ke ujung: kembali ke Servis
   // menggulir ke 0, bukan ke 28px yang memotong Dashboard. Layout effect:
   // tanpa lompatan yang sempat tergambar.
   const navRef = useRef<HTMLElement>(null);
@@ -99,128 +106,161 @@ export function Sidebar({
     nav.scrollTop = next;
   }, [pathname, collapsed]);
 
-  const logo = (
-    <span className={styles.bizLogo} aria-hidden>
-      {org?.logoDataUrl ? (
-        <img src={org.logoDataUrl} alt="" />
-      ) : (
-        <span className={styles.bizLogoFallback}>
-          {(org?.name ?? 'F').charAt(0).toUpperCase()}
-        </span>
-      )}
-    </span>
-  );
+  const logo = <ShopMark name={org?.name} logo={org?.logoDataUrl} />;
+  const reachable =
+    allowedOutletIds.length > 0 ? outlets.filter((o) => allowedOutletIds.includes(o.id)) : outlets;
 
   return (
     <>
       <div
-        className={[styles.overlay, mobileOpen ? styles.overlayOpen : ''].join(' ')}
+        aria-hidden
         onClick={onCloseMobile}
+        className={cn(
+          'fixed inset-0 z-(--z-overlay) hidden bg-[rgb(6_32_54/0.42)]',
+          mobileOpen && 'drawer:block drawer:animate-fade-in',
+        )}
       />
       <aside
         inert={drawerClosed}
         id={drawerId}
         ref={asideRef}
-        className={[
-          styles.sidebar,
-          collapsed ? styles.collapsed : '',
-          mobileOpen ? styles.mobileOpen : '',
-        ].join(' ')}
+        data-nu
+        data-collapsed={rail || undefined}
+        className={cn(
+          'fixed bottom-3.5 left-3.5 top-(--app-inset-top) z-(--z-sidebar) flex w-(--sidebar-width) flex-col overflow-hidden rounded-2xl bg-sidebar text-sidebar-foreground shadow-panel ring-1 ring-sidebar-border/70 transition-[width,transform] duration-200 ease-out-expo',
+          rail && 'w-(--sidebar-collapsed)',
+          'drawer:top-2 drawer:bottom-2 drawer:left-2 drawer:w-[min(var(--sidebar-width),calc(100vw-16px))] drawer:-translate-x-[calc(100%+var(--space-2))]',
+          mobileOpen && 'drawer:translate-x-0 drawer:z-[calc(var(--z-overlay)+1)] drawer:shadow-raised',
+        )}
       >
-        {/* ---------- Product identity (Nuara) ---------- */}
-        <div className={styles.header}>
-          <div className={styles.brand}>
-            <span className={styles.brandMark} aria-hidden>
-              <img src="/logo-mark.png" alt="" width="38" height="38" />
-            </span>
-            <span className={styles.brandText}>
-              <strong>
-                Nuara<span className={styles.brandAccent}> Service</span>
-              </strong>
-              <small className={styles.unitLine}>
-                <span className={styles.unitId}>DASHBOARD</span>
-              </small>
-            </span>
+        {/* ---------- Identitas produk ---------- */}
+        <div
+          className={cn(
+            'flex min-h-(--topbar-height) shrink-0 items-center gap-2 px-4 pb-4 pt-4',
+            rail && 'flex-col justify-center gap-2 px-0 py-3',
+          )}
+        >
+          <div className="flex min-w-0 flex-1 items-center gap-3">
+            <img
+              src="/logo-mark.png"
+              alt=""
+              width="40"
+              height="40"
+              className="size-10 shrink-0 rounded-xl ring-1 ring-sidebar-border/70"
+            />
+            {!rail && (
+              <span className="flex min-w-0 flex-col">
+                <strong className="truncate text-[15px] font-semibold leading-tight tracking-[-0.01em]">
+                  Nuara Service
+                </strong>
+                <small className="font-mono text-[10.5px] font-medium uppercase leading-5 tracking-[0.14em] text-muted-foreground">
+                  Dashboard
+                </small>
+              </span>
+            )}
           </div>
-          <button
-            className={styles.collapseBtn}
-            onClick={onToggleCollapse}
-            aria-label={t('sidebar.collapse')}
-          >
-            <Icon name="angles-left" aria-hidden />
-          </button>
+          {isDrawer ? (
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="rounded-xl text-muted-foreground"
+              onClick={onCloseMobile}
+              aria-label={t('common.close')}
+            >
+              <X />
+            </Button>
+          ) : (
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="rounded-xl text-muted-foreground"
+              onClick={onToggleCollapse}
+              aria-label={t('sidebar.collapse')}
+              aria-pressed={collapsed}
+            >
+              {collapsed ? <PanelLeftOpen /> : <PanelLeftClose />}
+            </Button>
+          )}
         </div>
 
-        {/* ---------- Diagnostic rail ---------- */}
-        {/* Sumur terpisah dari <nav>: tepi pudar menyamarkan isi nav, dan
-            latar sumur di belakangnya menjaga warnanya tetap utuh. */}
-        <div className={styles.navWell}>
-        <nav ref={navRef} className={styles.nav} aria-label={t('sidebar.mainNav')}>
+        {/* ---------- Navigasi ---------- */}
+        <nav
+          ref={navRef}
+          aria-label={t('sidebar.mainNav')}
+          className={cn('flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto overflow-x-hidden px-3 pb-3', rail && 'px-0')}
+        >
           {visibleNav.map(({ item }, i) => {
-            // Sambungan bertitik di awal tiap grup: operasional, kantor, sistem.
-            const seam = i > 0 && visibleNav[i - 1].item.group !== item.group ? styles.seam : '';
-            const sig = signals[item.to];
+            // Garis tipis di awal tiap grup: operasional, kantor, sistem.
+            const newGroup = i > 0 && visibleNav[i - 1].item.group !== item.group;
+            const ItemIcon = NAV_ICONS[item.to] ?? FALLBACK_NAV_ICON;
+            const label = t(item.labelKey);
             return (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.to === '/'}
-                onClick={onCloseMobile}
-                className={({ isActive }) =>
-                  [styles.navItem, isActive ? styles.active : '', seam].join(' ')
-                }
-                title={t(item.labelKey)}
-              >
-                <span className={styles.navIconCell} aria-hidden>
-                  <Icon name={item.icon} className={styles.navIcon} />
-                </span>
-                <span className={styles.navLabel}>{t(item.labelKey)}</span>
-                {sig && sig.tone !== 'idle' ? (
-                  <span
-                    className={[
-                      styles.readout,
-                      styles[`tone_${sig.tone}`],
-                      sig.pulse ? styles.pulse : '',
-                    ].join(' ')}
-                    aria-label={`${sig.count}`}
-                  >
-                    <span className={styles.readoutLed} aria-hidden />
-                    <span className={styles.readoutNum}>{sig.count}</span>
-                  </span>
-                ) : (
-                  <span className={[styles.readout, styles.tone_idle].join(' ')} aria-hidden>
-                    <span className={styles.readoutLed} />
-                  </span>
-                )}
-              </NavLink>
+              <div key={item.to} className="contents">
+                {newGroup && <div aria-hidden className={cn('mx-2 my-2 h-px shrink-0 bg-sidebar-border/70', rail && 'mx-4')} />}
+                <NavLink
+                  to={item.to}
+                  end={item.to === '/'}
+                  onClick={onCloseMobile}
+                  title={rail ? label : undefined}
+                  className={({ isActive }) =>
+                    cn(
+                      'group/nav relative flex min-h-10 shrink-0 items-center gap-3 rounded-xl px-2 text-sm font-medium text-sidebar-foreground/75 outline-none transition-[background-color,color] duration-150 hover:bg-sidebar-accent/70 hover:text-sidebar-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring pointer-coarse:min-h-11',
+                      isActive && 'bg-sidebar-accent font-semibold text-sidebar-foreground',
+                      rail && 'mx-auto size-11 justify-center px-0',
+                    )
+                  }
+                >
+                  {({ isActive }) => (
+                    <>
+                      <span
+                        aria-hidden
+                        className={cn(
+                          'grid size-8 shrink-0 place-items-center rounded-lg transition-colors duration-150 [&_svg]:size-[18px]',
+                          isActive
+                            ? 'bg-primary text-primary-foreground shadow-[0_1px_2px_rgb(6_32_54/0.18)]'
+                            : 'text-sidebar-foreground/70 group-hover/nav:text-sidebar-foreground',
+                        )}
+                      >
+                        <ItemIcon strokeWidth={1.75} />
+                      </span>
+                      {rail ? (
+                        <NavDot signal={signals[item.to]} className="absolute right-1.5 top-1.5" />
+                      ) : (
+                        <>
+                          <span className="min-w-0 flex-1 truncate">{label}</span>
+                          <NavCount signal={signals[item.to]} />
+                        </>
+                      )}
+                    </>
+                  )}
+                </NavLink>
+              </div>
             );
           })}
         </nav>
-        </div>
 
-        {/* ---------- Business unit (shop identity + branch selector) ---------- */}
-        {/* Satu baris bila ada cabang: logo, nama toko, dan cabang aktif menyatu
-            dalam satu sakelar (113 → 68px), ruang itu kembali ke kanal. */}
-        <div className={styles.bizBlock}>
-          {outlets.length > 0 ? (
+        {/* ---------- Unit usaha (identitas toko + pemilih cabang) ---------- */}
+        <div className={cn('shrink-0 border-t border-sidebar-border/70 p-3', rail && 'px-0')}>
+          {reachable.length > 0 ? (
             <BranchSelector
               logo={logo}
               orgName={org?.name}
-              outlets={
-                allowedOutletIds.length > 0
-                  ? outlets.filter((o) => allowedOutletIds.includes(o.id))
-                  : outlets
-              }
+              outlets={reachable}
               activeOutletId={activeOutletId}
               onSelect={setActiveOutlet}
+              rail={rail}
             />
           ) : (
-            <div className={styles.bizIdentity}>
+            <div className={cn('flex items-center gap-3 p-1.5', rail && 'justify-center')}>
               {logo}
-              <div className={styles.bizInfo}>
-                <small className={styles.bizLabel}>{t('nav.mobile.businessUnit')}</small>
-                <strong className={styles.bizName}>{org?.name ?? <EmptyValue />}</strong>
-              </div>
+              {!rail && (
+                <div className="flex min-w-0 flex-col">
+                  <small className="text-xs text-muted-foreground">{t('nav.mobile.businessUnit')}</small>
+                  <strong className="line-clamp-2 text-sm font-semibold leading-snug">
+                    {org?.name ?? <EmptyValue />}
+                  </strong>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -229,11 +269,27 @@ export function Sidebar({
   );
 }
 
+/** Logo toko dari Pengaturan, atau huruf pertama namanya di kotak navy. */
+export function ShopMark({ name, logo, className }: { name?: string; logo?: string | null; className?: string }) {
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        'grid size-8 shrink-0 place-items-center overflow-hidden rounded-lg bg-primary text-sm font-semibold text-primary-foreground',
+        className,
+      )}
+    >
+      {logo ? <img src={logo} alt="" className="size-full bg-card object-contain" /> : (name ?? 'N').charAt(0).toUpperCase()}
+    </span>
+  );
+}
+
 /**
- * Prominent branch (outlet) selector styled like a bench channel switch.
- * "Semua Outlet" (null) shows org-wide data; picking a branch scopes the
- * whole app to that outlet. Opens upward since it sits near the bottom.
- * Identitas toko (logo + nama) menjadi pelat sakelarnya.
+ * Pemilih cabang (outlet). "Semua Outlet" (null) menampilkan data seluruh toko;
+ * memilih cabang membatasi seluruh aplikasi ke cabang itu. Menu Radix dirender
+ * di portal, jadi tidak terpotong `overflow: hidden` sidebar saat rail diciutkan.
+ * Esc ditangani menunya sendiri (Radix menandai event-nya `defaultPrevented`),
+ * sehingga laci di tablet tidak ikut tertutup (useDrawerFocus melewatinya).
  */
 function BranchSelector({
   logo,
@@ -241,100 +297,75 @@ function BranchSelector({
   outlets,
   activeOutletId,
   onSelect,
+  rail,
 }: {
   logo: ReactNode;
   orgName: string | undefined;
   outlets: Outlet[];
   activeOutletId: ID | null;
   onSelect: (id: ID | null) => void;
+  rail: boolean;
 }) {
   const t = useT();
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  const btnRef = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const onDoc = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener('mousedown', onDoc);
-    return () => document.removeEventListener('mousedown', onDoc);
-  }, [open]);
-
   const active = outlets.find((o) => o.id === activeOutletId) ?? null;
   const allLabel = t('nav.mobile.allOutlets');
   const label = active ? active.name : allLabel;
 
   return (
-    <div
-      className={styles.branchSel}
-      ref={ref}
-      // Esc menutup menunya dulu; preventDefault membuat laci (useDrawerFocus)
-      // tak ikut menutup pada Esc yang sama.
-      onKeyDown={(e) => {
-        if (e.key !== 'Escape' || !open) return;
-        e.preventDefault();
-        setOpen(false);
-        btnRef.current?.focus();
-      }}
-    >
-      <button
-        ref={btnRef}
-        type="button"
-        className={[styles.branchBtn, open ? styles.branchBtnOpen : '', active ? '' : styles.branchAll].join(' ')}
-        onClick={() => setOpen((o) => !o)}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        title={`${t('nav.mobile.activeOutlet')}: ${label}`}
-      >
-        {logo}
-        <span className={styles.branchMain}>
-          <span className={styles.branchOrg}>{orgName ?? <EmptyValue />}</span>
-          <span className={styles.branchLine}>
-            <span className={styles.branchLed} aria-hidden />
-            <span className={styles.branchName}>{label}</span>
-          </span>
-        </span>
-        <Icon name="chevron-down" className={styles.branchCaret} aria-hidden />
-      </button>
-
-      {open && (
-        <div className={styles.branchMenu} role="listbox">
-          <button
-            type="button"
-            role="option"
-            aria-selected={!activeOutletId}
-            className={[styles.branchOpt, !activeOutletId ? styles.branchOptActive : ''].join(' ')}
-            onClick={() => {
-              onSelect(null);
-              setOpen(false);
-            }}
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          title={`${t('nav.mobile.activeOutlet')}: ${label}`}
+          className={cn(
+            'relative flex min-h-(--control-h) w-full items-center gap-3 rounded-xl p-1.5 pr-2.5 text-left outline-none transition-colors duration-150 hover:bg-sidebar-accent/70 focus-visible:ring-2 focus-visible:ring-sidebar-ring data-[state=open]:bg-sidebar-accent',
+            rail && 'mx-auto size-11 justify-center p-0',
+          )}
+        >
+          {logo}
+          {rail ? (
+            <span
+              aria-hidden
+              className={cn('absolute right-0.5 top-0.5 size-2 rounded-full ring-2 ring-sidebar', active ? 'bg-highlight' : 'bg-success-foreground')}
+            />
+          ) : (
+            <>
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="line-clamp-2 text-sm font-semibold leading-snug">{orgName ?? <EmptyValue />}</span>
+                <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <span aria-hidden className={cn('size-1.5 shrink-0 rounded-full', active ? 'bg-highlight' : 'bg-success-foreground')} />
+                  <span className="truncate">{label}</span>
+                </span>
+              </span>
+              <ChevronsUpDownIcon aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+            </>
+          )}
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent side="top" align="start" className="w-(--sidebar-width) max-w-[calc(100vw-2rem)]">
+        <DropdownMenuItem onSelect={() => onSelect(null)} aria-checked={!activeOutletId} role="menuitemradio">
+          <Layers />
+          <span className="flex-1 truncate">{allLabel}</span>
+          {!activeOutletId && <CheckIcon className="text-primary" />}
+        </DropdownMenuItem>
+        {outlets.map((o) => (
+          <DropdownMenuItem
+            key={o.id}
+            onSelect={() => onSelect(o.id)}
+            aria-checked={activeOutletId === o.id}
+            role="menuitemradio"
           >
-            <Icon name="boxes-stacked" className={styles.branchOptIcon} aria-hidden />
-            <span className={styles.branchOptName}>{allLabel}</span>
-            {!activeOutletId && <Icon name="check" className={styles.branchCheck} aria-hidden />}
-          </button>
-          {outlets.map((o) => (
-            <button
-              key={o.id}
-              type="button"
-              role="option"
-              aria-selected={activeOutletId === o.id}
-              className={[styles.branchOpt, activeOutletId === o.id ? styles.branchOptActive : ''].join(' ')}
-              onClick={() => {
-                onSelect(o.id);
-                setOpen(false);
-              }}
-            >
-              <Icon name="shop" className={styles.branchOptIcon} aria-hidden />
-              <span className={styles.branchOptName}>{o.name}</span>
-              {o.isPrimary && <span className={styles.branchPrimary}>{t('sidebar.primary')}</span>}
-              {activeOutletId === o.id && <Icon name="check" className={styles.branchCheck} aria-hidden />}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
+            <Store />
+            <span className="flex-1 truncate">{o.name}</span>
+            {o.isPrimary && (
+              <span className="rounded-full bg-secondary px-2 text-[11px] font-medium text-secondary-foreground">
+                {t('sidebar.primary')}
+              </span>
+            )}
+            {activeOutletId === o.id && <CheckIcon className="text-primary" />}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
