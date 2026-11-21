@@ -31,7 +31,7 @@ async function capture({ name, theme, width = 1440, height = 1100 }) {
     localStorage.setItem('fixmaster-theme', t);
     document.documentElement.setAttribute('data-theme', t);
   }, theme);
-  await page.getByText('MODE DEMO').waitFor({ timeout: 20000 });
+  await page.locator('a[href="/services"]').first().waitFor({ timeout: 20000 });
   await page.waitForSelector('a[href="/services"]', { timeout: 10000 });
   if (ROUTE !== '/') {
     await page.click(`a[href="${ROUTE}"]`);

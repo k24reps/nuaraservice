@@ -166,7 +166,10 @@ function probe() {
   return out;
 }
 
-const browser = await chromium.launch();
+// PW_CHROMIUM: jalur Chromium lain bila versi bawaan @playwright/test tidak terpasang (mis. container cloud).
+const browser = await chromium.launch(
+  process.env.PW_CHROMIUM ? { executablePath: process.env.PW_CHROMIUM } : {},
+);
 const rows = [];
 let floorBreaks = 0;
 

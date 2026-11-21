@@ -1,0 +1,197 @@
+/*
+ * Dasar komponen dens-ui di Nuara Dashboard (diimpor app.css).
+ *
+ * Preflight Tailwind TIDAK dipasang global: terukur 21 Nov 2026, preflight di
+ * bawah CSS FixMaster tetap mengubah halaman lama (line-height tombol/input,
+ * warna placeholder, kartu saldo Keuangan memanjang). Isinya disalin ke sini
+ * (Tailwind CSS v4.3 preflight, MIT) dan dibatasi ke lingkup dens-ui:
+ *   - [data-slot]        semua komponen dens-ui, termasuk isi portal Radix
+ *   - [data-nu]          wadah halaman yang sudah dipindah (Fase B)
+ *   - [data-sonner-toaster] toast sonner
+ * Di luar lingkup itu, halaman FixMaster dirender persis seperti sebelumnya.
+ *
+ * Layer nu-base ada di ATAS layer legacy (global.css), jadi di dalam lingkup
+ * aturan di sini juga menjadi perisai dari aturan elemen global.css
+ * (mis. `h2 { font-family: Space Grotesk }`, `a { color }`). Utilitas Tailwind
+ * tetap di atas keduanya. Hapus perisai saat CSS FixMaster dibuang (L-56).
+ */
+
+@layer nu-base {
+  :where([data-nu], [data-nu] *, [data-slot], [data-slot] *, [data-sonner-toaster], [data-sonner-toaster] *) {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    border: 0 solid;
+    border-color: var(--nu-border);
+    outline-color: color-mix(in srgb, var(--nu-ring) 50%, transparent);
+
+    &::before,
+    &::after,
+    &::backdrop,
+    &::file-selector-button {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      border: 0 solid;
+      border-color: var(--nu-border);
+    }
+
+    &:is(hr) {
+      height: 0;
+      color: inherit;
+      border-top-width: 1px;
+    }
+
+    /* Perisai global.css: judul memakai font dan warna induknya. */
+    &:is(h1, h2, h3, h4, h5, h6) {
+      font-family: inherit;
+      font-size: inherit;
+      font-weight: inherit;
+      line-height: inherit;
+      letter-spacing: inherit;
+      color: inherit;
+    }
+
+    &:is(a),
+    &:is(a):hover {
+      color: inherit;
+      text-decoration: inherit;
+    }
+
+    &:is(b, strong) {
+      font-weight: bolder;
+    }
+
+    &:is(code, kbd, samp, pre) {
+      font-family: var(--nu-font-mono);
+      font-feature-settings: normal;
+      font-variation-settings: normal;
+      font-size: 1em;
+    }
+
+    &:is(small) {
+      font-size: 80%;
+    }
+
+    &:is(sub, sup) {
+      font-size: 75%;
+      line-height: 0;
+      position: relative;
+      vertical-align: baseline;
+    }
+    &:is(sub) {
+      bottom: -0.25em;
+    }
+    &:is(sup) {
+      top: -0.5em;
+    }
+
+    &:is(table) {
+      text-indent: 0;
+      border-color: inherit;
+      border-collapse: collapse;
+    }
+
+    &:is(progress) {
+      vertical-align: baseline;
+    }
+
+    &:is(summary) {
+      display: list-item;
+    }
+
+    &:is(ol, ul, menu) {
+      list-style: none;
+    }
+
+    &:is(img, svg, video, canvas, audio, iframe, embed, object) {
+      display: block;
+      vertical-align: middle;
+    }
+
+    &:is(img, video) {
+      max-width: 100%;
+      height: auto;
+    }
+
+    &:is(button, input, select, optgroup, textarea),
+    &::file-selector-button {
+      font: inherit;
+      font-feature-settings: inherit;
+      font-variation-settings: inherit;
+      letter-spacing: inherit;
+      color: inherit;
+      border-radius: 0;
+      background-color: transparent;
+      opacity: 1;
+    }
+
+    &::file-selector-button {
+      margin-inline-end: 4px;
+    }
+
+    &::placeholder {
+      opacity: 1;
+      color: color-mix(in oklab, currentcolor 50%, transparent);
+    }
+
+    &:is(textarea) {
+      resize: vertical;
+    }
+
+    &::-webkit-search-decoration {
+      -webkit-appearance: none;
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--nu-ring);
+      outline-offset: 2px;
+    }
+
+    &::selection {
+      background: color-mix(in srgb, var(--nu-highlight) 30%, transparent);
+      color: var(--nu-foreground);
+    }
+  }
+
+  /* Pengganti `html` di preflight: akar halaman yang sudah dipindah, dan
+     komponen dens-ui paling luar (di dalam halaman lama atau di portal), supaya
+     tidak mewarisi font dan line-height body FixMaster. */
+  [data-nu],
+  :where([data-slot], [data-sonner-toaster]):not(:where([data-nu] *, [data-slot] *, [data-sonner-toaster] *)) {
+    line-height: 1.5;
+    -webkit-text-size-adjust: 100%;
+    tab-size: 4;
+    font-family: var(--nu-font-sans);
+    font-feature-settings: normal;
+    font-variation-settings: normal;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  [data-nu] {
+    background-color: var(--nu-background);
+    color: var(--nu-foreground);
+    caret-color: var(--nu-primary);
+  }
+}
+
+/*
+ * global.css memaksa min-height/min-width 44px dengan !important pada semua
+ * tombol dan isian di layar sentuh. Checkbox dan switch Radix adalah <button>,
+ * jadi tanpa ini keduanya tampil 44x44px di ponsel. !important dari layer yang
+ * LEBIH AWAL (nu-shield, sebelum legacy) mengalahkan !important di legacy.
+ * Nilainya = nilai komponen dens-ui (textarea: min-h-24). Target sentuh dens-ui
+ * diatur per komponen (IPD L-47), bukan lewat aturan global ini.
+ */
+@layer nu-shield {
+  @media (max-width: 720px), (hover: none), (pointer: coarse) {
+    :where([data-nu], [data-nu] *, [data-slot], [data-slot] *, [data-sonner-toaster], [data-sonner-toaster] *):is(button, input, select, summary) {
+      min-height: 0 !important;
+      min-width: 0 !important;
+    }
+    :where([data-nu], [data-nu] *, [data-slot], [data-slot] *):is(textarea) {
+      min-height: 6rem !important;
+    }
+  }
+}

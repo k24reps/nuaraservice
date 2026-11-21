@@ -1,6 +1,6 @@
 # Log Wawancara - Dashboard Nuara Service
 
-> Status: selesai | Putaran terakhir selesai: P13 (2026-11-21, fork FixMaster) | Pertanyaan dijawab: 230 (222 sampai 2026-11-04 + 8 di P13) | Sumber terserah: 16, semuanya sudah disetujui atau diubah user; [ASUMSI] tersisa: 0 | Diperbarui: 2026-11-21
+> Status: selesai | Putaran terakhir selesai: P14 (2026-11-21, fondasi dens-ui) | Pertanyaan dijawab: 235 (222 sampai 2026-11-04 + 8 di P13 + 5 di P14) | Sumber terserah: 16, semuanya sudah disetujui atau diubah user; [ASUMSI] tersisa: 0 | Diperbarui: 2026-11-21
 <!-- Status: berjalan -> siap-tulis (P12 dikonfirmasi) -> selesai (dokumen ditulis).
 Sumber: user = dipilih atau diketik user (termasuk memilih opsi Rekomendasi);
 terserah = user menyerahkan, AI memakai rekomendasi -> [ASUMSI];
@@ -197,6 +197,11 @@ Konteks repo (Fase 1): landing page statis di root (index.html, style.css, scrip
 | P13.6 | Selisih PRD vs FixMaster | Perilaku FixMaster dulu; selisih dicatat di IPD lalu diputuskan Pemilik satu per satu setelah UI dipindah ke dens-ui | user | IPD Daftar Selisih |
 | P13.7 | Strategi pindah UI | Bertahap per halaman; Tailwind + dens-ui berdampingan dengan CSS Modules; aplikasi tetap bisa di-build di setiap commit | user | IPD Fase B, TRD 9 |
 | P13.8 | Lingkup sesi 2026-11-21 | Fase 1 (salin, buang SaaS, merek Nuara, migrasi penetral, build/test/lint lolos) + perbarui dokumen, lalu commit dan push ke branch `claude/` | user | IPD L-43 |
+| P14.0 | Wizard toko FixMaster | Dipertahankan sebagai pengaturan awal satu kali (konfirmasi penyimpangan A17: "setuju wizard dipertahankan") | user | IPD L-43, A17 |
+| P14.1 | Mode gelap | Terang saja; tema gelap dan tombolnya dimatikan di L-47 (L-46 tidak menyentuh tema) | user | DBD 2, IPD L-47 |
+| P14.2 | Font dashboard | Figtree + JetBrains Mono (font dens-ui), menggantikan Archivo; halaman tracking tetap font nota landing | user | DBD 2 |
+| P14.3 | CSS lama vs Tailwind | CSS lama ke cascade layer di bawah utilitas Tailwind; dibuktikan probe sebelum/sesudah. Pelaksanaan: preflight akhirnya dibatasi ke komponen dens-ui karena terukur mengubah halaman lama (IPD Catatan L-46) | user | TRD 2, 9; IPD L-46 |
+| P14.4 | Toast, drawer, combobox | Pasang semua sekarang (sonner, vaul, cmdk) walau belum dipakai halaman mana pun | user | IPD L-46 |
 
 ## Perubahan (mode update)
 | Tanggal | Kode | Perubahan | Jawaban | Dokumen terdampak |
@@ -217,4 +222,5 @@ Konteks repo (Fase 1): landing page statis di root (index.html, style.css, scrip
 | 2026-11-04 | A14 (S11) | `audit_logs.record_id` menjadi teks agar perubahan Pengaturan (kunci teks) bisa dicatat | "perbaiki poin s11" | BSD audit_logs |
 | 2026-11-04 | A15 (R1-R23) | Semua perbaikan kecil: total jam IPD dihitung ulang (R1); langkah padat dipecah L-10/L-40, L-11/L-41, L-12/L-38, L-18/L-39, L-31/L-42 (R2); ERD dilengkapi (R3); klaim indeks pencarian dijujurkan (R4); `prepare: false` dan nama kunci Supabase baru (R5); kode error dan operasi Admin API (R6); urutan L-03/L-04/L-06 (R7); L-01 dan L-17 dikoreksi (R8); samaran nama dan tampilan garansi (R9); kunci saldo awal + Koreksi saldo (R10); visibilitas modal di stok (R11); kunci login per username + IP (R12); host `lacak.` hanya tracking (R13); tahap final tidak bisa dimundurkan (R14); isi nota (R15); cara ukur metrik (R16); teks pemberitahuan privasi (R17); `estimate_decision` 4 nilai dan klaim garansi disetujui otomatis (R18); draf form pulih setelah sesi habis (R19); keputusan turunan dicatat sebagai A3a sampai A15f (R20); hitungan pertanyaan dan nama tabel log dikoreksi (R21); CLAUDE.md antislop-ui diselaraskan (R22); teks pesan hanya di AFD (R23) | "kerjakan semua perbaikan kecil" | semua dokumen |
 | 2026-11-04 | A16 (review asumsi) | 8 asumsi baru (A3a, A6a, A15a sampai A15f) disetujui apa adanya; tanda [ASUMSI] dihapus dari PRD 8 dan sumber di log menjadi user | "Setujui semua" | PRD 8; log |
-| 2026-11-21 | A17 (P13) | Rencana Next.js + Drizzle dibatalkan; dasar kode = salinan FixMaster di `dashboard/`, UI dens-ui dengan warna Nuara, satu toko per database (migrasi 0105). Penyimpangan dari P13.4 yang menunggu konfirmasi Pemilik: wizard pengaturan awal toko FixMaster dipertahankan, karena itu satu-satunya jalan membuat toko pertama dan akun Pemilik; yang dibuang hanya jalur SaaS di sekitarnya (landing, pilihan paket, trial) | wawancara P13 | TRD; IPD; CLAUDE.md; catatan kepala PRD, AFD, BSD, DBD |
+| 2026-11-21 | A17 (P13) | Rencana Next.js + Drizzle dibatalkan; dasar kode = salinan FixMaster di `dashboard/`, UI dens-ui dengan warna Nuara, satu toko per database (migrasi 0105). Penyimpangan dari P13.4 (dikonfirmasi Pemilik di P14.0): wizard pengaturan awal toko FixMaster dipertahankan, karena itu satu-satunya jalan membuat toko pertama dan akun Pemilik; yang dibuang hanya jalur SaaS di sekitarnya (landing, pilihan paket, trial) | wawancara P13 | TRD; IPD; CLAUDE.md; catatan kepala PRD, AFD, BSD, DBD |
+| 2026-11-21 | A18 (P14) | Fondasi dens-ui: hanya tema terang (gelap dimatikan L-47), font Figtree + JetBrains Mono, bentuk dan bayangan dens-ui menggantikan rancangan Archivo/radius kecil/datar di DBD; sonner, vaul, cmdk dipasang | wawancara P14 | DBD 2-3, 6-7; TRD 1-3, 9; IPD L-46, L-47 |

@@ -1,0 +1,198 @@
+/* ==========================================================================
+   Tema Nuara untuk komponen dens-ui (src/components/dens/).
+
+   Bentuk, radius, bayangan, dan font mengikuti dens-ui v0.2.0
+   (https://github.com/dendense/dens-ui, MIT). Warna mengikuti token DBD
+   bagian 2 (docs/DBD.md), bukan Mars Green. Hanya tema terang (DBD P9.5).
+
+   Variabel mentah memakai awalan --nu- karena FixMaster (tokens.css) sudah
+   memakai --brand, --accent, --border, --ring, --success, --warning, --info
+   untuk arti lain. Komponen dens-ui tidak membaca variabel mentah ini secara
+   langsung; mereka memakai kelas Tailwind (bg-card, text-foreground, ...)
+   yang dipetakan di blok @theme inline di bawah.
+   ========================================================================== */
+
+/* Tanpa kelas .dark di mana pun, varian dark: di komponen tidak pernah aktif.
+   Tanpa baris ini Tailwind memakai prefers-color-scheme. */
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --nu-radius: 0.875rem;
+  /* Font: Figtree untuk teks, JetBrains Mono (sudah di-host global.css) untuk
+     angka dan ID. Ditulis sebagai --nu- karena --font-sans/--font-mono juga
+     dipakai tokens.css FixMaster. */
+  --nu-font-sans: "Figtree Variable", "Figtree", ui-sans-serif, system-ui, sans-serif;
+  --nu-font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", monospace;
+
+  --nu-background: #f4f6f9;
+  --nu-foreground: #062036;
+  /* Sumur di dalam panel: DBD tidak punya nada di antara latar dan kartu. */
+  --nu-surface: #f4f6f9;
+  --nu-card: #ffffff;
+  --nu-card-foreground: #062036;
+  --nu-popover: #ffffff;
+  --nu-popover-foreground: #062036;
+
+  --nu-brand: #062036;
+  --nu-brand-foreground: #ffffff;
+  --nu-primary: #062036;
+  --nu-primary-foreground: #ffffff;
+  --nu-primary-hover: #0d3558;
+
+  --nu-secondary: #e8eef5;
+  --nu-secondary-foreground: #062036;
+  --nu-muted: #e8eef5;
+  --nu-muted-foreground: #5b6776;
+  /* Hover netral dens-ui (bukan "accent" amber DBD, itu --nu-highlight). */
+  --nu-accent: #e8eef5;
+  --nu-accent-foreground: #062036;
+
+  /* DBD accent: hanya untuk hal yang perlu tindakan dan langkah aktif. */
+  --nu-highlight: #faa403;
+  --nu-highlight-foreground: #062036;
+  --nu-highlight-soft: #fef3d6;
+
+  --nu-soft: #e6f4ec;
+  --nu-soft-foreground: #067647;
+  --nu-success: #e6f4ec;
+  --nu-success-foreground: #067647;
+  --nu-warning: #fdf0e1;
+  --nu-warning-foreground: #b54708;
+  --nu-info: #e8eef5;
+  --nu-info-foreground: #062036;
+  --nu-destructive: #b42318;
+  --nu-destructive-foreground: #ffffff;
+  --nu-destructive-soft: #fdecea;
+
+  /* border = garis dekoratif; input = batas kontrol (>= 3:1, DBD). */
+  --nu-border: #c9d6e3;
+  --nu-input: #7d8896;
+  --nu-ring: #062036;
+
+  --nu-sidebar: #ffffff;
+  --nu-sidebar-foreground: #062036;
+  --nu-sidebar-primary: #062036;
+  --nu-sidebar-primary-foreground: #ffffff;
+  --nu-sidebar-accent: #e8eef5;
+  --nu-sidebar-accent-foreground: #062036;
+  --nu-sidebar-border: #c9d6e3;
+  --nu-sidebar-ring: #062036;
+
+  --nu-rail: #062036;
+  --nu-rail-foreground: #ffffff;
+
+  /* Bayangan dens-ui, diwarnai navy Nuara (6 32 54) alih-alih tinta hijau. */
+  --nu-elevation-panel: 0 1px 2px rgb(6 32 54 / 0.04), 0 10px 28px -14px rgb(6 32 54 / 0.14);
+  --nu-elevation-raised: 0 2px 6px rgb(6 32 54 / 0.06), 0 18px 40px -16px rgb(6 32 54 / 0.24);
+}
+
+@theme inline {
+  --font-sans: var(--nu-font-sans);
+  --font-mono: var(--nu-font-mono);
+
+  --color-background: var(--nu-background);
+  --color-foreground: var(--nu-foreground);
+  --color-surface: var(--nu-surface);
+  --color-card: var(--nu-card);
+  --color-card-foreground: var(--nu-card-foreground);
+  --color-popover: var(--nu-popover);
+  --color-popover-foreground: var(--nu-popover-foreground);
+  --color-brand: var(--nu-brand);
+  --color-brand-foreground: var(--nu-brand-foreground);
+  --color-primary: var(--nu-primary);
+  --color-primary-foreground: var(--nu-primary-foreground);
+  --color-primary-hover: var(--nu-primary-hover);
+  --color-secondary: var(--nu-secondary);
+  --color-secondary-foreground: var(--nu-secondary-foreground);
+  --color-muted: var(--nu-muted);
+  --color-muted-foreground: var(--nu-muted-foreground);
+  --color-accent: var(--nu-accent);
+  --color-accent-foreground: var(--nu-accent-foreground);
+  --color-highlight: var(--nu-highlight);
+  --color-highlight-foreground: var(--nu-highlight-foreground);
+  --color-highlight-soft: var(--nu-highlight-soft);
+  --color-soft: var(--nu-soft);
+  --color-soft-foreground: var(--nu-soft-foreground);
+  --color-success: var(--nu-success);
+  --color-success-foreground: var(--nu-success-foreground);
+  --color-warning: var(--nu-warning);
+  --color-warning-foreground: var(--nu-warning-foreground);
+  --color-info: var(--nu-info);
+  --color-info-foreground: var(--nu-info-foreground);
+  --color-destructive: var(--nu-destructive);
+  --color-destructive-foreground: var(--nu-destructive-foreground);
+  --color-destructive-soft: var(--nu-destructive-soft);
+  --color-border: var(--nu-border);
+  --color-input: var(--nu-input);
+  --color-ring: var(--nu-ring);
+  --color-sidebar: var(--nu-sidebar);
+  --color-sidebar-foreground: var(--nu-sidebar-foreground);
+  --color-sidebar-primary: var(--nu-sidebar-primary);
+  --color-sidebar-primary-foreground: var(--nu-sidebar-primary-foreground);
+  --color-sidebar-accent: var(--nu-sidebar-accent);
+  --color-sidebar-accent-foreground: var(--nu-sidebar-accent-foreground);
+  --color-sidebar-border: var(--nu-sidebar-border);
+  --color-sidebar-ring: var(--nu-sidebar-ring);
+  --color-rail: var(--nu-rail);
+  --color-rail-foreground: var(--nu-rail-foreground);
+
+  --radius-xs: 0.125rem;
+  --radius-sm: calc(var(--nu-radius) - 6px);
+  --radius-md: calc(var(--nu-radius) - 4px);
+  --radius-lg: var(--nu-radius);
+  --radius-xl: calc(var(--nu-radius) + 4px);
+  --radius-2xl: calc(var(--nu-radius) + 8px);
+  --radius-3xl: calc(var(--nu-radius) + 14px);
+
+  --shadow-panel: var(--nu-elevation-panel);
+  --shadow-raised: var(--nu-elevation-raised);
+
+  /* Nama berikut juga dipakai tokens.css FixMaster dengan nilai lain. CSS
+     lama ada di layer di atas tema Tailwind (app.css), jadi tanpa nilai
+     langsung di sini kelas text-sm, shadow-md, ease-out, dst. di komponen
+     dens-ui akan membaca angka FixMaster. Nilainya = bawaan Tailwind 4. */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-pop-in: dens-pop-in 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-pop-out: dens-pop-out 120ms ease-in forwards;
+  --animate-fade-in: dens-fade-in 180ms ease-out;
+  --animate-fade-out: dens-fade-out 120ms ease-in forwards;
+  --animate-shimmer: dens-shimmer 1.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  --animate-slide-in-right: dens-slide-in-right 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-slide-out-right: dens-slide-out-right 160ms ease-in forwards;
+}
+
+@keyframes dens-pop-in {
+  from { opacity: 0; transform: translateY(4px) scale(0.97); }
+}
+@keyframes dens-pop-out {
+  to { opacity: 0; transform: translateY(2px) scale(0.98); }
+}
+@keyframes dens-fade-in {
+  from { opacity: 0; }
+}
+@keyframes dens-fade-out {
+  to { opacity: 0; }
+}
+@keyframes dens-shimmer {
+  from { background-position: 150% 0; }
+  to { background-position: -50% 0; }
+}
+@keyframes dens-slide-in-right {
+  from { transform: translateX(100%); }
+}
+@keyframes dens-slide-out-right {
+  to { transform: translateX(100%); }
+}

@@ -30,15 +30,24 @@ const queryClient = new QueryClient({
 const DevSandbox = import.meta.env.DEV
   ? lazyChunk(() => import('./dev/DevSandbox').then((m) => ({ default: m.DevSandbox })))
   : null;
+// Katalog komponen dens-ui bertema Nuara (L-46); juga hanya di dev server.
+const ComponentShowcase = import.meta.env.DEV
+  ? lazyChunk(() => import('./dev/ComponentShowcase').then((m) => ({ default: m.ComponentShowcase })))
+  : null;
 
 export function App() {
-  const sandbox =
-    DevSandbox !== null && typeof window !== 'undefined' && window.location.pathname === '/demo';
+  const path = typeof window !== 'undefined' ? window.location.pathname : '';
+  const sandbox = DevSandbox !== null && path === '/demo';
+  const showcase = ComponentShowcase !== null && path === '/dev/komponen';
 
   return (
     <ErrorBoundary root>
       <QueryClientProvider client={queryClient}>
-        {sandbox && DevSandbox ? (
+        {showcase && ComponentShowcase ? (
+          <Suspense fallback={null}>
+            <ComponentShowcase />
+          </Suspense>
+        ) : sandbox && DevSandbox ? (
           <Suspense fallback={null}>
             <DevSandbox />
           </Suspense>

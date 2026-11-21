@@ -1,6 +1,6 @@
 # TRD (Technical Requirements Document) - Nuara Dashboard
 
-> Versi: 0.3 | Diperbarui: 2026-11-21 | Merujuk: PRD.md, IPD.md, `dashboard/AGENTS.md`
+> Versi: 0.4 | Diperbarui: 2026-11-21 | Merujuk: PRD.md, IPD.md, `dashboard/AGENTS.md`
 <!-- Proyek existing: landing page statis di root repo tetap apa adanya. Dashboard ada di folder dashboard/.
 Versi 0.2 (Next.js + Drizzle, dibangun dari nol) dibatalkan 2026-11-21 (wawancara P13): dasar kode diganti salinan FixMaster. Isi versi 0.2 ada di riwayat git (commit 215e799). -->
 
@@ -9,7 +9,7 @@ Versi 0.2 (Next.js + Drizzle, dibangun dari nol) dibatalkan 2026-11-21 (wawancar
 |---|---|---|---|
 | Dasar kode | Salinan FixMaster (`k24reps/fixmaster` commit `0175e8d`), bagian SaaS dibuang | - | Keputusan Pemilik 2026-11-21 (P13.1): hampir semua fitur PRD sudah ada dan teruji di FixMaster. |
 | Frontend | Vite + React + TypeScript, react-router, Zustand, TanStack Query | Vite 8, React 19 | Bawaan FixMaster; SPA tanpa server sendiri. |
-| UI | Fase 1: CSS Modules + token FixMaster. Fase 2: Tailwind CSS + komponen dens-ui (Radix, model shadcn) dengan token warna Nuara dari DBD | Tailwind 4 | Keputusan Pemilik (P13.3, P13.7): dens-ui, warna Nuara, dipindah per halaman. |
+| UI | Halaman lama: CSS Modules + token FixMaster. Halaman yang dipindah (Fase B): Tailwind CSS + komponen dens-ui v0.2.0 (`radix-ui`, `class-variance-authority`, `tailwind-merge`, `lucide-react`) di `src/components/dens/`, ditambah `sonner`, `vaul`, `cmdk`; font Figtree (`@fontsource-variable/figtree`) + JetBrains Mono; tema `src/styles/nuara-theme.css` dengan warna DBD | Tailwind 4 | Keputusan Pemilik (P13.3, P13.7, P14): dens-ui, warna Nuara, dipindah per halaman. |
 | Backend | Supabase: Postgres + RLS per `org_id`, RPC `security definer` untuk operasi uang dan stok, Edge Functions (Deno) untuk backup | Postgres 17 | Bawaan FixMaster; aturan akses ditegakkan database, bukan hanya UI. |
 | Database | Proyek Supabase milik Nuara, region Singapura; migrasi `dashboard/supabase/migrations/` 0001 s.d. 0105 | - | 0105 khusus Nuara: satu toko, tanpa saldo unit (P13.5). |
 | Auth | Supabase Auth email + password; staf bergabung lewat undangan email Pemilik; login PIN karyawan di perangkat bersama | - | Bawaan FixMaster; selisih dengan PRD (username tanpa email) ada di daftar selisih IPD. |
@@ -26,7 +26,8 @@ SPA statis di Vercel. Browser memakai `@supabase/supabase-js` dengan kunci publi
 - Satu toko: skema tetap multi-organisasi (tidak dibongkar, P13.5), tetapi `create_organization` menolak toko kedua (0105). Akun pertama yang menyelesaikan wizard menjadi Pemilik.
 - Tracking pelanggan: rute publik `/t/<kode>` (kode acak per tiket, migrasi 0100) dan `/track`, dilayani host yang sama dengan dashboard, lewat RPC `track_service_by_code` yang bisa dipanggil anon dengan kolom terbatas.
 - Backup: `auto-backup` (pg_cron harian) menyimpan salinan JSON per toko di Storage; `backup-email` (pg_cron Senin) mengirim tautan unduh ke Pemilik bila Resend diisi.
-- Harness pengembangan: rute `/demo` hanya di dev server (`src/dev/DevSandbox.tsx`), berisi data contoh di RAM, dipakai skrip foto dan probe UI.
+- Harness pengembangan (hanya dev server, tidak ada di build produksi): `/demo` (`src/dev/DevSandbox.tsx`) = aplikasi lengkap berisi data contoh di RAM untuk skrip foto dan probe UI; `/dev/komponen` (`src/dev/ComponentShowcase.tsx`) = katalog komponen dens-ui bertema Nuara.
+- CSS selama Fase B (`src/styles/app.css`): urutan cascade layer `theme`, `nu-shield`, `legacy` (global.css + tokens.css FixMaster), `nu-base` (reset dens-ui), `utilities`. Preflight Tailwind tidak dipasang global; salinannya di `dens-base.css` dibatasi ke `[data-slot]` (komponen dens-ui) dan `[data-nu]` (akar halaman yang dipindah). Utilitas hanya dibuat dari folder yang didaftarkan `@source`. Variabel tema memakai awalan `--nu-` karena tokens.css sudah memakai `--brand`, `--border`, dst.
 
 Keputusan penting:
 | Keputusan | Alternatif ditolak | Alasan |
@@ -37,6 +38,7 @@ Keputusan penting:
 | UI ke dens-ui bertahap per halaman (P13.7) | Tulis ulang semua halaman sekaligus | Aplikasi tetap bisa di-build dan dipakai di setiap commit. |
 | Form daftar tetap ada | Matikan pendaftaran di Supabase Auth | Staf bergabung lewat undangan email (migrasi 0008): staf mendaftar dengan email yang diundang. Pendaftar tanpa undangan berhenti di wizard karena toko sudah ada. |
 | Data API (PostgREST) Supabase aktif | Data API dimatikan (rencana TRD 0.2) | supabase-js di browser membutuhkannya; pagar keamanannya RLS di setiap tabel. |
+| Preflight Tailwind dibatasi ke komponen dens-ui (L-46) | Preflight global di bawah CSS lama (rencana P14.3) | Terukur mengubah halaman lama (line-height tombol, placeholder, kartu Keuangan); versi terbatas: 0 piksel berbeda di 16 foto halaman lama. |
 
 ## 3. Struktur Folder
 ```
@@ -47,12 +49,13 @@ dashboard/
   AGENTS.md CLAUDE.md     # aturan agent untuk kode dashboard
   src/
     app/                  # router, AuthGate, WorkspaceGate, guard peran
-    components/           # layout (Sidebar, Topbar, MobileBottomNav) dan ui/
+    components/           # layout (Sidebar, Topbar, MobileBottomNav), ui/ (FixMaster), dens/ (dens-ui)
     features/<fitur>/     # halaman per fitur (services, pos, customers, finance, ...)
     lib/business/         # logika domain murni + tes
     data/                 # repository, adapter Supabase/IndexedDB, tipe entity
-    stores/ hooks/ i18n/ config/ styles/
-    dev/                  # data contoh + DevSandbox (hanya dev)
+    styles/               # app.css (pintu masuk), nuara-theme.css, dens-base.css, global.css + tokens.css (FixMaster)
+    stores/ hooks/ i18n/ config/
+    dev/                  # data contoh, DevSandbox (/demo), ComponentShowcase (/dev/komponen); hanya dev
   supabase/migrations/    # 0001 s.d. 0105
   supabase/functions/     # auto-backup, backup-email, health
   tests/integration/      # tes RLS/RPC ke staging Supabase Nuara
@@ -106,10 +109,11 @@ CI/CD:
 | Typecheck | `npm run type-check` |
 | Build | `npm run build` |
 | Migrasi DB | `supabase db push` (setelah `supabase link` ke proyek Nuara) |
-| Probe UI | `BASE_URL=http://localhost:5173 node scripts/audit-mobile.mjs` dan `scripts/audit-zoom.mjs` (dev server jalan) |
+| Probe UI | `BASE_URL=http://localhost:5173 node scripts/audit-mobile.mjs` dan `scripts/audit-zoom.mjs` (dev server jalan; di container cloud tambah `PW_CHROMIUM=/opt/pw-browsers/chromium`) |
+| Katalog komponen | `npm run dev`, buka `/dev/komponen` |
 | Ikon | `npm run brand:render` (butuh ImageMagick) |
 
-- Unit (Vitest): logika domain di `src/lib/business/`, data layer, komponen, i18n, konfigurasi deploy.
+- Unit (Vitest): logika domain di `src/lib/business/`, data layer, komponen, i18n, konfigurasi deploy, kontras pasangan warna tema Nuara (`src/styles/nuaraTheme.test.ts`).
 - Integrasi: RLS lintas toko, RPC uang dan stok, absensi, tracking. Toko uji dibuat lewat service_role (`createOrgAs`) karena `create_organization` menolak toko kedua.
 - UI: foto Playwright lewat `/demo` + probe `audit-*` (ukur DOM, bukan membaca gambar).
 
@@ -122,6 +126,6 @@ CI/CD:
 - Vercel Hobby dibatasi untuk pemakaian non-komersial (https://vercel.com/docs/limits/fair-use-guidelines). Pemilik memilih tetap Hobby (2026-11-04) -> proyek bisa dijeda; aplikasi berupa SPA statis sehingga mudah dipindah ke hosting statis lain.
 - Paket gratis Supabase: proyek dijeda setelah 7 hari tanpa aktivitas, tanpa backup harian bawaan -> backup harian `auto-backup` + email mingguan; proyek produksi dibuat saat rilis.
 - Migrasi Nuara dijalankan ke proyek yang salah (mis. proyek FixMaster yang tercatat di vault) -> skrip deploy FixMaster tidak disalin; `supabase link` selalu dengan ref proyek Nuara; dicek ulang sebelum `db push`.
-- Fase 2: Tailwind dan CSS Modules hidup berdampingan -> reset dasar Tailwind (preflight) bisa mengubah tampilan halaman lama; diputuskan di L-46 dan dijaga probe `audit-*` sebelum dan sesudah.
+- Fase B: Tailwind dan CSS Modules hidup berdampingan -> aturan elemen global.css bisa merembes ke komponen dens-ui dan sebaliknya; ditangani di L-46 (layer, preflight terbatas, perisai, `@source` terbatas) dan dibuktikan dengan foto per piksel + probe `audit-*`. Pengukuran yang sama diulang setiap langkah Fase B.
 - Teks dan alur FixMaster berbeda dari PRD (sapaan "Anda", format nomor tiket, login email) -> dicatat di daftar selisih IPD, bukan diperbaiki diam-diam.
 - Tes integrasi belum pernah dijalankan untuk salinan ini (belum ada staging Nuara) -> dijalankan di L-44.

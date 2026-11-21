@@ -51,13 +51,24 @@ tetap relevan, tetapi bagian merek, harga, dan infrastruktur FixMaster tidak ber
 
 ## 4. Konvensi
 
-- **Warna**: selalu `var(--token)`, jangan hardcode hex. Sampai Fase 2 selesai token ada di
-  `src/styles/tokens.css` (masih palet FixMaster). Target Fase 2: token Nuara dari
-  `../docs/DBD.md` lewat tema dens-ui.
-- **UI baru dan halaman yang dipindah (Fase 2)**: komponen dens-ui
-  (https://github.com/dendense/dens-ui, MIT, model shadcn) di atas Tailwind v4, dengan warna
-  diganti token Nuara (navy `#062036`, amber `#FAA403`). Satu halaman dipindah utuh, lalu CSS
-  Module lamanya dihapus. Halaman yang belum dipindah tetap memakai CSS Modules.
+- **Warna**: jangan hardcode hex. Halaman lama: `var(--token)` dari `src/styles/tokens.css`
+  (palet FixMaster). Komponen dens-ui dan halaman yang dipindah: kelas Tailwind bertema
+  (`bg-card`, `text-muted-foreground`, `bg-highlight`, ...) yang dipetakan ke `--nu-*` di
+  `src/styles/nuara-theme.css` (warna DBD). Jangan baca `--nu-*` langsung kecuali di CSS tema.
+- **UI baru dan halaman yang dipindah (Fase B)**: komponen dens-ui di `src/components/dens/`
+  (dens-ui v0.2.0, MIT, model shadcn, lihat README di folder itu) di atas Tailwind v4.
+  `cn()` dari `@/lib/utils`. Satu halaman dipindah utuh, lalu CSS Module lamanya dihapus.
+  Halaman yang belum dipindah tetap memakai CSS Modules.
+- **Tiga syarat halaman yang dipindah** (tanpa ini kelas Tailwind tidak terbentuk atau gaya
+  lama merembes): (1) elemen akarnya diberi atribut `data-nu`; (2) foldernya ditambah ke daftar
+  `@source` di `src/styles/app.css`; (3) foto per piksel halaman lain + probe `audit-*` sama
+  dengan sebelum langkah.
+- **Arsitektur CSS Fase B** (`src/styles/app.css`): layer `theme` < `nu-shield` < `legacy`
+  (global.css) < `nu-base` (reset dens-ui) < `utilities`; CSS Module tidak berlayer dan selalu
+  menang. Preflight Tailwind sengaja TIDAK global (`dens-base.css`, terbatas ke
+  `[data-slot]`/`[data-nu]`): versi global terukur mengubah halaman lama. Nama variabel tema
+  Tailwind yang juga dipakai tokens.css (`--text-sm`, `--radius-lg`, ...) ditulis langsung di
+  `@theme inline`; tambahkan di sana bila menemukan bentrokan baru.
 - Motif visual FixMaster ("Precision Electronics Bench", maskot VOLT, rail diagnostik) **tidak**
   dipakai untuk UI baru dan hilang dengan sendirinya saat halaman dipindah.
 - **Teks UI baru**: lewat `useT()` + translation key, Bahasa Indonesia, kalimat netral tanpa
@@ -65,8 +76,11 @@ tetap relevan, tetapi bagian merek, harga, dan infrastruktur FixMaster tidak ber
   FixMaster lama yang masih menyapa "Anda" termasuk daftar selisih, bukan untuk diubah sambil lalu.
 - **Data**: baca via `useCollection('<koleksi>')`, mutasi via `repository` (`src/data/`).
 - **Logika domain**: murni dan testable di `src/lib/business/`, dipanggil dari UI.
-- **Ikon**: lewat komponen `Icon` (`src/components/ui/Icon.tsx`). Ikon lucide dari dens-ui
-  boleh dipakai di komponen dens-ui.
+- **Ikon**: halaman lama lewat komponen `Icon` (`src/components/ui/Icon.tsx`, Phosphor).
+  Komponen dens-ui dan halaman yang dipindah memakai `lucide-react`.
+- **Hanya tema terang** (DBD P9.5, P14.1). Varian `dark:` di komponen dens-ui tidak pernah aktif.
+- **Font**: Figtree untuk teks, JetBrains Mono (`font-mono tabular-nums`) untuk nomor tiket,
+  Rupiah, dan ID.
 - **Import alias**: `@/` ke `src/`.
 - **Breakpoint yang menjaga dari overflow wajib `@container`, bukan `@media`** (zoom aplikasi
   dan sidebar mengubah ruang konten tanpa menggeser media query). Detail di vault,
@@ -93,15 +107,28 @@ npm run test:integration  # RLS/RPC ke staging (butuh .env.test.local)
 > `tsc -b` hanya mencakup `src`. Periksa berkas tes baru dengan tsconfig sementara:
 > `extends` app, `include: ["tests","src"]`, `types: ["node","vite/client"]`.
 
-Untuk perubahan UI: foto render asli via Playwright, jangan menebak. Rute `/demo` di **dev
-server** adalah harness berisi data contoh (`src/dev/DevSandbox.tsx`, tidak ada di build
-produksi); skrip `scripts/shoot-*.mjs` dan probe di bawah memakainya.
+Untuk perubahan UI: foto render asli via Playwright, jangan menebak. Di **dev server** ada dua
+harness (tidak ada di build produksi): `/demo` = aplikasi berisi data contoh
+(`src/dev/DevSandbox.tsx`, dipakai skrip `scripts/shoot-*.mjs` dan probe di bawah) dan
+`/dev/komponen` = katalog komponen dens-ui (`src/dev/ComponentShowcase.tsx`).
+Di container cloud, versi browser bawaan `@playwright/test` tidak terpasang: jalankan skrip
+audit dengan `PW_CHROMIUM=/opt/pw-browsers/chromium`. Folder `scripts/shots/` di-gitignore;
+buat dulu bila belum ada.
 
 ```bash
 BASE_URL=http://localhost:5173 node scripts/audit-mobile.mjs   # 5 lebar ponsel x 13 halaman
 BASE_URL=http://localhost:5173 node scripts/audit-zoom.mjs     # 11 lebar desktop x 13 halaman
-node scripts/audit-tokens.mjs                                  # gerbang token warna
+node scripts/audit-tokens.mjs                                  # gerbang token FixMaster
+BASE_URL=http://localhost:5173 node scripts/audit-contrast.mjs  # kontras DOM: /demo, wizard, /dev/komponen
 ```
+
+Kontras tema Nuara diuji `src/styles/nuaraTheme.test.ts` (ikut `npm run test`): tambahkan
+pasangan baru di sana saat komponen memakai kombinasi warna baru.
+
+Langkah Fase B juga wajib membuktikan halaman lain tidak berubah dengan **foto per piksel**:
+foto halaman lama sebelum dan sesudah (sama viewport, tema, dan `reducedMotion`), bandingkan
+dengan `compare -metric AE -fuzz 2%` (ImageMagick), dan ukur derau dengan dua foto sebelum.
+Selisih yang tersisa harus bisa dijelaskan (jam, kursor berkedip).
 
 Laporan ditulis ke `scripts/shots/{zoom,mobile}-report.json`. Saring tiga positif palsu
 sebelum menyimpulkan: `caption._srOnly`, `span.fm-visually-hidden`, dan elemen `text.` di dalam

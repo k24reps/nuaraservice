@@ -32,4 +32,10 @@ export default defineConfig([
       ],
     },
   },
+  {
+    // Salinan dens-ui/shadcn: varian (buttonVariants, dst.) sengaja diekspor
+    // bersama komponennya. Berkasnya dibiarkan dekat dengan upstream.
+    files: ['src/components/dens/**/*.tsx'],
+    rules: { 'react-refresh/only-export-components': 'off' },
+  },
 ]);

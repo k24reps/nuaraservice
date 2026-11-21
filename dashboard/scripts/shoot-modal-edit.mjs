@@ -25,7 +25,7 @@ await page.evaluate(() => {
   document.documentElement.setAttribute('data-theme', 'dark');
 });
 await page.goto(`${BASE}/demo`, { waitUntil: 'networkidle' });
-await page.getByText('MODE DEMO').waitFor({ timeout: 20000 });
+await page.locator('a[href="/services"]').first().waitFor({ timeout: 20000 });
 await page.waitForTimeout(800);
 
 await page.getByRole('link', { name: /Servis/i }).first().click();

@@ -1,6 +1,6 @@
 # DBD (Design & Brand Document) - Nuara Dashboard
 
-> Versi: 0.2 | Diperbarui: 2026-11-04 | Merujuk: PRD.md, AFD.md, DESIGN.md (landing page)
+> Versi: 0.3 | Diperbarui: 2026-11-21 | Merujuk: PRD.md, AFD.md, DESIGN.md (landing page)
 <!-- Dokumen desain visual. Skema database ada di BSD, bukan di sini. Eksekusi visual memakai skill impeccable (CLAUDE.md); token di sini adalah kontraknya. -->
 
 > [!note] Sejak 2026-11-21 (wawancara P13.3)
@@ -83,21 +83,26 @@
 
 Catatan: accent #FAA403 di atas putih hanya 2.0:1, jadi tidak dipakai untuk teks atau cincin fokus di surface.
 
-Dark mode: tidak (P9.5).
+Dark mode: tidak (P9.5, ditegaskan P14.1). Tema dens-ui hanya terang; tema gelap FixMaster dan tombolnya dimatikan di L-47.
 
 **Tipografi**
-- Font: Archivo (Google Fonts lewat `next/font`, sumbu wdth 62-125 dan wght 400-900). Kalam tidak dipakai di dashboard; di tracking hanya untuk isian pendek sesuai DESIGN.md.
-- Skala dashboard: h1 28px/1.2 wght 800 wdth 85; h2 22px/1.25 wght 800 wdth 85; h3 18px/1.3 wght 700; body 16px/1.5 wght 400 wdth 96; small 14px/1.45; label 13px/1.3 wght 700 wdth 80 kapital spasi 0.04em; nomor tiket dan Rupiah memakai angka tabular (`tnum`), Rupiah rata kanan di tabel.
+- Font dashboard (P13.3, P14.2, sejak 2026-11-21): Figtree (variable, dipaket lewat `@fontsource-variable/figtree`) untuk teks; JetBrains Mono untuk nomor tiket, Rupiah, ID, dan label kecil kapital. Mengikuti dens-ui, menggantikan Archivo untuk dashboard staf.
+- Font tracking (S-07): tetap Archivo dan font nota DESIGN.md landing page. Kalam tidak dipakai di dashboard.
+- Skala dashboard: ikuti skala dens-ui (judul halaman 24px/700, judul kartu 16px/600, body 14px/1.5, label kecil mono 11px kapital spasi 0.08-0.12em); nomor tiket dan Rupiah memakai angka tabular (`tabular-nums`), Rupiah rata kanan di tabel.
+- Rancangan skala Archivo sebelumnya (h1 28px wght 800 wdth 85, dst.) tidak dipakai lagi.
 - Skala tracking: ikuti DESIGN.md (display, title, body, numerator).
 
 **Spacing & bentuk**
 - Skala spacing: 4/8/12/16/24/32/48 px.
-- Radius: kontrol 8px, kartu 6px, badge 4px, kertas tracking 3px.
-- Bayangan: dashboard datar (kartu = surface + garis border 1px); hanya modal, dropdown, dan toast berbayang `0 18px 40px -12px rgba(0,0,0,0.35)`. Tracking: bayangan kertas DESIGN.md.
+- Bentuk dashboard (P13.3): mengikuti dens-ui. Tombol, badge, dan tab berbentuk pill (`rounded-full`); input dan select radius 14px; kartu 22px; dialog 28px. Kertas tracking tetap 3px (DESIGN.md).
+- Bayangan dashboard (P13.3): bayangan lembut dens-ui, diwarnai navy (`rgb(6 32 54 / ...)`): `shadow-panel` untuk kartu, `shadow-raised` untuk menu, dialog, toast. Tracking: bayangan kertas DESIGN.md.
+- Token tema dashboard ada di `dashboard/src/styles/nuara-theme.css` (variabel `--nu-*`); kontras pasangan warnanya diuji `nuaraTheme.test.ts`.
 - Grid & lebar maks konten: sidebar 240px; konten maks 1280px; gutter 16px (< 640px) dan 24px (>= 640px). Tracking: satu kolom maks 560px.
-- Kepadatan sedang: baris tabel 48px (10-15 tiket per layar laptop 768px tinggi); target sentuh minimal 44px di semua ukuran.
+- Kepadatan sedang: baris tabel 48px (10-15 tiket per layar laptop 768px tinggi); target sentuh minimal 44px di semua ukuran. Tombol dens-ui bawaan setinggi 40px; penyesuaian target sentuh di L-47.
 
 ## 3. Komponen
+Sumber: `dashboard/src/components/dens/` (dens-ui v0.2.0 + tambahan pola shadcn: popover, sheet, drawer, command, combobox, sonner). Katalog hidup di dev server: `/dev/komponen`. Badge tahap memakai varian dens-ui: info (Diterima, Diagnosa, Pengerjaan, Dikembalikan), highlight (Konfirmasi biaya), warning (Tunggu part), success (Selesai, Diambil), destructive-soft (Dibatalkan).
+
 | Komponen | Varian | State wajib | Dipakai di layar |
 |---|---|---|---|
 | Button | primary, secondary (garis), ghost, danger, whatsapp (primary + ikon WA) | default, hover, focus, disabled, loading | S-01, S-02, S-03, S-04, S-05, S-06, S-07, S-10, S-11, S-12, S-13, S-14, S-15, S-16, S-17, S-18, S-19, S-20, S-21 |
@@ -136,7 +141,7 @@ Pendekatan: mobile-first. Cetak memakai CSS `@page` (58 mm / 80 mm), terpisah da
 
 ## 6. Aset
 - Logo: `assets/logo.jpg` (disalin ke `dashboard/public/`); versi hitam-putih untuk thermal dan ikon PWA 192/512 px (termasuk maskable) dibuat dari file ini di L-05/L-17.
-- Ikon: lucide-react (bawaan shadcn/ui); ikon WhatsApp dan pin lokasi memakai simbol yang sama dengan landing page.
+- Ikon: lucide-react di komponen dens-ui; halaman FixMaster yang belum dipindah tetap memakai Phosphor lewat `Icon`. Ikon WhatsApp dan pin lokasi memakai simbol yang sama dengan landing page.
 - Ilustrasi/gambar: tidak ada. Tidak ada foto stok, ilustrasi generik, atau gambar orang.
 
 ## 7. Do & Don't
@@ -144,10 +149,10 @@ Pendekatan: mobile-first. Cetak memakai CSS `@page` (58 mm / 80 mm), terpisah da
 |---|---|
 | Pakai token DESIGN.md hanya di halaman tracking; dashboard memakai token bagian 2 | Mencampur kertas miring, rangkap, atau bayangan kertas ke dashboard |
 | Pakai accent amber hanya untuk hal yang perlu tindakan dan langkah aktif | Memakai amber untuk teks atau cincin fokus di atas putih (2.0:1) |
-| Bedakan peran teks dengan sumbu lebar Archivo (sempit untuk label/angka) sebelum menambah warna | Memakai Kalam di dashboard |
+| Bedakan peran teks dengan ketebalan Figtree dan label mono sebelum menambah warna | Memakai Kalam di dashboard |
 | Tulis nomor tiket dan Rupiah dengan angka tabular, Rupiah rata kanan | Menulis uang dengan desimal atau tanpa pemisah ribuan |
 | Satu nomor numerator oranye dan maksimal satu cap di halaman tracking | Memakai oranye numerator atau merah cap di dashboard |
 | Badge selalu berteks; empty state teks + tombol | Status hanya dengan warna; ilustrasi atau foto stok |
-| Tombol, navigasi, dan bar tanpa bayangan | Tombol WhatsApp mengambang |
+| Bayangan hanya dari token dens-ui (`shadow-panel`, `shadow-raised`) | Tombol WhatsApp mengambang |
 | Teks UI tanpa em dash; tanpa fakta bisnis karangan (harga, jam buka, durasi garansi) | Kartu statistik berwarna-warni, gradien, tampilan template admin generik |
 | Dashboard memakai kalimat netral ("Tiket NS-00012 dibuat.") | Memakai "kamu", "Anda", atau "-mu" di teks dashboard (hanya halaman tracking yang menyapa "kamu") |

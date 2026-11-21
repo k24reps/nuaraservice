@@ -24,7 +24,10 @@ const BASE = process.env.BASE_URL || 'http://localhost:5173';
    terakhir di dokumen, sehingga selektor yang identik menang. Ini memberi
    pembanding "sebelum" tanpa menyentuh berkas kerja. */
 const BASELINE = process.env.BASELINE ? readFileSync(process.env.BASELINE, 'utf8') : null;
-const browser = await chromium.launch();
+// PW_CHROMIUM: jalur Chromium lain bila versi bawaan @playwright/test tidak terpasang (mis. container cloud).
+const browser = await chromium.launch(
+  process.env.PW_CHROMIUM ? { executablePath: process.env.PW_CHROMIUM } : {},
+);
 
 const scan = () => {
   const parse = (c) => {
@@ -135,13 +138,12 @@ const scan = () => {
   return out;
 };
 
-// `/` di dev server tanpa Supabase merender Wizard onboarding, bukan landing.
-// Landing yang dilihat pengunjung baru ada di alias /landing-preview, dan sampai
-// 6 Nov 2026 halaman itu tidak pernah ikut dipindai gerbang ini.
+// Nuara Dashboard: landing FixMaster sudah dibuang (L-43). `/` di dev server
+// tanpa Supabase merender wizard toko; /dev/komponen = katalog dens-ui (L-46).
 const routes = [
   ['/demo', 'demo-dashboard'],
-  ['/', 'landing'],
-  ['/landing-preview', 'landing-preview'],
+  ['/', 'wizard'],
+  ['/dev/komponen', 'komponen-dens'],
 ];
 
 let total = 0;
@@ -171,7 +173,7 @@ for (const theme of ['dark', 'light']) {
     await page.goto(BASE + path, { waitUntil: 'networkidle' });
     // Demo baru merender dashboard setelah seed selesai; tanpa menunggu ini
     // tema terang hanya memeriksa 1 elemen (terukur 27 Sep 2026).
-    if (path === '/demo') await page.getByText('MODE DEMO').first().waitFor({ timeout: 20000 });
+    if (path === '/demo') await page.locator('a[href="/services"]').first().waitFor({ timeout: 20000 });
     if (BASELINE) {
       await page.evaluate((css) => {
         const el = document.createElement('style');
@@ -197,7 +199,7 @@ for (const theme of ['dark', 'light']) {
   await page.goto(BASE + '/demo', { waitUntil: 'networkidle' });
   await page.evaluate((t) => localStorage.setItem('fixmaster-theme', t), theme);
   await page.goto(BASE + '/demo', { waitUntil: 'networkidle' });
-  await page.getByText('MODE DEMO').waitFor({ timeout: 20000 });
+  await page.locator('a[href="/services"]').first().waitFor({ timeout: 20000 });
   if (BASELINE) {
     await page.evaluate((css) => {
       const el = document.createElement('style');

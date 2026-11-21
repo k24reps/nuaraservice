@@ -21,7 +21,7 @@ async function openDemo(viewport) {
     localStorage.setItem('fixmaster-theme', 'dark');
     document.documentElement.setAttribute('data-theme', 'dark');
   });
-  await page.getByText('MODE DEMO').waitFor({ timeout: 20000 });
+  await page.locator('a[href="/services"]').first().waitFor({ timeout: 20000 });
   await page.waitForTimeout(300);
   return { context, page };
 }

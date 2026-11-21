@@ -1,6 +1,6 @@
 # IPD (Implementation Plan Document) - Nuara Dashboard
 
-> Versi: 0.3 | Diperbarui: 2026-11-21 | Merujuk: PRD, TRD, AFD, DBD, `dashboard/AGENTS.md`
+> Versi: 0.4 | Diperbarui: 2026-11-21 | Merujuk: PRD, TRD, AFD, DBD, `dashboard/AGENTS.md`
 <!-- Versi 0.2 (42 langkah Next.js dari nol) dibatalkan 2026-11-21 (wawancara P13). Langkahnya disimpan di bagian Arsip dengan tanda [DIBATALKAN]; rujukan kriteria F-xx di sana tetap berguna untuk daftar selisih. -->
 
 ## Cara memakai
@@ -42,14 +42,16 @@ Target: belum ada tenggat (P0.3). Estimasi jam ditulis saat langkah dimulai, kar
 
 ## Fase B - UI ke dens-ui
 
-Aturan bersama: satu langkah = satu kelompok halaman dipindah utuh, CSS Module lamanya dihapus, probe `audit-mobile` dan `audit-zoom` bersih sebelum dan sesudah, foto Playwright terang dan gelap. Teks yang tampil tidak diubah di Fase B kecuali yang memang ikut komponen baru; perbaikan teks masuk daftar selisih.
+Aturan bersama: satu langkah = satu kelompok halaman dipindah utuh, CSS Module lamanya dihapus, akar halamannya diberi atribut `data-nu` dan foldernya ditambah ke `@source` di `src/styles/app.css`, probe `audit-mobile` dan `audit-zoom` bersih sebelum dan sesudah, foto Playwright tema terang (dan gelap untuk halaman lama sampai L-47). Teks yang tampil tidak diubah di Fase B kecuali yang memang ikut komponen baru; perbaikan teks masuk daftar selisih.
 
-- [ ] **L-46 Fondasi dens-ui + token Nuara**
-  - Rujukan: DBD 2, `https://github.com/dendense/dens-ui` (README, DESIGN.md)
-  - Pertanyaan pra-langkah untuk Pemilik: font (Figtree + JetBrains Mono dari dens-ui, atau font DBD), mode gelap (DBD hanya mendefinisikan terang), reset dasar Tailwind (preflight) dipasang global atau dibatasi selama CSS Modules masih ada.
-  - Kerjakan: pasang Tailwind v4 (`@tailwindcss/vite`) dan dependensi dens-ui; tema dens-ui dengan token warna DBD; komponen dasar dens-ui (Button, Badge, Card, Input, Select, Dialog, Tabs, Table, Tooltip, Dropdown Menu, Skeleton) di `src/components/ui/` tanpa menabrak komponen lama; komponen yang tidak ada di dens-ui (toast, drawer, combobox) dari shadcn standar dengan tema yang sama.
+- [x] **L-46 Fondasi dens-ui + token Nuara**
+  - Rujukan: DBD 2-3, `https://github.com/dendense/dens-ui` (README, DESIGN.md), wawancara P14
+  - Keputusan pra-langkah (P14): hanya tema terang, tema gelap dimatikan di L-47 (P14.1); Figtree + JetBrains Mono (P14.2); CSS lama ke cascade layer di bawah utilitas (P14.3); sonner, vaul, cmdk dipasang sekarang (P14.4).
+  - Kerjakan: Tailwind v4 (`@tailwindcss/vite`) + dependensi dens-ui; tema `src/styles/nuara-theme.css` (token DBD sebagai `--nu-*`, bentuk dan bayangan dens-ui); komponen dens-ui di `src/components/dens/` (folder terpisah dari `components/ui/` karena `Button.tsx` vs `button.tsx` bentrok di Windows/macOS); popover, sheet, drawer (vaul), command (cmdk), combobox, sonner; katalog dev `/dev/komponen`; gerbang kontras `nuaraTheme.test.ts`.
   - Selesai jika: satu halaman uji di dev memakai komponen dens-ui; `audit-tokens` dan `audit-contrast` lolos; probe `audit-*` di halaman lama sama dengan sebelum langkah.
+  - Hasil 2026-11-21: `/dev/komponen` tampil di 1280px dan 390px tanpa error JS dan tanpa luberan; `audit-tokens` lolos; `audit-contrast` 0 gagal (katalog 94 elemen); laporan `audit-mobile` dan `audit-zoom` identik dengan baseline; foto per piksel 8 halaman lama x 2 tema sama dengan baseline (sisa selisih hanya jam dan kursor berkedip); 1125 tes / 83 berkas, lint, build lolos.
 - [ ] **L-47 Kerangka aplikasi**: Sidebar, Topbar, MobileBottomNav, AppLayout, halaman masuk/daftar, wizard toko, PIN karyawan, splash.
+  - Termasuk: matikan tema gelap dan tombolnya untuk seluruh aplikasi (P14.1); putuskan pengganti toast (sonner dari L-46 atau sistem toast lama dengan tampilan baru); target sentuh 44px untuk tombol dens-ui (DBD 2: tombol bawaan 40px); body memakai font dan latar Nuara.
 - [ ] **L-48 Servis: daftar tiket**
 - [ ] **L-49 Servis: detail tiket dan modal-modalnya** (status, estimasi, sparepart, garansi, notifikasi WA, cetak)
 - [ ] **L-50 Kasir & Stok**
@@ -97,7 +99,7 @@ Awal, dari pemeriksaan kode 2026-11-21; dilengkapi di L-45. Kolom Keputusan diis
 | Risiko | Dampak | Mitigasi |
 |---|---|---|
 | L-44 butuh akun Supabase, Vercel, dan DNS milik Pemilik | Fase A tertunda | Dipandu langkah demi langkah; Fase B bisa jalan di dev server dengan `/demo` |
-| Preflight Tailwind mengubah halaman CSS Modules lama | Halaman lama rusak selama Fase B | Diputuskan di L-46; probe `audit-*` sebelum dan sesudah tiap langkah |
+| Tailwind mengubah halaman CSS Modules lama | Halaman lama rusak selama Fase B | L-46: preflight dibatasi ke komponen dens-ui, CSS lama di layer bawah utilitas, utilitas hanya dari folder `@source`; dibuktikan foto per piksel + probe `audit-*`. Ulangi pengukuran yang sama di tiap langkah |
 | Halaman Servis FixMaster besar (detail + 8 modal) | L-48/L-49 molor | Dipecah dua langkah; boleh dipecah lagi dengan nomor baru |
 | Selisih PRD lebih banyak dari dugaan | Rilis mundur | Pemilik memilih per butir: ikuti PRD, pertahankan, sembunyikan, atau tunda setelah rilis |
 | Migrasi dijalankan ke proyek Supabase yang salah | Data FixMaster atau Nuara rusak | Skrip deploy FixMaster tidak disalin; cek ref proyek sebelum `db push` |
@@ -115,6 +117,11 @@ Awal, dari pemeriksaan kode 2026-11-21; dilengkapi di L-45. Kolom Keputusan diis
 - 2026-11-21 - L-43 - Kunci `localStorage` `fixmaster-*` dan penanda backup `app: 'fixmaster'` sengaja tidak diganti (tidak tampil ke pengguna, dipakai tes dan skrip). Template email Auth FixMaster dibuang; Supabase memakai template bawaan sampai Pemilik memutuskan lain.
 - 2026-11-21 - L-43 - Teks merek yang terlihat diganti ke Nuara (login, sidebar, wizard, lacak, nota, glosarium), tetapi tampilan halaman masuk masih membawa maskot VOLT dan teks "Precision Electronics Bench" sampai L-47.
 
+- 2026-11-21 - L-46 - Preflight Tailwind dipasang di bawah CSS lama (pilihan P14.3) ternyata tetap mengubah halaman lama: `line-height` tombol/input dan warna placeholder berubah, kartu saldo Keuangan memanjang (222 ribu piksel berbeda). Penjaga `all: revert` juga gagal karena membatalkan atribut presentasi SVG/img (ikon Phosphor). Akhirnya preflight disalin ke `src/styles/dens-base.css` dan dibatasi ke `[data-slot]`/`[data-nu]`, di layer `nu-base` di atas `legacy`, sekaligus jadi perisai dari aturan elemen global.css (font judul, warna tautan). Halaman lama: 0 piksel berbeda.
+- 2026-11-21 - L-46 - global.css memaksa `min-height`/`min-width` 44px `!important` pada tombol di layar sentuh; checkbox/switch Radix ikut membesar. Dicegah layer `nu-shield` (sebelum legacy). Target sentuh komponen dens-ui diatur di L-47.
+- 2026-11-21 - L-46 - 19 variabel tema Tailwind bentrok dengan tokens.css FixMaster (`--text-sm`, `--radius-lg`, `--shadow-md`, `--font-sans`, ...). Ditulis langsung di `@theme inline` agar utilitas dens-ui tidak membaca angka FixMaster.
+- 2026-11-21 - L-46 - Skrip audit dan foto menunggu teks "MODE DEMO" dari demo publik yang dibuang di L-43; diganti menunggu tautan menu Servis. `audit-contrast` memeriksa `/` (wizard) dan `/dev/komponen` alih-alih landing. Skrip audit menerima `PW_CHROMIUM` (Chromium container cloud).
+- 2026-11-21 - L-46 - Wizard toko dipertahankan; dikonfirmasi Pemilik (A17).
 
 ## Arsip: rencana Next.js (dibatalkan 2026-11-21)
 Langkah di bawah tidak dikerjakan. Disimpan karena rujukan kriteria F-xx dan keputusan di dalamnya dipakai untuk L-45.

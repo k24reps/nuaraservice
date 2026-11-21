@@ -56,7 +56,7 @@ for (const theme of ['dark', 'light']) {
   await setTheme(page, 'dark');
   await page.goto(`${BASE}/demo`, { waitUntil: 'networkidle' });
   try {
-    await page.getByText('MODE DEMO').waitFor({ timeout: 20000 });
+    await page.locator('a[href="/services"]').first().waitFor({ timeout: 20000 });
     await page.waitForTimeout(800);
     await page.getByRole('link', { name: /Servis/i }).first().click();
     await page.waitForTimeout(700);

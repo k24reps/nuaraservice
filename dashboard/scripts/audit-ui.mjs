@@ -31,7 +31,10 @@ const pages = [
   { path: '/settings', name: 'settings' },
 ];
 
-const browser = await chromium.launch();
+// PW_CHROMIUM: jalur Chromium lain bila versi bawaan @playwright/test tidak terpasang (mis. container cloud).
+const browser = await chromium.launch(
+  process.env.PW_CHROMIUM ? { executablePath: process.env.PW_CHROMIUM } : {},
+);
 const report = [];
 
 async function setTheme(page, theme) {

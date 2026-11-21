@@ -61,7 +61,8 @@ Baca sebelum bekerja. Jangan menebak jika dokumen tidak menjelaskan; tanyakan le
 | Typecheck | `npm run type-check` |
 | Build | `npm run build` |
 | Migrasi DB | `supabase db push` (setelah `supabase link` ke proyek Nuara) |
-| Probe UI | `BASE_URL=http://localhost:5173 node scripts/audit-mobile.mjs` dan `scripts/audit-zoom.mjs` (dev server jalan) |
+| Probe UI | `BASE_URL=http://localhost:5173 node scripts/audit-mobile.mjs` dan `scripts/audit-zoom.mjs` (dev server jalan; di container cloud tambah `PW_CHROMIUM=/opt/pw-browsers/chromium`) |
+| Katalog komponen | `npm run dev`, buka `/dev/komponen` |
 | Ikon | `npm run brand:render` (butuh ImageMagick) |
 
 ## Perintah vibe-docs

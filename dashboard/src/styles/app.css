@@ -1,0 +1,34 @@
+/* ==========================================================================
+   Pintu masuk CSS Nuara Dashboard (diimpor main.tsx).
+
+   Selama Fase B, CSS FixMaster dan Tailwind + dens-ui hidup berdampingan.
+   Urutan cascade layer, dari terlemah ke terkuat:
+
+     theme      variabel tema Tailwind
+     nu-shield  !important yang harus mengalahkan !important global.css
+     legacy     global.css + tokens.css FixMaster
+     nu-base    reset dan perisai dens-ui, dibatasi ke data-slot/data-nu
+     components (cadangan)
+     utilities  kelas Tailwind di komponen dens-ui
+
+   CSS Module per halaman tidak berlayer, jadi tetap mengalahkan semuanya,
+   sama seperti sebelum Tailwind dipasang. Preflight Tailwind tidak dipasang
+   global (lihat dens-base.css), jadi halaman FixMaster tidak berubah.
+   Utilitas di atas legacy, sehingga `button { background: none }` milik
+   FixMaster tidak mengalahkan `bg-primary` pada tombol dens-ui.
+   ========================================================================== */
+@layer theme, nu-shield, legacy, nu-base, components, utilities;
+
+@import "tailwindcss/theme.css" layer(theme);
+@import "./global.css" layer(legacy);
+@import "tailwindcss/utilities.css" layer(utilities) source(none);
+
+@import "@fontsource-variable/figtree";
+@import "./nuara-theme.css";
+@import "./dens-base.css";
+
+/* Kelas Tailwind hanya dibuat dari folder ini. Kata seperti "hidden" atau
+   "grid" di kode FixMaster tidak boleh melahirkan utilitas yang mengalahkan
+   kelas global lama. Tambahkan folder halaman saat halamannya dipindah. */
+@source "../components/dens";
+@source "../dev";

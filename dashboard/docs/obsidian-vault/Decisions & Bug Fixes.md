@@ -13,6 +13,42 @@ Catatan keputusan desain penting + bug nyata yang ditemukan saat verifikasi.
 
 ## Keputusan desain
 
+### Tailwind + dens-ui berdampingan dengan CSS FixMaster (L-46, 21 Nov 2026)
+Fondasi Fase B: komponen dens-ui (Tailwind v4 + Radix) di `src/components/dens/`, tema Nuara di
+`src/styles/nuara-theme.css`, pintu masuk CSS `src/styles/app.css`. Empat jebakan yang terukur,
+bukan teori:
+- **Nama variabel bentrok.** dens-ui memakai `--brand`, `--accent`, `--border`, `--ring`,
+  `--success`, `--warning`, `--info`, yang sudah dipakai tokens.css dengan arti lain. Variabel
+  mentah tema diberi awalan `--nu-`; komponen tetap memakai kelas shadcn (`bg-card`) lewat
+  `@theme inline`. 19 variabel tema Tailwind (`--text-sm`, `--radius-lg`, `--shadow-md`,
+  `--font-sans`, `--ease-out`, ...) juga bentrok; karena CSS lama di layer di atas tema,
+  nilainya ditulis langsung di `@theme inline` agar utilitas tidak membaca angka FixMaster.
+- **CSS global lama tidak berlayer mengalahkan utilitas berlayer.** `button { background: none }`
+  akan mengalahkan `bg-primary`. global.css diimpor ke layer `legacy` di bawah `utilities`.
+- **Preflight global tetap mengubah halaman lama walau di bawah CSS lama.** Ia mengisi properti
+  yang selama ini dibiarkan ke bawaan browser: `line-height` tombol/input (normal menjadi warisan
+  24,8px), warna placeholder. Kartu saldo Keuangan memanjang: 222 ribu piksel berbeda. Upaya
+  pertama, `all: revert` untuk elemen di luar dens-ui, gagal: `revert` juga membatalkan atribut
+  presentasi (`fill`, `width`, `height` pada SVG Phosphor dan img). Solusi akhir: preflight
+  disalin ke `dens-base.css` dan dibatasi ke `[data-slot]` (semua komponen dens-ui, termasuk isi
+  portal Radix) dan `[data-nu]` (akar halaman yang dipindah), di layer `nu-base` di atas
+  `legacy`. Hasil: 16 foto halaman lama (8 halaman x 2 tema) sama dengan baseline; sisa selisih
+  hanya jam dan kursor berkedip. Karena di atas `legacy`, layer itu juga perisai dari aturan
+  elemen global.css (judul `h2` di dialog dens-ui tidak lagi memakai Space Grotesk).
+- **`!important` di global.css.** Aturan target sentuh memaksa `min-height`/`min-width` 44px
+  `!important` pada semua `button`; checkbox dan switch Radix adalah `<button>`, jadi tampil
+  44x44px di ponsel. `!important` hanya bisa dikalahkan `!important` dari layer yang LEBIH AWAL:
+  layer `nu-shield` sebelum `legacy`.
+- Tailwind memindai seluruh proyek secara bawaan, sehingga kata `hidden`/`grid` di kode FixMaster
+  bisa melahirkan utilitas yang menimpa kelas global lama. `source(none)` + `@source` hanya ke
+  `components/dens` dan `dev`; halaman yang dipindah menambah foldernya sendiri.
+- Folder `components/dens/`, bukan `components/ui/`: `Button.tsx` (FixMaster) dan `button.tsx`
+  (dens-ui) adalah berkas yang sama di Windows dan macOS.
+- Verifikasi: foto per piksel sebelum/sesudah dengan derau diukur dari dua foto sebelum
+  (`compare -metric AE -fuzz 2%`); laporan `audit-mobile`/`audit-zoom` identik; `audit-contrast`
+  0 gagal termasuk `/dev/komponen`; gerbang kontras tema `nuaraTheme.test.ts` (diuji juga dengan
+  warna pucat yang sengaja gagal); 1125 tes / 83 berkas.
+
 ### Disalin menjadi Nuara Dashboard (21 Nov 2026)
 Pemilik Nuara Service memutuskan memakai kode FixMaster sebagai dasar Nuara Dashboard,
 menggantikan rencana Next.js + Drizzle dari nol di `nuaraservice/docs` (42 langkah, belum ada

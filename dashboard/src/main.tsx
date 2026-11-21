@@ -7,7 +7,7 @@ import { initSettings } from './stores/settings';
 import { initErrorTracking } from './lib/report';
 import { registerServiceWorker } from './lib/sw-register';
 import { installPreloadErrorRecovery } from './lib/lazyChunk';
-import './styles/global.css';
+import './styles/app.css';
 
 initTheme();
 initZoom();
