@@ -2,6 +2,9 @@
 
 > Versi: 0.2 | Diperbarui: 2026-11-04 | Merujuk: PRD.md (F-xx, peran)
 
+> [!note] Sejak 2026-11-21 (wawancara P13)
+> Layar S-xx di sini adalah target. Aplikasi sekarang memakai layar dan rute FixMaster (mis. `/services`, `/t/<kode>`); selisihnya dicatat di IPD "Daftar Selisih". Teks pesan baru tetap ditulis di sini lebih dulu.
+
 ## 1. Peta Layar
 <!-- Rute dashboard di host app.nuaraservice.my.id; S-07 di host lacak.nuaraservice.my.id. -->
 | ID | Layar | Rute/URL | Akses | Fitur terkait |

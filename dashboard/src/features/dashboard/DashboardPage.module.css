@@ -1,0 +1,1065 @@
+/* ============================================================
+   Dashboard — "Diagnostic Readout Panel"
+   A bench instrument cluster: status strip, mono metric gauges,
+   tick-marked target gauges, and channel level-meters. Matches
+   the POS register + Inventory parts-bin identity. Global tokens.
+   ============================================================ */
+
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  container: dashboard / inline-size;
+}
+
+/* ---------- Console: cabang + denyut HARI INI + aksi cepat ---------- */
+.console {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: 10px var(--space-4);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  flex-wrap: wrap;
+}
+.consoleBrand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  padding-right: var(--space-4);
+  border-right: 1px dotted var(--border-strong);
+}
+.consoleMascot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.consoleMascotImg {
+  display: block;
+}
+.consoleToday {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--brand-text);
+  white-space: nowrap;
+}
+.consoleLed {
+  width: 7px;
+  height: 7px;
+  border-radius: var(--radius-full);
+  background: var(--brand);
+  box-shadow: 0 0 7px var(--brand);
+}
+.consoleReadouts {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  margin: 0;
+}
+.consoleItem {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.consoleKey {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.consoleVal {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: var(--fw-semibold);
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.consoleNum {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-lg);
+  font-weight: var(--fw-bold);
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+.consoleData {
+  padding-left: var(--space-4);
+  border-left: 1px dotted var(--border-strong);
+}
+.consoleFault {
+  color: var(--danger-text);
+}
+/* Aksi cepat — di ponsel dilipat (navigasi bawah sudah memuat Servis & Kasir). */
+.quick {
+  display: flex;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+.quickPrimary,
+.quickSecondary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 36px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: var(--fw-semibold);
+  white-space: nowrap;
+  text-decoration: none;
+  transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+}
+.quickPrimary {
+  color: var(--on-brand);
+  background: var(--gradient-brand);
+}
+.quickSecondary {
+  color: var(--text-primary);
+  border: 1px solid var(--border-strong);
+}
+.quickSecondary:hover {
+  border-color: var(--brand);
+}
+
+/* ---------- Data fault + honest loading ---------- */
+.fault {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius-md);
+  background: var(--danger-soft);
+}
+.faultIcon {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  border-radius: var(--radius-sm);
+  color: var(--danger);
+  background: var(--bg-surface);
+}
+.faultCopy {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+.faultCopy strong {
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+}
+.faultCopy span {
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  line-height: 1.45;
+}
+.loadingPanel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+}
+.loadingHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+.loadingReadout,
+.loadingMetrics {
+  display: grid;
+  gap: var(--space-3);
+}
+.loadingReadout {
+  grid-template-columns: 2fr 1fr;
+}
+.loadingMetrics {
+  grid-template-columns: repeat(3, 1fr);
+}
+.loadingReadout span,
+.loadingMetrics span {
+  min-height: 72px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(90deg, var(--bg-surface-2), var(--bg-elevated), var(--bg-surface-2));
+  background-size: 200% 100%;
+  animation: dashboard-loading 1.4s var(--ease-in-out) infinite;
+}
+.loadingReadout span:first-child {
+  grid-row: span 2;
+  min-height: 156px;
+}
+@keyframes dashboard-loading {
+  to { background-position: -200% 0; }
+}
+
+/* ---------- Hero readout (instrument screen) ----------
+   The screen stays dark in BOTH themes (like a real LCD), so every
+   text color here is a FIXED value or a bright scale token — never a
+   theme-flipping semantic token. That is exactly what broke the old
+   strip in light mode. */
+.hero {
+  border-radius: var(--radius-lg);
+  padding: 2px; /* gradient bezel */
+  background: var(--gradient-brand-accent);
+}
+.heroScreen {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-5);
+  flex-wrap: wrap;
+  padding: var(--space-5) var(--space-6);
+  border-radius: calc(var(--radius-lg) - 2px);
+  background: radial-gradient(130% 150% at 0% 0%, var(--readout-surface), var(--readout-base));
+  overflow: hidden;
+}
+.heroScan {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(0deg, color-mix(in srgb, var(--readout-text) 3%, transparent) 0 1px, transparent 1px 3px);
+  pointer-events: none;
+}
+.heroMain {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  z-index: 1;
+}
+.heroLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--readout-muted);
+}
+.heroLed {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+  background: var(--readout-muted);
+}
+.heroValue {
+  font-family: var(--font-mono);
+  font-weight: var(--fw-bold);
+  font-size: clamp(1.8rem, 4.5vw, 2.8rem);
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+  color: var(--readout-text);
+  white-space: nowrap;
+}
+.heroTag {
+  align-self: flex-start;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.18em;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  border: 1px solid currentColor;
+  color: var(--readout-muted);
+}
+.heroHead {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+}
+/* Sakelar periode di atas LCD — layar selalu gelap, jadi warnanya readout. */
+.period {
+  display: inline-flex;
+  padding: 2px;
+  border: 1px solid color-mix(in srgb, var(--readout-text) 22%, transparent);
+  border-radius: var(--radius-full);
+}
+.periodBtn {
+  min-height: 26px;
+  padding: 0 10px;
+  border-radius: var(--radius-full);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--readout-muted);
+}
+.periodBtn:hover {
+  color: var(--readout-text);
+}
+.periodBtn[aria-pressed='true'] {
+  background: color-mix(in srgb, var(--readout-text) 16%, transparent);
+  color: var(--readout-text);
+}
+.heroAside {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-6);
+  margin: 0;
+  z-index: 1;
+}
+.heroStat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 6px;
+  margin: -4px -6px;
+  border-radius: var(--radius-xs);
+  color: inherit;
+  text-decoration: none;
+}
+a.heroStat:hover {
+  background: color-mix(in srgb, var(--readout-text) 8%, transparent);
+}
+.heroStatVal {
+  overflow-wrap: anywhere;
+}
+.heroStatSub {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--readout-muted);
+}
+.statIn {
+  color: var(--green-400);
+}
+/* Panel hero selalu gelap: pengeluaran bertinta readout biasa, bukan merah.
+   Labelnya sudah bilang "Pengeluaran"; merah membuatnya terbaca sebagai alarm. */
+.statOut {
+  color: var(--readout-text);
+}
+/* Break-even bulan ini (owner): satu baris readout di layar hero, melipat
+   sendiri saat sempit (flex-wrap, tanpa breakpoint). */
+.heroBe {
+  --tone: var(--green-400);
+  position: relative;
+  z-index: 1;
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px var(--space-3);
+  padding: var(--space-2) 6px;
+  margin: 0 -6px;
+  border-top: 1px dotted color-mix(in srgb, var(--readout-text) 18%, transparent);
+  border-radius: var(--radius-xs);
+  color: var(--readout-soft);
+  text-decoration: none;
+}
+.heroBe[data-tone='warn'] {
+  --tone: var(--amber-400);
+}
+.heroBe[data-tone='crit'] {
+  --tone: var(--red-400);
+}
+.heroBe:hover {
+  background: color-mix(in srgb, var(--readout-text) 6%, transparent);
+}
+.heroBe:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+.heroBeGauge {
+  flex: 1 1 6rem;
+  max-width: 14rem;
+  height: 6px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--readout-text) 14%, transparent);
+  overflow: hidden;
+}
+.heroBeGauge > span {
+  display: block;
+  height: 100%;
+  background: var(--tone);
+  transform-origin: left;
+}
+.heroBePct {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: var(--fw-bold);
+  font-variant-numeric: tabular-nums;
+  color: var(--tone);
+}
+.heroBeText {
+  flex: 1 1 16rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: var(--text-sm);
+}
+.heroBeLed {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--tone);
+  box-shadow: 0 0 8px var(--tone);
+}
+.heroBeMore {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--readout-muted);
+}
+.heroNote {
+  position: relative;
+  z-index: 1;
+  flex-basis: 100%;
+  max-width: 80ch;
+  margin: 0;
+  padding-top: var(--space-2);
+  border-top: 1px dotted color-mix(in srgb, var(--readout-text) 18%, transparent);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+  color: var(--readout-muted);
+}
+.heroStatKey {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--readout-muted-2);
+}
+.heroStatVal {
+  font-family: var(--font-mono);
+  font-size: var(--text-lg);
+  font-weight: var(--fw-bold);
+  color: var(--readout-soft);
+  font-variant-numeric: tabular-nums;
+}
+/* hero state tints (LED + value + tag) */
+.hero.ok .heroLed { background: var(--green-400); box-shadow: 0 0 9px var(--green-400); }
+.hero.ok .heroValue { color: var(--green-400); }
+.hero.ok .heroTag { color: var(--green-400); }
+.hero.warn .heroLed { background: var(--amber-400); box-shadow: 0 0 9px var(--amber-400); }
+.hero.warn .heroValue { color: var(--amber-400); }
+.hero.warn .heroTag { color: var(--amber-400); }
+
+/* ---------- Strip readout (Design System) + Meja saya ----------
+   Satu panel, sel dipisah seam titik, tiap sel menaut ke daftarnya. Dulu lima
+   kartu ikon-dalam-kotak yang tak bisa diklik; di ponsel jadi carousel dan
+   Pemasukan/Pengeluaran/Saldo tersembunyi 2–4 geseran ke kanan. */
+.strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  margin: 0;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: var(--space-3) var(--space-4);
+  border-right: 1px dotted var(--border-strong);
+  border-bottom: 1px dotted var(--border-strong);
+  margin: 0 -1px -1px 0;
+  color: inherit;
+  text-decoration: none;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+.cell:hover {
+  background: var(--bg-hover);
+}
+.cell:focus-visible {
+  outline: none;
+  box-shadow: inset var(--ring);
+}
+.cellLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.cellValue {
+  font-family: var(--font-mono);
+  font-size: var(--text-lg);
+  font-weight: var(--fw-bold);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+.cellValueSm {
+  font-size: var(--text-md);
+}
+.cellUnit {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+.desk {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.deskTitle {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+/* ---------- Targets (tick gauges) ---------- */
+.targets {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-6);
+}
+.targetItem {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.targetLabel {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: var(--text-sm);
+}
+.targetLabel span:first-child {
+  color: var(--text-secondary);
+}
+.targetPct {
+  font-family: var(--font-mono);
+  font-weight: var(--fw-bold);
+  font-size: var(--text-md);
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+.gauge {
+  position: relative;
+  height: 12px;
+  border-radius: var(--radius-xs);
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+}
+.gaugeFill {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  overflow: hidden;
+  /* Progres berjalan = bacaan instrumen (cyan); amber milik aksi utama. */
+  background: linear-gradient(90deg, var(--accent-600), var(--accent-400));
+  transform-origin: left center;
+  transition: transform var(--dur-slow) var(--ease-out);
+}
+/* Gauge di kartu yang ikut tema (berbeda dengan hero yang selalu gelap):
+   token peran. Di gelap nilainya sama dengan skala 500->400 sebelumnya. */
+.gauge.ok .gaugeFill {
+  background: linear-gradient(90deg, var(--success), var(--success-text));
+}
+.gauge.behind .gaugeFill {
+  background: linear-gradient(90deg, var(--warning), var(--warning-text));
+}
+/* Penanda laju: di mana angka seharusnya berada pada tanggal ini. */
+.paceTick {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--text-primary);
+  z-index: 1;
+}
+/* tick marks overlay */
+.gauge::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent 0 calc(10% - 1px),
+    var(--bg-base) calc(10% - 1px) 10%
+  );
+  opacity: 0.45;
+  pointer-events: none;
+}
+.targetPct.ok { color: var(--success-text); }
+.targetPct.behind { color: var(--warning-text); }
+.paceBehind { color: var(--warning-text); }
+.targetDetail {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+}
+
+/* ---------- Grid ---------- */
+.grid {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: var(--space-4);
+}
+.gridSingle {
+  grid-template-columns: 1fr;
+}
+.noPad {
+  padding: 0;
+}
+
+/* ---------- Recent services ---------- */
+.viewAll {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--brand-text);
+  padding: 6px 8px;
+  margin: -6px -8px;
+  border-radius: var(--radius-xs);
+}
+.viewAll:hover {
+  background: var(--bg-hover);
+}
+/* Tautan, bukan tombol, jadi aturan 44px global untuk <button> tak berlaku.
+   Aksi cepat konsol juga tautan: di tablet sentuh dulu 36px. */
+@media (max-width: 720px), (pointer: coarse) {
+  .viewAll,
+  .quickPrimary,
+  .quickSecondary {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--control-h);
+  }
+}
+/* Di ponsel Servis Baru tinggal di dok zona jempol (ThumbDock); salinan di
+   konsol disembunyikan supaya tak ada dua tombol sama di 561-720px. */
+@media (max-width: 720px) {
+  .quick .quickPrimary {
+    display: none;
+  }
+}
+.dockAction {
+  padding: 0 var(--space-4);
+}
+.recentList {
+  display: flex;
+  flex-direction: column;
+}
+.recentRow {
+  min-width: 0;
+}
+.recentItem {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--row-py) var(--space-5);
+  border-bottom: 1px dotted var(--border);
+  cursor: pointer;
+  color: inherit;
+  text-decoration: none;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+/* No./device (.recentDetail's 140px floor, above) claim line 1 together;
+   on a narrow status badge (e.g. "Lunas") that's plenty of room and nothing
+   wraps. On a wide one ("Konfirmasi Biaya" ≈155px, measured) the row's
+   rigid parts (76px no. + 155px badge + gaps) leave only ~47px for the
+   device name — not enough for even a short one ("Samsung A52" truncated
+   while a longer name elsewhere didn't, purely because ITS neighboring
+   badge happened to be narrower). flex-wrap here lets the badge alone drop
+   to its own line instead of continuing to squeeze the name below its
+   140px floor. */
+.recentRow:last-child .recentItem {
+  border-bottom: none;
+}
+.recentItem:hover {
+  background: var(--bg-hover);
+}
+.recentItem:focus-visible {
+  outline: none;
+  background: var(--brand-soft);
+  box-shadow: inset var(--ring);
+}
+.recentNo {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: var(--fw-semibold);
+  color: var(--text-secondary);
+  min-width: 76px;
+  padding: 3px 7px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  background: var(--bg-surface-2);
+  text-align: center;
+}
+.recentDetail {
+  flex: 1;
+  min-width: 100px;
+  display: flex;
+  flex-direction: column;
+}
+.recentDetail strong {
+  font-size: var(--text-sm);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.recentDetail small {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+.recentArrow {
+  flex: none;
+  color: var(--text-muted);
+  transition: transform var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+.recentItem:hover .recentArrow,
+.recentItem:focus-visible .recentArrow {
+  color: var(--text-primary);
+  transform: translateX(2px);
+}
+
+/* ---------- Action queue ---------- */
+.alertList {
+  display: flex;
+  flex-direction: column;
+}
+.alertItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--row-py) var(--space-5);
+  border-bottom: 1px dotted var(--border);
+  font-size: var(--text-sm);
+  position: relative;
+  color: inherit;
+  text-decoration: none;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+.alertList li:last-child .alertItem {
+  border-bottom: none;
+}
+.alertItem:hover {
+  background: var(--bg-hover);
+}
+.alertItem:focus-visible {
+  outline: none;
+  background: var(--brand-soft);
+  box-shadow: inset var(--ring);
+}
+/* LED + angka mono, bukan kotak ikon pastel (anti-referensi DESIGN.md). */
+.alertLed {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--text-muted);
+}
+.alertLed[data-tone='warning'] { background: var(--warning); box-shadow: 0 0 7px var(--warning); }
+.alertLed[data-tone='danger'] { background: var(--danger); box-shadow: 0 0 7px var(--danger); }
+.alertLed[data-tone='info'] { background: var(--info); box-shadow: 0 0 7px var(--info); }
+.alertLed[data-tone='accent'] { background: var(--accent); box-shadow: 0 0 7px var(--accent); }
+.alertLed[data-tone='success'] { background: var(--success); box-shadow: 0 0 7px var(--success); }
+.alertCount {
+  min-width: 2ch;
+  font-family: var(--font-mono);
+  font-size: var(--text-lg);
+  font-weight: var(--fw-bold);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--text-primary);
+}
+.alertCount[data-tone='warning'] { color: var(--warning-text); }
+.alertCount[data-tone='danger'] { color: var(--danger-text); }
+.alertCount[data-tone='info'] { color: var(--info-text); }
+.alertCount[data-tone='accent'] { color: var(--accent-text); }
+.alertCopy {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+.alertCopy strong {
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+}
+.alertCopy small {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+.alertArrow {
+  flex: none;
+  color: var(--text-muted);
+  transition: transform var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+.alertItem:hover .alertArrow,
+.alertItem:focus-visible .alertArrow {
+  color: var(--text-primary);
+  transform: translateX(2px);
+}
+.allClear {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+}
+.allClear > span:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.allClear strong {
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+}
+.allClear small {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+
+/* ---------- Leaderboard (channel level-meters) ---------- */
+.leaderboard {
+  display: flex;
+  flex-direction: column;
+}
+.leaderItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--row-py) var(--space-5);
+  border-bottom: 1px dotted var(--border);
+}
+.leaderItem:last-child {
+  border-bottom: none;
+}
+.chan {
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-xs);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: var(--fw-bold);
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+.chan[data-rank='1'] {
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+.leaderMain {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.leaderTop {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  /* Same fix as .recentItem (Servis Terbaru): wrap lets .leaderStats
+     ("3 selesai · Rp 3.550.000", nowrap/rigid) drop to its own line instead
+     of squeezing .leaderName below its min-width floor — previously a name
+     like "Rizal Pratama" truncated to "Rizal Prata…" purely because
+     .leaderName had no floor (overflow:hidden implicitly zeroes a flex
+     child's automatic min-width per spec) and stats never shrinks. */
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+}
+.leaderName {
+  flex: 1;
+  min-width: 100px;
+  font-weight: var(--fw-semibold);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.leaderStats {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.leaderStats strong {
+  color: var(--text-primary);
+}
+.meter {
+  position: relative;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--bg-input);
+  overflow: hidden;
+}
+.meterFill {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent-600), var(--accent-400));
+  transform-origin: left center;
+  transition: transform var(--dur-slow) var(--ease-out);
+}
+
+@container dashboard (max-width: 900px) {
+  .grid,
+  .targets {
+    grid-template-columns: 1fr;
+  }
+}
+@container dashboard (max-width: 560px) {
+  .console {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--space-2) var(--space-3);
+    padding: var(--space-2) var(--space-3);
+  }
+  .consoleBrand {
+    gap: var(--space-2);
+    padding-right: 0;
+    border-right: none;
+  }
+  .consoleMascotImg {
+    width: auto !important;
+    height: 28px !important;
+  }
+  .consoleData {
+    grid-row: 1;
+    grid-column: 2;
+    padding-left: 0;
+    border-left: none;
+    text-align: right;
+  }
+  .consoleToday,
+  .consoleReadouts {
+    grid-column: 1 / -1;
+  }
+  .consoleToday {
+    padding-top: var(--space-2);
+    border-top: 1px dotted var(--border-strong);
+  }
+  .consoleReadouts {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-2);
+  }
+  .quick {
+    display: none;
+  }
+  .heroScreen {
+    padding: var(--space-3) var(--space-4);
+    gap: var(--space-3);
+  }
+  /* minmax(0,…): 1fr berbatas bawah auto, jadi rupiah mono yang tak bisa patah
+     mendorong grid melewati layar (terukur 13px terpotong di 320px). */
+  .heroAside {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    gap: var(--space-2) var(--space-4);
+  }
+  .heroAside > :last-child {
+    grid-column: 1 / -1;
+  }
+  .heroValue {
+    font-size: clamp(1.45rem, 7cqi, 2rem);
+  }
+  .strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  /* Baris Servis Terbaru: no. | perangkat | panah, badge di bawah perangkat.
+     flex-wrap dulu membuat tinggi baris 84–108px dan panah terdampar sendirian. */
+  .recentItem {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      'no detail arrow'
+      '. badge arrow';
+    row-gap: 4px;
+  }
+  .recentNo {
+    grid-area: no;
+  }
+  .recentDetail {
+    grid-area: detail;
+    min-width: 0;
+  }
+  .recentItem > :nth-child(3) {
+    grid-area: badge;
+    justify-self: start;
+  }
+  .recentArrow {
+    grid-area: arrow;
+  }
+  .strip > :last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+  .fault {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .faultCopy {
+    min-width: calc(100% - 52px);
+  }
+  .loadingReadout,
+  .loadingMetrics {
+    grid-template-columns: 1fr;
+  }
+  .loadingReadout span:first-child {
+    grid-row: auto;
+    min-height: 112px;
+  }
+  .loadingMetrics {
+    display: flex;
+    overflow: hidden;
+  }
+  .loadingMetrics span {
+    min-width: 72%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loadingReadout span,
+  .loadingMetrics span {
+    animation: none;
+  }
+}

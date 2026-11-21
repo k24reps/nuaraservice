@@ -1,0 +1,1327 @@
+import { EmptyValue } from '@/components/ui/EmptyValue';
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent } from 'react';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import {
+  Card,
+  Button,
+  Input,
+  Badge,
+  EmptyState,
+  Icon,
+  CategoryChips,
+  ConfirmDialog,
+  PageSummary,
+} from '@/components/ui';
+import { ThumbDock } from '@/components/layout/ThumbDock';
+import { repository } from '@/data';
+import { useCollection, useDerivedQuery } from '@/hooks/useCollection';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { useServiceSummary } from '@/hooks/useServiceSummary';
+import { SERVICE_LIST_CAP, useServiceArchive } from '@/hooks/useServiceArchive';
+import { useSessionStore } from '@/stores/session';
+import { toast } from '@/stores/toast';
+import { fmtNumber, fmtRp } from '@/lib/format';
+import { addDays, fmtDate, localDateOf, localDateStr, localDayStartISO, monthRange } from '@/lib/time';
+import { serviceSummary } from '@/lib/business/dashboard';
+import {
+  STATUS_LABELS,
+  STATUS_TONE,
+  visibleServices,
+  isAwaitingPickup,
+  serviceProfit,
+  serviceModalTotal,
+  heldCost,
+  cancelledProfit,
+  isClosedOut,
+  outstandingBalance,
+  canQuickAddParts,
+  finalCostLocked,
+  type ModalDadakanInput,
+} from '@/lib/business/services';
+import { walletsForOutlet } from '@/lib/business/finance';
+import { addServiceModalLine, addServicePart } from '@/data/serviceParts';
+import { resolveServiceColumns } from '@/lib/business/serviceColumns';
+import { LIST_PAGE_SIZE, resolveListView, scrollRestoreStep } from '@/lib/business/serviceListView';
+import { readListSnapshot, readScroll, saveListScroll, saveListView, writeScroll } from './listMemory';
+import {
+  SERVICE_SCOPES,
+  SERVICE_SORTS,
+  SORT_LABEL_KEY,
+  compareServices,
+  costReadout,
+  createdRange,
+  matchesPayment,
+  matchesQuery,
+  matchesScope,
+  matchesTechnician,
+  nextSort,
+  scopeCounts,
+  sortDirectionOn,
+  stalledDays,
+  type DateFilter,
+  type PaymentFilter,
+  type ServiceScope,
+  type ServiceSort,
+  type ServiceSortColumn,
+} from '@/lib/business/serviceFilters';
+import { getCategories, getLastExpenseWallet, setLastExpenseWallet } from '@/config/orgConfig';
+import { ServiceModal } from './ServiceModal';
+import { StatusModal } from './StatusModal';
+import { NotifyModal } from './NotifyModal';
+import { TicketDoneModal } from './TicketDoneModal';
+import { SparepartPickerModal } from './SparepartPickerModal';
+import type { Service, ServiceSparepart, ServiceStatus } from '@/data/types';
+import styles from './ServicesPage.module.css';
+import { useT, type TranslationKey } from '@/i18n';
+import { interpolate } from '@/lib/business/notify';
+import { PICKUP_NOTE, UNPICK_NOTE } from '@/lib/business/services';
+
+/**
+ * Jendela daftar "panas" di cloud: SEMUA tiket yang belum tuntas (berapa pun
+ * umurnya, supaya selalu terpantau) plus yang tuntas dalam N hari terakhir.
+ * Tiket tuntas adalah riwayat beku yang dulu ditarik ulang utuh di setiap
+ * perangkat tiap ada perubahan servis, sehingga ongkosnya tumbuh seiring umur
+ * toko. Dengan jendela, ongkosnya mengikuti laju tiket masuk toko itu sendiri,
+ * bukan umurnya. Tiket lama tetap ditemukan lewat pencarian, filter tanggal,
+ * dan riwayat pelanggan (useServiceArchive).
+ */
+const SERVICE_WINDOW_DAYS = 31;
+const NO_WINDOW: { rows: Service[]; truncated: boolean } = { rows: [], truncated: false };
+
+const SCOPE_TEXT: Record<ServiceScope, { label: TranslationKey; hint: TranslationKey }> = {
+  all: { label: 'services.scopeAll', hint: 'services.scopeAllHint' },
+  open: { label: 'services.scopeOpen', hint: 'services.scopeOpenHint' },
+  stalled: { label: 'services.stalled', hint: 'services.stalledHint' },
+};
+
+export function ServicesPage() {
+  const t = useT();
+  const [searchParams] = useSearchParams();
+  // Cloud: daftar berjendela. Batasnya awal hari lokal, jadi kuncinya hanya
+  // berganti sekali sehari. Lokal/demo: daftar lengkap — tidak ada ongkos
+  // egress di sana. Kunci di bawah ['collection','services',…] supaya realtime
+  // tetap meng-invalidasi.
+  // Dua kueri, bukan satu `or`: tiap kueri mentok max_rows PostgREST (1.000).
+  // Dengan satu kueri berurut created_at, toko yang ramai akan kehilangan
+  // tiket BELUM tuntas yang paling tua lebih dulu — justru yang harus terpantau.
+  const windowed = !!repository.queryServices;
+  const activeOutlet = useSessionStore((s) => s.activeOutletId);
+  const windowStart = localDayStartISO(addDays(localDateStr(), -SERVICE_WINDOW_DAYS));
+  const { data: windowData, loading } = useDerivedQuery(
+    ['collection', 'services', 'window', activeOutlet, windowStart],
+    async () => {
+      if (!repository.queryServices) return { rows: await repository.list('services'), truncated: false };
+      const [open, closed] = await Promise.all([
+        repository.queryServices({ openOnly: true, limit: SERVICE_LIST_CAP }),
+        repository.queryServices({ closedSince: windowStart, limit: SERVICE_LIST_CAP }),
+      ]);
+      return {
+        rows: [...open, ...closed],
+        truncated: open.length >= SERVICE_LIST_CAP || closed.length >= SERVICE_LIST_CAP,
+      };
+    },
+    NO_WINDOW,
+  );
+  const services = windowData.rows;
+  const truncated = windowData.truncated;
+  const { data: employees } = useCollection('employees');
+  const sessionEmployees = useSessionStore((s) => s.employees);
+  const techs = employees.length ? employees : sessionEmployees;
+  const me = useSessionStore((s) => s.currentEmployee);
+  const role = me?.role;
+  const isOwner = role === 'owner';
+  const isManager = role === 'owner' || role === 'admin';
+  // Hanya untuk Modal Dadakan di aksi cepat sparepart, yang khusus owner/admin.
+  const { data: allWallets } = useCollection('wallets', { enabled: isManager });
+
+  // Tampilan awal = tautan yang membuka halaman ini (?status/?pickup/?tech/
+  // ?date/?open dari Dashboard) ATAU ingatan sesi bila pengguna baru saja
+  // membuka tiket dan kembali. Aturannya ada di resolveListView.
+  // `?pickup=awaiting` tetap dihormati: alert "unit menunggu diambil" di
+  // Dashboard menaut ke sana (lihat dashboard.ts); `?tech=me` = "Tiket saya".
+  const { key: entryKey } = useLocation();
+  const listOwner = `${activeOutlet ?? ''}:${me?.id ?? ''}`;
+  const [initial] = useState(() =>
+    resolveListView({
+      snapshot: readListSnapshot(),
+      owner: listOwner,
+      entryKey,
+      params: searchParams,
+      now: Date.now(),
+    }),
+  );
+  const start = initial.view;
+  const [query, setQuery] = useState(start.query);
+  const [statusFilter, setStatusFilter] = useState<ServiceStatus | 'all'>(start.status);
+  const [categoryFilter, setCategoryFilter] = useState(start.category);
+  const [pickupFilter, setPickupFilter] = useState<'all' | 'awaiting'>(start.pickup);
+  const [moreOpen, setMoreOpen] = useState(false);
+  // Tampilan ditentukan perangkat, bukan dipilih (keputusan pemilik, 7 Nov
+  // 2026): kartu di ponsel, daftar di layar yang lebih lebar. Ambangnya sama
+  // dengan tata letak ponsel halaman ini (@media max-width 720px di CSS).
+  // Media query, bukan @container: ini selera per perangkat, sedangkan daftar
+  // sendiri sudah muat di lebar berapa pun lewat container query.
+  const view = useMediaQuery('(max-width: 720px)') ? 'cards' : 'list';
+  const [techFilter, setTechFilter] = useState(start.tech);
+  const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>(start.payment);
+  // `?date=month` = "Unit masuk bulan ini" dari Dashboard.
+  const [dateFilter, setDateFilter] = useState<DateFilter>(start.date);
+  const [customFrom, setCustomFrom] = useState(start.from);
+  const [customTo, setCustomTo] = useState(start.to);
+  const [sort, setSort] = useState<ServiceSort>(start.sort);
+  // Semua / Belum tuntas / Tertahan. Arsip (lunas/batal DAN sudah diambil) ikut
+  // tampil di Semua menurut urutan tanggal; Belum tuntas membuangnya saat daftar
+  // dipakai sebagai antrean kerja. `?open=1` = "Tiket saya" dari Dashboard.
+  const [scope, setScope] = useState<ServiceScope>(start.scope);
+  // `?new=1` membuka Servis Baru langsung (tombol cepat Dashboard).
+  const [editOpen, setEditOpen] = useState(() => searchParams.get('new') === '1');
+  const [editing, setEditing] = useState<Service | null>(null);
+  const [statusOpen, setStatusOpen] = useState(false);
+  const [statusTarget, setStatusTarget] = useState<Service | null>(null);
+  // Panel setelah tiket dibuat / unit diserahkan. Baris daftar dicari lagi saat
+  // render supaya nota memakai data terbaru (lunas, garansi).
+  const [done, setDone] = useState<{ service: Service; variant: 'intake' | 'handover' } | null>(null);
+  const [notifyOpen, setNotifyOpen] = useState(false);
+  const [notifyTarget, setNotifyTarget] = useState<Service | null>(null);
+  // Dipulihkan bersama gulir: tanpa itu daftar kembali 50 baris dan posisi
+  // gulir yang dalam tersangkut di ujung bawahnya.
+  const [limit, setLimit] = useState(start.limit);
+  const [pickupConfirm, setPickupConfirm] = useState<Service | null>(null);
+  // Tiket yang sedang ditambah sparepart dari daftar. Disimpan id-nya, lalu
+  // barisnya dicari saat render, supaya part yang baru masuk langsung terbaca
+  // "Tambah lagi" di pemilih.
+  const [partsFor, setPartsFor] = useState<string | null>(null);
+
+  // Subscribe to the org slice so the category filter reflects cloud-synced
+  // edits (and updates from other devices) without a manual reload.
+  const orgCategories = useSessionStore((s) => s.org?.settings?.deviceCategories);
+  const categories = orgCategories ?? getCategories();
+  // Kolom yang dipilih toko di Pengaturan > Operasional (tersinkron antar perangkat).
+  const savedColumns = useSessionStore((s) => s.org?.settings?.serviceColumns);
+  const cols = useMemo(() => new Set(resolveServiceColumns(savedColumns)), [savedColumns]);
+
+  const today = localDateStr();
+  // Tiket di luar daftar yang dimuat ditanyakan ke server saat dicari (≥3 huruf)
+  // atau saat rentang tanggal menjangkau sebelum batasnya, lalu digabung.
+  // SETIAP tiket yang DIBUAT dalam jendela pasti termuat, karena updated_at tak
+  // mungkin lebih tua dari created_at — jadi batasnya adalah awal jendela. Kalau
+  // salah satu kueri terpotong, jaminan itu gugur: setiap rentang tanggal
+  // ditanyakan ke server.
+  const dateRange = createdRange(dateFilter, today, { from: customFrom, to: customTo });
+  const oldestLoaded = truncated ? Infinity : Date.parse(windowStart);
+  const { rows: archive, pending: archivePending } = useServiceArchive({
+    enabled: windowed,
+    term: query,
+    range: dateRange && Date.parse(localDayStartISO(dateRange.from)) < oldestLoaded ? dateRange : null,
+  });
+  const allServices = useMemo(() => {
+    if (archive.length === 0) return services;
+    const loaded = new Set(services.map((s) => s.id));
+    return [...services, ...archive.filter((s) => !loaded.has(s.id))];
+  }, [services, archive]);
+  const visible = useMemo(() => visibleServices(allServices), [allServices]);
+
+  // Hitungan dari SEMUA tiket — daftar cloud maks 1000 tiket terbaru, jadi
+  // dihitung server (service_summary, 0063). Selama dimuat, pakai daftar yang ada.
+  const { from: monthFrom, to: monthTo } = monthRange();
+  const summaryQuery = useServiceSummary(monthFrom, monthTo);
+  const stats = useMemo(
+    () => summaryQuery.data ?? serviceSummary(services, monthFrom, monthTo),
+    [summaryQuery.data, services, monthFrom, monthTo],
+  );
+
+  const {
+    open: openCount,
+    stalled: stalledCount,
+    closed: closedCount,
+  } = useMemo(() => scopeCounts(visible, today), [visible, today]);
+
+  // Semua filter KECUALI status — dasar hitungan chip status, supaya angka di
+  // chip selalu berarti "yang akan tampil kalau chip ini dipilih".
+  const filteredExceptStatus = useMemo(() => {
+    const range = createdRange(dateFilter, today, { from: customFrom, to: customTo });
+    return visible
+      .filter((s) => matchesScope(s, scope, today))
+      .filter((s) => categoryFilter === 'all' || s.category === categoryFilter)
+      .filter((s) => pickupFilter === 'all' || isAwaitingPickup(s))
+      .filter((s) => matchesTechnician(s, techFilter, techs, me))
+      .filter((s) => matchesPayment(s, paymentFilter))
+      .filter((s) => {
+        if (!range) return true;
+        const created = localDateOf(s.createdAt);
+        return created >= range.from && created <= range.to;
+      })
+      .filter((s) => matchesQuery(s, query));
+  }, [
+    visible,
+    scope,
+    pickupFilter,
+    categoryFilter,
+    techFilter,
+    techs,
+    me,
+    paymentFilter,
+    dateFilter,
+    customFrom,
+    customTo,
+    today,
+    query,
+  ]);
+
+  const statusCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const s of filteredExceptStatus) counts.set(s.status, (counts.get(s.status) ?? 0) + 1);
+    return (Object.keys(STATUS_LABELS) as ServiceStatus[])
+      .filter((st) => counts.has(st))
+      .map((st): [string, number] => [st, counts.get(st) ?? 0]);
+  }, [filteredExceptStatus]);
+  const activeStatus = statusCounts.some(([st]) => st === statusFilter) ? statusFilter : 'all';
+
+  const rows = useMemo(
+    () =>
+      filteredExceptStatus
+        .filter((s) => activeStatus === 'all' || s.status === activeStatus)
+        .sort((a, b) => compareServices(a, b, sort)),
+    [filteredExceptStatus, activeStatus, sort],
+  );
+
+  const filtersActive =
+    query !== '' ||
+    activeStatus !== 'all' ||
+    categoryFilter !== 'all' ||
+    pickupFilter !== 'all' ||
+    techFilter !== 'all' ||
+    paymentFilter !== 'all' ||
+    dateFilter !== 'all' ||
+    scope === 'stalled';
+
+  // Filter yang jarang dipakai tinggal di panel "Filter lainnya"; jumlah yang
+  // aktif tampil di tombolnya supaya daftar yang tersaring tak pernah tanpa sebab.
+  const moreActive = [categoryFilter !== 'all', paymentFilter !== 'all', dateFilter !== 'all'].filter(
+    Boolean,
+  ).length;
+  // Toko satu orang (mis. paket Solo) tidak butuh filter teknisi.
+  const activeTechs = techs.filter((e) => e.active !== false);
+  const showTechFilter = activeTechs.length > 1;
+  // Kolom Teknisi hanya berguna bila isinya membedakan tiket. Toko satu teknisi
+  // (atau yang tak pernah mengisinya) mengulang nama yang sama di tiap baris dan
+  // memakan lajur yang dibutuhkan keluhan; di demo "Rizal Pratama" ada di 7 dari
+  // 7 tiket. Yang dihitung nama pada tiketnya, bukan jumlah karyawan aktif: semua
+  // karyawan bisa dipilih jadi teknisi, jadi toko berkaryawan banyak tetap bisa
+  // hanya punya satu nama di daftar. Tiket tanpa teknisi dihitung sebagai satu
+  // nilai sendiri, supaya campuran "ada / belum ditugaskan" tetap terlihat.
+  const distinctTechs = useMemo(
+    () => new Set(services.map((s) => s.technicianName || '')).size,
+    [services],
+  );
+  const showTech = cols.has('technician') && distinctTechs > 1;
+  // Di ponsel teknisi, urutan, dan sakelar lingkup dilipat ke tombol filter di
+  // samping kolom cari (CSS); yang aktif ikut dihitung di tombol itu.
+  const foldedOnMobile = [
+    showTechFilter && techFilter !== 'all',
+    sort !== 'newest',
+    scope !== 'all',
+  ].filter(Boolean).length;
+
+  // Setiap perubahan filter kembali ke potongan pertama daftar.
+  const change = (apply: () => void) => {
+    apply();
+    setLimit(LIST_PAGE_SIZE);
+  };
+  const resetFilters = () =>
+    change(() => {
+      setQuery('');
+      setStatusFilter('all');
+      setCategoryFilter('all');
+      setPickupFilter('all');
+      setTechFilter('all');
+      setPaymentFilter('all');
+      setDateFilter('all');
+      setCustomFrom('');
+      setCustomTo('');
+      // Belum tuntas adalah cara pandang, bukan saringan, jadi tak direset.
+      // Tertahan = Belum tuntas + saringan, maka resetnya kembali ke Belum tuntas.
+      setScope((v) => (v === 'stalled' ? 'open' : v));
+    });
+
+  // Hanya potongan ini yang dirender. `stats` di atas SENGAJA tetap dihitung
+  // dari seluruh tiket, bukan dari sini — kalau tidak, angka
+  // "Total Servis"/"Nilai Tiket Lunas" akan berubah mengikuti seberapa banyak
+  // baris yang kebetulan sudah dimuat, dan itu laporan yang menyesatkan.
+  // Daftar berjendela dirender UTUH (±105 tiket). Potongan 50 baris dibuat untuk
+  // ribuan tiket sejak toko berdiri; kini itu hanya terjadi saat hasil arsip ikut
+  // digabung (pencarian/rentang lama, maks 1000), jadi potongannya hanya berlaku
+  // saat itu.
+  const shownRows = useMemo(
+    () => (archive.length > 0 ? rows.slice(0, limit) : rows),
+    [rows, limit, archive.length],
+  );
+
+  // Keluhan & Penanganan berbagi satu segmen: dua baris bertumpuk, bukan dua
+  // potongan yang terpisah jauh saat segmen membungkus di layar laptop.
+  const showComplaint = cols.has('complaint');
+  const showFix = cols.has('completionNote');
+  const showNotes = showComplaint || showFix;
+
+  // Tiket yang belum selesai belum punya penanganan: baris "Penanganan –" hanya
+  // jadi derau di empat dari tujuh tiket. Selesai/Lunas tanpa catatan tetap
+  // menampilkan tanda kosong, karena itu catatan yang lupa diisi.
+  const showFixLine = (s: Service) =>
+    showFix && (!!s.completionNote || s.status === 'selesai' || s.status === 'lunas');
+
+  // Lajur segmen Daftar dari kolom yang diaktifkan toko, supaya segmen antar
+  // baris sejajar. Urutan = urutan segmen di JSX (nomor dulu). Tiap lajur punya
+  // lantai (minmax) selebar isi terpendek yang masih terbaca; jumlah lantainya
+  // menurunkan ambang judul kolom di CSS (`@container svcRows (min-width: …)`).
+  const tracks = [
+    '6.5rem',
+    // Segmen keluhan-penanganan paling lebar (tiga baris ringkasan kerja); nama
+    // pelanggan & teknisi pendek dan boleh dua baris, jadi lajurnya lebih sempit.
+    // Lantai pelanggan = nomor HP mono 18 karakter ("+62 812-3456-78901" = 129,6px
+    // terukur): nomor yang kehilangan digit sama dengan nomor salah, jadi tak boleh
+    // dipotong. Selisihnya diambil dari lantai catatan, sehingga jumlah lantai (dan
+    // ambang judul kolom di CSS) tak bergeser.
+    cols.has('customer') && 'minmax(8.25rem, 0.9fr)',
+    cols.has('device') && 'minmax(7.5rem, 1fr)',
+    showNotes && `minmax(9.75rem, ${showComplaint && showFix ? 2.5 : showFix ? 1.6 : 0.9}fr)`,
+    showTech && 'minmax(5.5rem, 0.7fr)',
+  ]
+    .filter(Boolean);
+  const rowTracks = tracks.join(' ');
+  // Jumlah segmen = jumlah lajur; CSS memilih ambang tabel dari sini.
+  const segCount = tracks.length;
+
+  // Seluruh baris Daftar membuka tiket. Jalur papan ketik & pembaca layar tetap
+  // tautan nomor tiket (satu perhentian tab per baris), jadi ini hanya jalan
+  // pintas untuk penunjuk. Klik pada kontrol di dalam baris, seleksi teks, dan
+  // klik bermodifikasi (tab baru lewat tautan nomor) dibiarkan apa adanya.
+  const navigate = useNavigate();
+  const openTicket = (e: MouseEvent<HTMLElement>, id: string) => {
+    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    if ((e.target as HTMLElement).closest('a, button, input, select, textarea, label')) return;
+    if (window.getSelection()?.toString()) return;
+    navigate(`/services/${id}`);
+  };
+
+  // Ingatan daftar: saringan dicatat tiap berubah, gulir tiap bergeser, supaya
+  // membuka tiket lalu kembali (tautan "Kembali ke daftar", sidebar, atau tombol
+  // Kembali peramban) mendarat di tempat yang sama, bukan kotak cari kosong di
+  // puncak daftar. Bentuk & masa berlakunya: lib/business/serviceListView.ts.
+  const wrapRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    saveListView(listOwner, entryKey, {
+      limit,
+      query,
+      status: statusFilter,
+      category: categoryFilter,
+      pickup: pickupFilter,
+      tech: techFilter,
+      payment: paymentFilter,
+      date: dateFilter,
+      from: customFrom,
+      to: customTo,
+      sort,
+      scope,
+    });
+  }, [
+    listOwner,
+    entryKey,
+    limit,
+    query,
+    statusFilter,
+    categoryFilter,
+    pickupFilter,
+    techFilter,
+    paymentFilter,
+    dateFilter,
+    customFrom,
+    customTo,
+    sort,
+    scope,
+  ]);
+  useEffect(() => {
+    let raf = 0;
+    const onScroll = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        // Halaman ini sudah tergantikan (peralihan rute) → peramban memotong
+        // gulir ke 0 dan itu bukan posisi daftar; jangan dicatat.
+        if (wrapRef.current?.isConnected) saveListScroll(readScroll());
+      });
+    };
+    // Capture: peristiwa scroll tak menggelembung, dan wadah gulir bisa dokumen
+    // atau elemen (demo).
+    window.addEventListener('scroll', onScroll, { capture: true, passive: true });
+    return () => {
+      window.removeEventListener('scroll', onScroll, { capture: true });
+      cancelAnimationFrame(raf);
+    };
+  }, []);
+  // Pulihkan gulir sekali, setelah baris yang dulu mengisi halaman benar-benar
+  // ada: jendela termuat DAN arsip yang diminta pencarian/rentang sudah tiba
+  // (scrollRestoreStep). Flag dinyalakan di dalam rAF: kalau efek ini dijalankan
+  // ulang sebelum bingkai tiba, pembatalan tak boleh menelan pemulihan.
+  const scrollRestored = useRef(initial.scrollTop <= 0);
+  const rowCount = rows.length;
+  useEffect(() => {
+    if (scrollRestored.current) return;
+    const step = scrollRestoreStep({ loading, archivePending, rowCount });
+    if (step === 'wait') return;
+    if (step === 'skip') {
+      scrollRestored.current = true;
+      return;
+    }
+    const raf = requestAnimationFrame(() => {
+      scrollRestored.current = true;
+      writeScroll(initial.scrollTop);
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [loading, archivePending, rowCount, initial.scrollTop]);
+
+  const openNew = () => {
+    setEditing(null);
+    setEditOpen(true);
+  };
+  // "N" = Servis Baru, seperti "/" untuk cari di Kasir. Diabaikan saat mengetik
+  // atau saat jendela lain terbuka.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key.toLowerCase() !== 'n' || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
+      const el = e.target as HTMLElement | null;
+      if (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) return;
+      if (document.querySelector('[role="dialog"]')) return;
+      e.preventDefault();
+      setEditing(null);
+      setEditOpen(true);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  // Toggle physical collection (manager-only). Mirrors ServiceDetailPage so the
+  // list and detail stay consistent; pickup is independent of payment status.
+  const togglePickup = async (s: Service, confirmed = false) => {
+    // Unit keluar sebelum lunas boleh, tapi harus disengaja.
+    if (!s.pickedUp && !confirmed && s.status === 'selesai' && outstandingBalance(s) > 0) {
+      setPickupConfirm(s);
+      return;
+    }
+    const now = new Date().toISOString();
+    const nowPicked = !s.pickedUp;
+    try {
+      await repository.patch('services', s.id, {
+        pickedUp: nowPicked,
+        pickedUpAt: nowPicked ? now : null,
+        updatedAt: now,
+        history: [
+          ...(s.history ?? []),
+          {
+            at: now,
+            status: 'edit',
+            by: me?.id ?? '',
+            byName: me?.name ?? '',
+            note: nowPicked ? PICKUP_NOTE : UNPICK_NOTE,
+            internal: false,
+          },
+        ],
+      });
+      toast.success(t(nowPicked ? 'services.pickedToast' : 'services.unpickedToast'));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t('services.pickupFailed'));
+    }
+  };
+
+  const partsService = partsFor ? (allServices.find((s) => s.id === partsFor) ?? null) : null;
+  // Jalur yang sama dengan tombol Sparepart di detail tiket (addServicePart).
+  // Biaya final yang sudah ditetapkan tidak ikut naik; detail mengingatkannya di
+  // panel biaya, di daftar toast inilah satu-satunya pengingat.
+  const addPart = async (line: ServiceSparepart) => {
+    if (!partsService) return;
+    try {
+      await addServicePart(partsService, line);
+      if (finalCostLocked(partsService)) {
+        toast.warning(
+          interpolate(t('services.partAddedCostStale'), { amount: fmtRp(partsService.finalCost) }),
+        );
+      } else {
+        toast.success(t('serviceDetail.partAdded'));
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t('serviceDetail.partAddFailed'));
+    }
+  };
+
+  // Part yang dibeli di luar stok. Pengeluaran kas, jadi hanya owner/admin
+  // (RLS & RPC 0087), sama dengan tombol Modal Dadakan di detail tiket.
+  const partsWallets =
+    partsService && isManager ? walletsForOutlet(allWallets, partsService.outletId) : [];
+  const lastWallet = getLastExpenseWallet();
+  const addModal = async (input: ModalDadakanInput): Promise<boolean> => {
+    if (!partsService) return false;
+    try {
+      await addServiceModalLine(partsService, input);
+      setLastExpenseWallet(input.walletId);
+      if (finalCostLocked(partsService)) {
+        toast.warning(
+          interpolate(t('services.modalAddedCostStale'), { amount: fmtRp(partsService.finalCost) }),
+        );
+      } else {
+        toast.success(t('serviceDetail.modalAdded'));
+      }
+      return true;
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t('serviceDetail.modalAddFailed'));
+      return false;
+    }
+  };
+
+  // Tombol ikon yang sama berulang di setiap baris ("Ubah", "Notifikasi & nota"):
+  // tiap tombol menunjuk nomor tiketnya lewat aria-describedby supaya pembaca
+  // layar tahu ia milik tiket yang mana. Daftar dan Kartu tak pernah tampil
+  // bersamaan, jadi id ini unik di halaman.
+  const noId = (s: Service) => `svc-no-${s.id}`;
+
+  // Label sel yang tampil sebagai judul kolom (atau tak tampil sama sekali di
+  // tata letak mengalir) tetap sampai ke pembaca layar sebagai teks tersembunyi.
+  const srLabel = (key: Parameters<typeof t>[0]) => (
+    <span className="fm-visually-hidden">{t(key)}: </span>
+  );
+
+  // Pickup indicator: prominent "Belum diambil" for closed-but-uncollected
+  // units, dim "Diambil" for collected ones, nothing for in-progress tickets.
+  // Manajer mengklik labelnya untuk menandai/membatalkan pengambilan (dulu tombol
+  // ikon terpisah di kolom aksi).
+  const renderPickup = (s: Service) => {
+    if (!s.pickedUp && !isAwaitingPickup(s)) return null;
+    const cls = s.pickedUp ? styles.pickupDone : styles.pickupWait;
+    const content = s.pickedUp ? (
+      <>
+        <Icon name="circle-check" aria-hidden /> {t('services.pickedUp')}
+      </>
+    ) : (
+      <>
+        <Icon name="box" aria-hidden /> {t('services.notPickedUp')}
+      </>
+    );
+    if (!isManager) return <span className={cls}>{content}</span>;
+    const action = t(s.pickedUp ? 'services.unpickHint' : 'services.pickHint');
+    return (
+      <button
+        type="button"
+        className={[cls, styles.pickupBtn].join(' ')}
+        onClick={() => void togglePickup(s)}
+        title={action}
+        // Nama memuat teks yang terlihat, lalu tiketnya dan apa yang terjadi bila
+        // diklik: dulu hanya title yang memuatnya, dan title tak terbaca keyboard.
+        aria-label={`${t(s.pickedUp ? 'services.pickedUp' : 'services.notPickedUp')} ${s.serviceNo}. ${action}`}
+      >
+        {content}
+      </button>
+    );
+  };
+
+  // Tiket tuntas tidak pernah ditandai tertahan: tak ada lagi yang ditunggu.
+  const renderStall = (s: Service) => {
+    const days = isClosedOut(s) ? null : stalledDays(s, today);
+    if (days === null) return null;
+    return (
+      <span className={styles.stallTag} title={t('services.stallHint')}>
+        {interpolate(t('services.stalledDays'), { n: String(days) })}
+      </span>
+    );
+  };
+
+  // Lencana status yang bisa diklik untuk mengubah status; sama di ketiga tampilan.
+  const renderStatus = (s: Service) => (
+    <button
+      type="button"
+      className={styles.statusBtn}
+      onClick={() => {
+        setStatusTarget(s);
+        setStatusOpen(true);
+      }}
+      title={t('services.statusHint')}
+      aria-label={interpolate(t('services.statusChangeAria'), {
+        no: s.serviceNo,
+        status: t(`statusLabel.${s.status}`),
+      })}
+    >
+      <Badge tone={STATUS_TONE[s.status]} dot>
+        {t(`statusLabel.${s.status}`)}
+      </Badge>
+      <Icon name="pen" aria-hidden />
+    </button>
+  );
+
+  // Judul kolom yang bisa diurutkan (hanya tampil di tata letak lebar). Klik: naik,
+  // turun, lalu kembali ke Terbaru (nextSort). Panah mono menandai arah; di kolom
+  // yang tak aktif ia tersembunyi sampai disorot, supaya judul tak terlihat seperti
+  // tabel penuh panah. Tak memakai aria-sort (hanya sah di columnheader, dan daftar
+  // ini bukan tabel): urutan aktif dibacakan lewat teks tersembunyi.
+  const sortHead = (column: ServiceSortColumn, label: string) => {
+    const dir = sortDirectionOn(sort, column);
+    return (
+      <button
+        type="button"
+        className={styles.sortBtn}
+        data-dir={dir}
+        onClick={() => change(() => setSort(nextSort(sort, column)))}
+        title={interpolate(t('services.sortBy'), { column: label })}
+      >
+        <span className={styles.sortLabel}>{label}</span>
+        <Icon name={dir === 'descending' ? 'arrow-down' : 'arrow-up'} className={styles.sortMark} aria-hidden />
+        {dir !== 'none' && (
+          <span className="fm-visually-hidden">
+            {interpolate(t('services.sortCurrent'), { order: t(SORT_LABEL_KEY[sort]) })}
+          </span>
+        )}
+      </button>
+    );
+  };
+
+  // Biaya, sama di ketiga tampilan: biaya final (plus modal/profit untuk pemilik
+  // bila ada modal), atau estimasi berlabel selama biaya final belum ditetapkan.
+  // Tiket batal: DP yang ditahan (biaya cek), dengan modal = biaya yang tetap
+  // ditanggung, sama seperti rincian Detail Servis.
+  const renderCost = (s: Service) => {
+    const shown = costReadout(s);
+    if (shown.kind === 'none') return <span className={styles.muted}><EmptyValue /></span>;
+    if (shown.kind === 'estimate') {
+      return (
+        <span className={styles.estimate} title={t('services.estimateHint')}>
+          {interpolate(t('services.estimateShort'), { amount: fmtRp(shown.amount) })}
+        </span>
+      );
+    }
+    const kept = shown.kind === 'kept';
+    const modal = kept ? heldCost(s.spareparts) : serviceModalTotal(s.spareparts);
+    const profit = kept ? (cancelledProfit(s) ?? 0) : serviceProfit(s);
+    return (
+      <>
+        <span className={styles.cost}>{fmtRp(shown.amount)}</span>
+        {kept && (
+          <span className={styles.costTag} title={t('services.keptHint')}>
+            {t('services.keptTag')}
+          </span>
+        )}
+        {/* Hanya kalau ada modal. Tanpa sparepart, profit SAMA DENGAN biaya, dan
+            sub-baris cuma mengulang angka di atasnya. */}
+        {isOwner && modal > 0 && (
+          <span className={styles.breakdown}>
+            {/* Label margin lewat teks tersembunyi, bukan aria-label: aria-label pada
+                <span> biasa tak dibacakan, sehingga pembaca layar hanya mengucap
+                "-850.000 +650.000" tanpa tahu mana modal dan mana profit. */}
+            <span className={styles.modal}>
+              <span aria-hidden>-{fmtNumber(modal)}</span>
+              <span className="fm-visually-hidden">
+                {interpolate(t('services.modalAria'), { amount: fmtRp(modal) })}
+              </span>
+            </span>
+            <span className={styles.profit} data-loss={profit < 0 ? 'true' : undefined}>
+              <span aria-hidden>
+                {profit >= 0 && '+'}
+                {fmtNumber(profit)}
+              </span>
+              <span className="fm-visually-hidden">
+                {interpolate(t('services.profitAria'), { amount: fmtRp(profit) })}
+              </span>
+            </span>
+          </span>
+        )}
+      </>
+    );
+  };
+
+  // Shared action cluster so the list and cards stay in sync. Tiga aksi tetap
+  // untuk semua tiket; tanda ambil ada di label status ambil (renderPickup).
+  // Sparepart hanya untuk tiket yang masih dikerjakan, dan ditaruh paling kiri:
+  // kelompoknya rata kanan, jadi tiga aksi tetap sejajar antarbaris.
+  // `viewLink` hanya untuk Kartu: di Daftar seluruh baris sudah tautan ke tiket
+  // (openTicket), jadi ikon tautannya menghabiskan 40px lajur tanpa menambah jalan.
+  const renderActions = (s: Service, viewLink = false) => (
+    <>
+      {canQuickAddParts(s.status) && (
+        <button
+          className={styles.iconBtn}
+          onClick={() => setPartsFor(s.id)}
+          title={t('services.addPart')}
+          aria-label={t('services.addPart')}
+          aria-describedby={noId(s)}
+        >
+          <Icon name="microchip" aria-hidden />
+        </button>
+      )}
+      {viewLink && (
+        <Link
+          className={styles.iconBtn}
+          to={`/services/${s.id}`}
+          title={t('services.viewTicket')}
+          aria-label={t('services.viewTicket')}
+          aria-describedby={noId(s)}
+        >
+          <Icon name="up-right-from-square" aria-hidden />
+        </Link>
+      )}
+      <button
+        className={styles.iconBtn}
+        onClick={() => {
+          setNotifyTarget(s);
+          setNotifyOpen(true);
+        }}
+        title={t('services.notifyReceipt')}
+        aria-label={t('services.notifyReceipt')}
+        aria-describedby={noId(s)}
+      >
+        <Icon name="whatsapp" aria-hidden />
+      </button>
+      <button
+        className={styles.iconBtn}
+        onClick={() => {
+          setEditing(s);
+          setEditOpen(true);
+        }}
+        title={t('common.edit')}
+        aria-label={t('common.edit')}
+        aria-describedby={noId(s)}
+      >
+        <Icon name="pen" aria-hidden />
+      </button>
+    </>
+  );
+
+  return (
+    <div className={styles.wrap} ref={wrapRef}>
+      <ConfirmDialog
+        open={!!pickupConfirm}
+        title={t('services.unpaidTitle')}
+        message={
+          pickupConfirm
+            ? interpolate(t('services.unpaidMsg'), {
+                no: pickupConfirm.serviceNo,
+                amount: fmtRp(outstandingBalance(pickupConfirm)),
+              })
+            : ''
+        }
+        confirmLabel={t('services.unpaidConfirm')}
+        onCancel={() => setPickupConfirm(null)}
+        onConfirm={() => {
+          const s = pickupConfirm;
+          setPickupConfirm(null);
+          if (s) void togglePickup(s, true);
+        }}
+      />
+      {/* Satu strip readout, bukan lima kartu. Di ponsel ia satu baris empat
+          hitungan berlabel pendek; nilai rupiah ada di Dashboard & Laporan. */}
+      <PageSummary
+        label={t('services.summaryAria')}
+        items={[
+          { label: t('services.statTotal'), short: t('services.statTotalShort'), value: stats.total },
+          {
+            label: t('services.statInProcess'),
+            short: t('services.statInProcessShort'),
+            value: stats.inProcess,
+            tone: stats.inProcess > 0 ? 'info' : undefined,
+          },
+          {
+            label: t('services.statAwaiting'),
+            short: t('services.statAwaitingShort'),
+            value: stats.awaitingPickup,
+            tone: stats.awaitingPickup > 0 ? 'accent' : undefined,
+          },
+          { label: t('services.statDone'), short: t('services.statDoneShort'), value: stats.done },
+          // Jumlah biaya final tiket Lunas — bukan "pendapatan" (itu kas masuk per bulan di Dashboard/Keuangan).
+          { label: t('services.statPaidValue'), value: fmtRp(stats.lunasValue), wide: true, hideOnPhone: true },
+        ]}
+      />
+
+      <div className={styles.toolbar}>
+        <div className={styles.search}>
+          <Input
+            placeholder={t('services.searchPh')}
+            value={query}
+            onChange={(e) => change(() => setQuery(e.target.value))}
+            onClear={() => change(() => setQuery(''))}
+            clearLabel={t('services.searchClear')}
+            iconLeft={<Icon name="magnifying-glass" aria-hidden />}
+            aria-label={t('services.searchAria')}
+          />
+        </div>
+        {/* Ponsel: seluruh filter (termasuk sakelar lingkup) dilipat ke sini,
+            di samping kolom cari, supaya tiket pertama naik ke layar pertama. */}
+        <button
+          type="button"
+          className={[styles.toggle, styles.phoneMore, moreOpen ? styles.toggleOn : ''].join(' ')}
+          aria-expanded={moreOpen}
+          aria-controls="servis-filter-lainnya"
+          aria-label={t('services.moreFilters')}
+          title={t('services.moreFilters')}
+          onClick={() => setMoreOpen((v) => !v)}
+        >
+          <Icon name="sliders" aria-hidden />
+          {moreActive + foldedOnMobile > 0 && (
+            <span className={styles.toggleCount}>{moreActive + foldedOnMobile}</span>
+          )}
+        </button>
+        <div className={styles.toolbarActions}>
+          <Button onClick={openNew} iconLeft={<Icon name="plus" aria-hidden />}>
+            {t('services.new')}
+          </Button>
+        </div>
+      </div>
+
+      <div className={styles.filterBar} role="group" aria-label={t('services.filterAria')} data-more={moreOpen}>
+        {showTechFilter && (
+          <select
+            className={styles.select}
+            value={techFilter}
+            onChange={(e) => change(() => setTechFilter(e.target.value))}
+            aria-label={t('services.filterTech')}
+          >
+            <option value="all">{t('services.allTechs')}</option>
+            {me && <option value="me">{t('services.myTickets')}</option>}
+            {activeTechs.map((e) => (
+              <option key={e.id} value={e.id}>
+                {e.name}
+              </option>
+            ))}
+            <option value="none">{t('services.unassigned')}</option>
+          </select>
+        )}
+        <select
+          className={styles.select}
+          value={sort}
+          onChange={(e) => change(() => setSort(e.target.value as ServiceSort))}
+          aria-label={t('services.sortAria')}
+        >
+          {SERVICE_SORTS.map((value) => (
+            <option key={value} value={value}>
+              {t(SORT_LABEL_KEY[value])}
+            </option>
+          ))}
+        </select>
+        {/* Sakelar lingkup: tiga posisi bertingkat dalam satu rumah. Angka =
+            tiket yang tampil bila posisi itu dipilih. Semua sengaja tanpa angka:
+            di cloud daftarnya berjendela (31 hari), jadi angkanya akan
+            bertabrakan dengan TOTAL di strip atas, dan chip status di bawah
+            sudah menghitungnya. */}
+        <div className={[styles.scope, styles.foldable].join(' ')} role="group" aria-label={t('services.scopeAria')}>
+          {SERVICE_SCOPES.map((value) => {
+            const count = value === 'open' ? openCount : value === 'stalled' ? stalledCount : null;
+            return (
+              <button
+                key={value}
+                type="button"
+                className={styles.scopeCell}
+                aria-pressed={scope === value}
+                onClick={() => change(() => setScope(value))}
+                title={t(SCOPE_TEXT[value].hint)}
+              >
+                {/* Lampu peringatan Tertahan menyala selama ada tiket yang tertahan. */}
+                {value === 'stalled' && (
+                  <span className={styles.scopeLed} data-lit={stalledCount > 0} aria-hidden />
+                )}
+                <span>{t(SCOPE_TEXT[value].label)}</span>
+                {count !== null && <span className={styles.scopeCount}>{fmtNumber(count)}</span>}
+              </button>
+            );
+          })}
+        </div>
+        <button
+          type="button"
+          className={[styles.toggle, styles.moreBtn, moreOpen ? styles.toggleOn : ''].join(' ')}
+          aria-expanded={moreOpen}
+          aria-controls="servis-filter-lainnya"
+          onClick={() => setMoreOpen((v) => !v)}
+        >
+          <Icon name="sliders" aria-hidden />
+          {t('services.moreFilters')}
+          {moreActive > 0 && <span className={styles.toggleCount}>{moreActive}</span>}
+        </button>
+        {/* Hanya muncul dari tautan Dashboard "unit menunggu diambil". */}
+        {pickupFilter === 'awaiting' && (
+          <button
+            type="button"
+            className={[styles.toggle, styles.toggleOn, styles.awaitingChip].join(' ')}
+            onClick={() => change(() => setPickupFilter('all'))}
+            aria-label={t('services.awaitingOffAria')}
+            title={t('services.awaitingOffHint')}
+          >
+            {t('services.awaiting')} <Icon name="times" aria-hidden />
+          </button>
+        )}
+        {filtersActive && (
+          <button type="button" className={styles.resetBtn} onClick={resetFilters}>
+            {t('services.resetFilters')}
+          </button>
+        )}
+      </div>
+
+      {moreOpen && (
+        <div
+          id="servis-filter-lainnya"
+          className={styles.morePanel}
+          role="group"
+          aria-label={t('services.moreFilters')}
+        >
+          <select
+            className={styles.select}
+            value={categoryFilter}
+            onChange={(e) => change(() => setCategoryFilter(e.target.value))}
+            aria-label={t('services.filterDevice')}
+          >
+            <option value="all">{t('services.allDevices')}</option>
+            {categories.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+          <select
+            className={styles.select}
+            value={dateFilter}
+            onChange={(e) => change(() => setDateFilter(e.target.value as DateFilter))}
+            aria-label={t('services.filterDate')}
+          >
+            <option value="all">{t('services.allDates')}</option>
+            <option value="last7">{t('services.last7')}</option>
+            <option value="thisMonth">{t('services.thisMonth')}</option>
+            <option value="custom">{t('services.pickDates')}</option>
+          </select>
+          {dateFilter === 'custom' && (
+            <span className={styles.dateRange}>
+              <input
+                type="date"
+                className={styles.dateInput}
+                value={customFrom}
+                onChange={(e) => change(() => setCustomFrom(e.target.value))}
+                aria-label={t('services.dateFrom')}
+              />
+              <span aria-hidden>–</span>
+              <input
+                type="date"
+                className={styles.dateInput}
+                value={customTo}
+                onChange={(e) => change(() => setCustomTo(e.target.value))}
+                aria-label={t('services.dateTo')}
+              />
+            </span>
+          )}
+          {/* Terakhir: di ponsel ia mengambil satu baris penuh (lihat .wideSelect). */}
+          <select
+            className={[styles.select, styles.wideSelect].join(' ')}
+            value={paymentFilter}
+            onChange={(e) => change(() => setPaymentFilter(e.target.value as PaymentFilter))}
+            aria-label={t('services.filterPayment')}
+          >
+            <option value="all">{t('services.allPayments')}</option>
+            <option value="unpaid">{t('services.unpaid')}</option>
+            <option value="dp">{t('services.dpUnpaid')}</option>
+          </select>
+        </div>
+      )}
+
+      <CategoryChips
+        categories={statusCounts}
+        total={filteredExceptStatus.length}
+        value={activeStatus}
+        onChange={(v) => change(() => setStatusFilter(v as ServiceStatus | 'all'))}
+        label={t('services.statusAria')}
+        labelOf={(id) => t(`statusLabel.${id as ServiceStatus}`) ?? id}
+      />
+
+      <Card>
+        {loading ? (
+          <p className={styles.loading}>
+            <Icon name="circle-notch" className="spin" aria-hidden /> {t('services.loading')}
+          </p>
+        ) : rows.length === 0 ? (
+          <EmptyState
+            icon={<Icon name="screwdriver-wrench" aria-hidden />}
+            title={t(visible.length === 0 ? 'services.emptyTitle' : 'services.noResults')}
+            description={
+              visible.length === 0
+                ? t('services.emptyFirst')
+                : !filtersActive && scope === 'open' && closedCount > 0
+                  ? t('services.emptyAllClosed')
+                  : t('services.emptyFiltered')
+            }
+            action={
+              visible.length === 0 ? (
+                <Button onClick={openNew} iconLeft={<Icon name="plus" aria-hidden />}>
+                  {t('services.new')}
+                </Button>
+              ) : filtersActive ? (
+                <Button variant="secondary" size="sm" onClick={resetFilters}>
+                  {t('services.resetFilters')}
+                </Button>
+              ) : scope === 'open' && closedCount > 0 ? (
+                <Button variant="secondary" size="sm" onClick={() => change(() => setScope('all'))}>
+                  {t('services.showClosed')}
+                </Button>
+              ) : null
+            }
+          />
+        ) : (
+          <div>
+            {/* Daftar: satu baris per tiket, konsep sama dengan Inventori & Kasir. */}
+            {view === 'list' && (
+              <div
+                className={styles.rowList}
+                data-segs={segCount}
+                style={{ '--row-cols': rowTracks } as CSSProperties}
+              >
+              {/* Judul kolom: hanya di tata letak lebar, saat segmen berbaris dalam lajur.
+                  Baris di bawah (ul) tak pernah jadi tabel bagi pembaca layar, jadi judul
+                  yang hanya label disembunyikan (aria-hidden): tiap sel membawa labelnya
+                  sendiri sebagai teks tersembunyi (srLabel). Judul yang bisa diurutkan
+                  (No. Servis, Pelanggan, Status, Biaya) adalah tombol sungguhan di dalam
+                  grup berlabel, jadi wadahnya TIDAK aria-hidden. */}
+              <div
+                className={[styles.row, styles.rowHead, cols.has('cost') ? '' : styles.rowNoCost].join(' ')}
+                role="group"
+                aria-label={t('services.sortAria')}
+              >
+                <div className={styles.rowMain}>
+                  {sortHead('date', t('services.colNo'))}
+                  {cols.has('customer') && sortHead('customer', t('services.colCustomer'))}
+                  {cols.has('device') && <span aria-hidden="true">{t('services.colDevice')}</span>}
+                  {showNotes && (
+                    <span aria-hidden="true">
+                      {showComplaint && showFix
+                        ? t('services.colNotes')
+                        : t(showFix ? 'services.colFix' : 'services.colComplaint')}
+                    </span>
+                  )}
+                  {showTech && <span aria-hidden="true">{t('services.colTech')}</span>}
+                </div>
+                <span className={styles.rowStatus}>{sortHead('status', t('common.status'))}</span>
+                {cols.has('cost') && <span className={styles.rowCost}>{sortHead('cost', t('services.colCost'))}</span>}
+                <span className={styles.rowActions} aria-hidden="true">
+                  {t('common.actions')}
+                </span>
+              </div>
+              <ul className={styles.rows}>
+                {shownRows.map((s) => (
+                  <li
+                    key={s.id}
+                    className={[styles.row, cols.has('cost') ? '' : styles.rowNoCost].join(' ')}
+                    data-tone={STATUS_TONE[s.status]}
+                    onClick={(e) => openTicket(e, s.id)}
+                  >
+                    <div className={styles.rowMain}>
+                      {/* Nomor + tanggal masuk: satu identitas tiket, satu segmen. */}
+                      <div className={[styles.rowCell, styles.mono].join(' ')} data-seg="id">
+                        <Link to={`/services/${s.id}`} className={styles.noLink} id={noId(s)}>
+                          {s.serviceNo}
+                        </Link>
+                        <small className={styles.sub}>{fmtDate(localDateOf(s.createdAt))}</small>
+                      </div>
+                      {cols.has('customer') && (
+                        <div className={styles.rowCell} data-seg="customer">
+                          {srLabel('services.colCustomer')}
+                          <strong className={styles.customerName} title={s.customerName || undefined}>
+                            {s.customerName}
+                          </strong>
+                          <small
+                            className={[styles.sub, styles.phone].join(' ')}
+                            title={s.customerPhone || undefined}
+                          >
+                            {s.customerPhone}
+                          </small>
+                        </div>
+                      )}
+                      {cols.has('device') && (
+                        <div className={styles.rowCell} data-seg="device">
+                          {srLabel('services.colDevice')}
+                          <span className={styles.rowTitle} title={s.device || undefined}>
+                            {s.device}
+                          </span>
+                          <small className={styles.sub}>{s.category}</small>
+                        </div>
+                      )}
+                      {showNotes && (
+                        <div
+                          className={styles.rowCell}
+                          data-seg="notes"
+                          data-single={showComplaint !== showFix ? 'true' : undefined}
+                        >
+                          {showComplaint && (
+                            <span className={styles.clamp} title={s.complaint || undefined}>
+                              <b>{t('services.colComplaint')}</b> {s.complaint || <EmptyValue />}
+                            </span>
+                          )}
+                          {showFixLine(s) && (
+                            <span
+                              className={[styles.clamp, styles.clamp3].join(' ')}
+                              title={s.completionNote || undefined}
+                            >
+                              <b>{t('services.colFix')}</b> {s.completionNote || <EmptyValue />}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      {showTech && (
+                        <div className={styles.rowCell} data-seg="technician">
+                          {srLabel('services.colTech')}
+                          <span className={styles.rowTech} title={t('services.colTech')}>
+                            <Icon name="screwdriver-wrench" aria-hidden />
+                            <span>{s.technicianName || <EmptyValue />}</span>
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    {/* Satu zona pindai: lencana status, lalu sinyal "belum diambil" dan
+                        "tertahan". Dulu yang pertama di kolom perangkat, yang kedua di
+                        sini, sehingga satu unit (Lunas, tak diambil 9 hari) memajang dua
+                        sinyal di dua tempat. */}
+                    <div className={styles.rowStatus}>
+                      {renderStatus(s)}
+                      {renderPickup(s)}
+                      {renderStall(s)}
+                    </div>
+                    {cols.has('cost') && (
+                      <div className={styles.rowCost}>
+                        {srLabel('services.colCost')}
+                        {renderCost(s)}
+                      </div>
+                    )}
+                    <div className={styles.rowActions}>{renderActions(s)}</div>
+                  </li>
+                ))}
+              </ul>
+              </div>
+            )}
+
+            {view === 'cards' && (
+            <ul className={styles.cardList}>
+              {shownRows.map((s) => (
+                <li key={s.id} className={styles.jobCard} data-tone={STATUS_TONE[s.status]}>
+                  <div className={styles.jobTop}>
+                    <Link to={`/services/${s.id}`} className={styles.jobNo} id={noId(s)}>
+                      {s.serviceNo}
+                    </Link>
+                    {renderStatus(s)}
+                  </div>
+                  <div className={styles.jobDevice}>
+                    <strong title={s.device || undefined}>{s.device}</strong>
+                    <small>{s.category}</small>
+                    {renderPickup(s)}
+                    {showComplaint && s.complaint && (
+                      <small className={styles.jobNote}>
+                        <b>{t('services.colComplaint')}</b> {s.complaint}
+                      </small>
+                    )}
+                    {showFix && s.completionNote && (
+                      <small className={styles.jobNote}>
+                        <b>{t('services.colFix')}</b> {s.completionNote}
+                      </small>
+                    )}
+                    {renderStall(s)}
+                  </div>
+                  <div className={styles.jobMeta}>
+                    <span className={styles.customerName}>
+                      <Icon name="user" aria-hidden /> {s.customerName}
+                    </span>
+                    <span>
+                      <Icon name="calendar" aria-hidden /> {fmtDate(localDateOf(s.createdAt))}
+                    </span>
+                    {s.technicianName && (
+                      <span>
+                        <Icon name="screwdriver-wrench" aria-hidden /> {s.technicianName}
+                      </span>
+                    )}
+                  </div>
+                  <div className={styles.jobFoot}>
+                    <div className={styles.jobCost}>
+                      {srLabel('services.colCost')}
+                      {renderCost(s)}
+                    </div>
+                    <div className={styles.jobActions}>{renderActions(s, true)}</div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            )}
+
+            {/* Satu footer untuk kedua tampilan, karena keduanya memakai
+                `shownRows` yang sama. */}
+            <div className={styles.loadMore}>
+              {rows.length > shownRows.length && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setLimit((n) => n + LIST_PAGE_SIZE)}
+                  iconLeft={<Icon name="arrow-down" aria-hidden />}
+                >
+                  {t('services.showMore')}
+                </Button>
+              )}
+              <span className={styles.loadMoreHint}>
+                {interpolate(t('services.shownOf'), { shown: String(shownRows.length), total: String(rows.length) })}
+                {rows.length !== stats.total && interpolate(t('services.totalTail'), { n: String(stats.total) })}
+                {scope === 'open' && closedCount > 0 && interpolate(t('services.closedHiddenTail'), { n: String(closedCount) })}
+                {windowed && archive.length === 0 && t(truncated ? 'services.truncatedTail' : 'services.olderTail')}
+              </span>
+            </div>
+          </div>
+        )}
+      </Card>
+
+      <ThumbDock>
+        <Button onClick={openNew} iconLeft={<Icon name="plus" aria-hidden />}>
+          {t('services.new')}
+        </Button>
+      </ThumbDock>
+
+      <ServiceModal
+        open={editOpen}
+        onClose={() => setEditOpen(false)}
+        editing={editing}
+        services={services}
+        employees={techs}
+        onSaved={(created) => created && setDone({ service: created, variant: 'intake' })}
+      />
+      <StatusModal
+        open={statusOpen}
+        onClose={() => setStatusOpen(false)}
+        service={statusTarget}
+        onSaved={() => {}}
+        onHandedOver={() => statusTarget && setDone({ service: statusTarget, variant: 'handover' })}
+      />
+      <TicketDoneModal
+        open={!!done}
+        onClose={() => setDone(null)}
+        service={done ? (services.find((s) => s.id === done.service.id) ?? done.service) : null}
+        variant={done?.variant ?? 'intake'}
+      />
+      <NotifyModal
+        open={notifyOpen}
+        onClose={() => setNotifyOpen(false)}
+        service={notifyTarget}
+      />
+      {/* key per tiket: pencarian dan jumlah di pemilih tidak terbawa ke tiket lain. */}
+      <SparepartPickerModal
+        key={partsFor ?? 'none'}
+        open={!!partsService}
+        onClose={() => setPartsFor(null)}
+        existingItemIds={(partsService?.spareparts ?? [])
+          .map((p) => p.itemId)
+          .filter((x): x is string => !!x)}
+        onPick={addPart}
+        ticket={partsService ?? undefined}
+        modalDadakan={
+          isManager
+            ? {
+                wallets: partsWallets,
+                defaultWalletId: partsWallets.some((w) => w.id === lastWallet)
+                  ? lastWallet
+                  : (partsWallets[0]?.id ?? ''),
+                onSave: addModal,
+              }
+            : undefined
+        }
+      />
+    </div>
+  );
+}

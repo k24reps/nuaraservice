@@ -1,0 +1,252 @@
+/**
+ * TIER 2 — RPC, eskalasi peran, dan gerbang billing.
+ *
+ * Menguji lapis RPC security-definer (yang BYPASS RLS, jadi guard eksplisit
+ * di dalam fungsi adalah satu-satunya pertahanan) + privilege khusus:
+ *   - void_sale / receive_goods → manager-only.
+ *   - set_member_role / deactivate_member → manager; owner-only utk role owner.
+ *   - billing self-service → tidak tersedia sejak 0047.
+ *   - restore_org_data → owner-only + org dipaksa (anti lintas-tenant).
+ *   - track_service (publik) → hanya field aman, history internal tersembunyi.
+ *
+ * Fase "tests-only": test GAGAL = bukti celah. Lihat laporan temuan.
+ */
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import {
+  hasConfig,
+  setupTenants,
+  teardownTenants,
+  makeAnon,
+  type TenantCtx,
+} from './helpers';
+
+const d = hasConfig ? describe : describe.skip;
+
+let ctx: TenantCtx;
+
+beforeAll(async () => {
+  if (!hasConfig) return;
+  ctx = await setupTenants();
+}, 120000);
+
+afterAll(async () => {
+  if (ctx) await teardownTenants(ctx);
+}, 120000);
+
+d('Tier 2 — RPC privilege (manager/owner gates)', () => {
+  it('karyawan TIDAK bisa void_sale (manager-only)', async () => {
+    const { error } = await ctx.karyawanA.client.rpc('void_sale', {
+      p_sale_id: ctx.saleAId,
+      p_reason: 'iseng',
+    });
+    expect(error).not.toBeNull();
+  });
+
+  it('owner A TIDAK bisa void_sale milik org B (cross-tenant)', async () => {
+    const { error } = await ctx.ownerA.client.rpc('void_sale', {
+      p_sale_id: ctx.saleBId,
+      p_reason: 'x',
+    });
+    expect(error).not.toBeNull();
+    // Pastikan sale B tidak ter-void.
+    const { data } = await ctx.admin
+      .from('sales')
+      .select('voided')
+      .eq('id', ctx.saleBId)
+      .single();
+    expect(data?.voided).toBe(false);
+  });
+
+  it('karyawan TIDAK bisa set_member_role (eskalasi diri ke admin)', async () => {
+    const { error } = await ctx.karyawanA.client.rpc('set_member_role', {
+      p_member_id: ctx.karyawanA.membershipId,
+      p_role: 'admin',
+    });
+    expect(error).not.toBeNull();
+    const { data } = await ctx.admin
+      .from('memberships')
+      .select('role')
+      .eq('id', ctx.karyawanA.membershipId)
+      .single();
+    expect(data?.role).toBe('karyawan'); // tetap karyawan
+  });
+
+  it('admin A TIDAK bisa mengangkat dirinya jadi owner (owner-only, 0016)', async () => {
+    const { error } = await ctx.adminA.client.rpc('set_member_role', {
+      p_member_id: ctx.adminA.membershipId,
+      p_role: 'owner',
+    });
+    expect(error).not.toBeNull();
+    const { data } = await ctx.admin
+      .from('memberships')
+      .select('role')
+      .eq('id', ctx.adminA.membershipId)
+      .single();
+    expect(data?.role).toBe('admin');
+  });
+
+  it('admin A TIDAK bisa menurunkan OWNER A (owner-only)', async () => {
+    const { error } = await ctx.adminA.client.rpc('set_member_role', {
+      p_member_id: ctx.ownerA.membershipId,
+      p_role: 'karyawan',
+    });
+    expect(error).not.toBeNull();
+    const { data } = await ctx.admin
+      .from('memberships')
+      .select('role')
+      .eq('id', ctx.ownerA.membershipId)
+      .single();
+    expect(data?.role).toBe('owner');
+  });
+});
+
+d('Tier 2 — Eskalasi via PostgREST langsung (direct write)', () => {
+  it('karyawan TIDAK bisa UPDATE role-nya sendiri via tabel memberships', async () => {
+    const { data } = await ctx.karyawanA.client
+      .from('memberships')
+      .update({ role: 'owner' })
+      .eq('id', ctx.karyawanA.membershipId)
+      .select('id');
+    expect(data ?? []).toHaveLength(0);
+    const { data: check } = await ctx.admin
+      .from('memberships')
+      .select('role')
+      .eq('id', ctx.karyawanA.membershipId)
+      .single();
+    expect(check?.role).toBe('karyawan');
+  });
+
+  it('admin A TIDAK bisa UPDATE plan_type org via tabel organizations (trigger guard 0016)', async () => {
+    await ctx.adminA.client
+      .from('organizations')
+      .update({ plan_type: 'enterprise' })
+      .eq('id', ctx.orgA);
+    const { data } = await ctx.admin
+      .from('organizations')
+      .select('plan_type')
+      .eq('id', ctx.orgA)
+      .single();
+    expect(data?.plan_type).not.toBe('enterprise'); // dipertahankan ke nilai lama
+  });
+});
+
+d('Tier 2 — Billing gates', () => {
+  it('owner pun TIDAK bisa membuat invoice self-service sejak 0047', async () => {
+    const { error } = await ctx.ownerA.client.rpc('start_subscription', {
+      p_plan: 'standard',
+      p_amount: 99_000,
+    });
+    expect(error).not.toBeNull();
+  });
+
+  it('0101: masa aktif tidak lagi menggerbang tulis; yang menggerbang hanya penangguhan', async () => {
+    // Masa aktif lama yang sudah lewat jauh: sejak harga per unit tidak berarti apa-apa.
+    const past = new Date(Date.now() - 10 * 864e5).toISOString();
+    await ctx.admin
+      .from('organizations')
+      .update({ plan_type: 'trial', plan_expired_at: past })
+      .eq('id', ctx.orgA);
+
+    const open = await ctx.ownerA.client
+      .from('customers')
+      .insert({ org_id: ctx.orgA, name: 'Setelah Expired', phone: '0815' });
+    expect(open.error).toBeNull();
+
+    // Ditangguhkan operator: RLS tetap memblokir semua tulis.
+    await ctx.admin.from('organizations').update({ plan_type: 'suspended' }).eq('id', ctx.orgA);
+    const blocked = await ctx.ownerA.client
+      .from('customers')
+      .insert({ org_id: ctx.orgA, name: 'Saat Ditangguhkan', phone: '0816' });
+    expect(blocked.error).not.toBeNull();
+
+    // Pulihkan agar tes lain (urutan tak dijamin) tak terdampak.
+    await ctx.admin.from('organizations').update({ plan_type: 'trial' }).eq('id', ctx.orgA);
+  });
+});
+
+d('Tier 2 — restore_org_data (owner-only + anti lintas-tenant)', () => {
+  it('karyawan TIDAK bisa restore_org_data', async () => {
+    const { error } = await ctx.karyawanA.client.rpc('restore_org_data', {
+      p_org_id: ctx.orgA,
+      p_payload: {},
+    });
+    expect(error).not.toBeNull();
+  });
+
+  it('owner A TIDAK bisa restore data ke org B', async () => {
+    const { error } = await ctx.ownerA.client.rpc('restore_org_data', {
+      p_org_id: ctx.orgB,
+      p_payload: {},
+    });
+    expect(error).not.toBeNull();
+  });
+});
+
+d('Tier 2 — track_service (publik, anon) membocorkan hanya field aman', () => {
+  it('anon BISA melihat status tapi TIDAK melihat history internal', async () => {
+    const anon = makeAnon();
+    const { data, error } = await anon.rpc('track_service', {
+      p_org_id: ctx.orgA,
+      p_service_no: ctx.serviceANo,
+    });
+    expect(error).toBeNull();
+    expect(Array.isArray(data)).toBe(true);
+    const row = (data as Array<{ public_history: unknown; device: string }>)[0];
+    expect(row).toBeTruthy();
+    const serialized = JSON.stringify(row.public_history);
+    expect(serialized).not.toContain('CATATAN-RAHASIA-INTERNAL'); // internal disaring
+    // 0060: garansi per sparepart ikut dikirim, tapi hanya nama + tanggal — tanpa harga.
+    expect(Array.isArray((row as unknown as { part_warranties: unknown }).part_warranties)).toBe(true);
+    const whole = JSON.stringify(row);
+    expect(whole).not.toMatch(/costPrice|sellPrice|cost_price|sell_price|final_cost/);
+  });
+
+  it('anon TIDAK bisa SELECT tabel services langsung', async () => {
+    const anon = makeAnon();
+    const { data } = await anon.from('services').select('id').eq('org_id', ctx.orgA);
+    expect(data ?? []).toHaveLength(0); // RLS: anon bukan member
+  });
+});
+
+/**
+ * Fungsi pembantu INTERNAL tidak boleh bisa dipanggil anon (0082).
+ *
+ * Default privileges Supabase memberi anon EXECUTE atas setiap fungsi baru di
+ * `public` SAAT DIBUAT, dan `revoke ... from anon` tidak mencabut warisan dari
+ * PUBLIC. Jadi kesalahan ini bisa terulang di migrasi mana pun — berkas ini
+ * penjaganya.
+ *
+ * check_rate_limit adalah satu-satunya pengaman track_service terhadap penebakan
+ * nomor servis yang berurutan. Sebelum 0082, anon bisa mengosongkan bucket
+ * sebuah toko dengan jendela waktu negatif. Terbukti di replika self-host yang
+ * ACL-nya identik dengan produksi: `200 true`.
+ */
+d('Tier 2 — fungsi pembantu internal tertutup bagi anon', () => {
+  it('anon TIDAK bisa memanggil check_rate_limit (pembatas track_service)', async () => {
+    const anon = makeAnon();
+    const { error } = await anon.rpc('check_rate_limit', {
+      p_key: `track:${ctx.orgA}`,
+      p_max: 1,
+      p_window_seconds: -999999,
+    });
+    expect(error, 'anon bisa mengosongkan pembatas track_service').not.toBeNull();
+  });
+
+  it('anon TIDAK bisa memanggil po_lines_checked', async () => {
+    const anon = makeAnon();
+    const { error } = await anon.rpc('po_lines_checked', { p_org_id: ctx.orgA, p_lines: [] });
+    expect(error).not.toBeNull();
+  });
+
+  it('track_service TETAP bisa dipanggil anon — ia memanggil pembatasnya dari dalam', async () => {
+    // Perbaikan ini tidak boleh mematikan halaman pelacakan pelanggan:
+    // track_service SECURITY DEFINER, jadi ia memanggil check_rate_limit
+    // dengan hak pemiliknya, bukan hak anon.
+    const anon = makeAnon();
+    const { error } = await anon.rpc('track_service', {
+      p_org_id: ctx.orgA,
+      p_service_no: ctx.serviceANo,
+    });
+    expect(error).toBeNull();
+  });
+});

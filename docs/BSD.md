@@ -3,6 +3,9 @@
 > Versi: 0.2 | Diperbarui: 2026-11-04 | Merujuk: PRD.md, TRD.md, AFD.md
 > Database: PostgreSQL 17 (Supabase) | Auth: Supabase Auth (schema `auth`, dikelola penyedia) | ORM/migrasi: Drizzle ORM + drizzle-kit
 
+> [!warning] Rancangan awal, bukan skema yang berlaku (sejak 2026-11-21)
+> Skema yang berlaku adalah migrasi FixMaster di `dashboard/supabase/migrations/` (0001 s.d. 0105): tabel `services`, `memberships`, `wallets`, dan seterusnya, dengan RLS per `org_id`. Drizzle dan Server Actions tidak dipakai. Dokumen ini dipakai sebagai acuan aturan bisnis yang diinginkan saat menyusun Daftar Selisih (IPD, L-45).
+
 ## 1. ERD
 ```mermaid
 erDiagram

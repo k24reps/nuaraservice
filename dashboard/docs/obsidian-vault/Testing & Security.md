@@ -1,0 +1,200 @@
+---
+title: Testing & Security
+aliases: [Testing, QA, Security, RLS Testing, Audit]
+tags: [fixmaster, testing, security, rls, audit]
+created: 2026-06-10
+---
+
+# 🧪 Testing & Security
+
+> [!danger] Proyek Supabase di catatan ini milik FixMaster
+> Staging `fpwwswngqpftaixdlozo` dan produksi `vmitplpvncfvyimgyxrn` di bawah adalah proyek
+> **FixMaster**, bukan Nuara. Nuara Dashboard memakai proyek Supabase sendiri. Jangan pernah
+> mengisi `.env.test.local` atau menjalankan migrasi Nuara (terutama `0105`) ke proyek FixMaster:
+> tes integrasi membuat dan menghapus pengguna sungguhan.
+
+Bagian dari [[00 - FixMaster MOC]]. Catatan ini = **memori persisten** untuk pekerjaan audit/testing keamanan, supaya lintas-sesi tak perlu menjelaskan ulang lingkungan & keputusan.
+
+## Lingkungan testing (FAKTA — jangan tanya ulang)
+
+- **Staging Supabase**: `https://fpwwswngqpftaixdlozo.supabase.co` (project `fixmaster-staging`, org `rifan6juli-svg`, plan FREE). **Terpisah dari produksi** — aman untuk test yang membuat/menghapus user & org. Tracker server sinkron `0001`–`0079` per 21 Sep 2026 (staging **dan** produksi).
+- **Produksi Supabase**: project `FixMaster` (`vmitplpvncfvyimgyxrn`, region Singapore). **BERISI DATA & TRANSAKSI ASLI**. Tracker server sinkron `0001`–`0048` per 30 Agu 2026; `0048` diterapkan setelah dry-run hanya menemukan satu migrasi pending dan 78/78 integration staging lulus. Operasi ke produksi WAJIB konfirmasi user dulu. CLI default sudah dikembalikan ke **staging**.
+- **Kredensial app**: `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` ada di `.env.local` (gitignored via `*.local`). Var dibaca di [supabase-client.ts](src/data/supabase-client.ts) (`import.meta.env.VITE_SUPABASE_*`).
+- **Kredensial test**: ditaruh di **`.env.test.local`** (root repo, auto-ignored oleh `*.local`). Berisi `TEST_SUPABASE_URL`, `TEST_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`.
+- **Edge functions source aktif**: hanya `delete-account` + `health`. Deployment `gopay-listener` staging sudah dihapus saat cutover `0047`. Deployment hosted legacy non-GoPay masih dapat terlihat di dashboard remote, tetapi tidak dipanggil frontend dan RPC billing-nya sudah dicabut; penghapusan remote perlu audit target + persetujuan eksplisit.
+- **Tooling lokal**: Node v24 ✅, Supabase CLI 2.101.0 ✅, **Docker ❌ (tidak terpasang)**. Maka `supabase start` (DB lokal) tidak dipakai — kita pakai **staging cloud**.
+
+> [!CAUTION]
+> `service_role` key mem-bypass SELURUH RLS. **JANGAN PERNAH** beri prefix `VITE_` (Vite meng-inline var `VITE_` ke bundle browser → kunci admin bocor). Hanya untuk runner test di Node (`process.env`), tak pernah ke klien. Ambil di: Dashboard → Project Settings → API → Project API keys → `service_role`.
+
+## Keputusan testing (sudah disepakati user)
+
+| Keputusan | Pilihan | Alasan |
+|---|---|---|
+| Lingkungan DB | **Staging cloud** (bukan Docker) | Staging sudah ada; paritas asli; Docker belum terpasang. Trade-off: data test menumpuk → butuh cleanup (pakai service_role) |
+| Tooling RLS | **vitest + dua client `@supabase/supabase-js`** (bukan pgTAP) | Lewat jalur PostREST + anon key + JWT yang sama dipakai browser → paling representatif; menyatu dgn 280 test vitest |
+| Scope fase ini | **(a) Tests-only — temukan dulu, jangan perbaiki** | Kumpulkan SEMUA temuan, klasifikasi by severity, baru putuskan improvement. Test yg sengaja merah = bukti celah |
+| Prioritas mulai | **Tier 1** (isolasi tenant & peran) | ROI keamanan tertinggi untuk SaaS multi-tenant |
+
+## Hasil audit awal (read-only, 10 Jun 2026)
+
+Permukaan yang disisir: auth/password, 3 edge function, validasi zod, link WhatsApp, sink XSS.
+
+| # | Temuan | Lokasi | Keparahan |
+|---|--------|--------|:---------:|
+| F1 | **Webhook fail-open**: bila `FERSAKU_WEBHOOK_SECRET` kosong, `signatureOk = !secret` → semua request lolos | `fersaku-webhook` (fungsi sudah dihapus) | 🔴 Tinggi → ✅ **DIPERBAIKI**, lalu **usang** (gateway dicabut). Polanya diwariskan: [gopay-listener](supabase/functions/gopay-listener/index.ts) fail-closed sejak awal |
+| F2 | **Validasi No. HP lemah**: `phone: z.string().trim().min(1)` terima teks/simbol apa pun | [validators.ts](src/lib/validators.ts) | 🟡 Sedang → ✅ **DIPERBAIKI** (digit 8–15, regex pemisah) |
+| F3 | **Password tanpa kompleksitas**: hanya `length < 8` | [AuthPage.tsx](src/features/auth/AuthPage.tsx) | 🟡 Sedang → ✅ **DIPERBAIKI** (wajib huruf+angka saat signup) |
+| F4 | **Gap struktural**: 280 test menguji cermin klien, bukan penegak server (RLS/RPC) | `supabase/migrations/` | 🔴 Tinggi → **TERBUKTI AMAN** (27/28 lolos) |
+| F5 | **Billing bypass**: `apply_payment` di-grant `authenticated` TANPA cek pemanggil → non-owner bisa tandai invoice lunas tanpa bayar | [0009](supabase/migrations/0009_billing.sql) / [0016](supabase/migrations/0016_role_hardening.sql) | 🔴 Tinggi → ✅ **DIPERBAIKI** ([0022](supabase/migrations/0022_apply_payment_guard.sql), applied staging) |
+
+| F6 | **`set search_path` hilang di 64 dari 70 fungsi `security definer`** — standar proyek sejak `0045` ternyata hanya diterapkan pada `0045` ke atas. Termasuk `process_sale`, `settle_service`, `apply_payment`, `claim_invite`, `track_service` | seluruh `supabase/migrations/` | 🔴 Tinggi → ✅ **DIPERBAIKI** ([0055](supabase/migrations/0055_definer_search_path.sql)) |
+| F7 | **`clock_in` melewati RLS**: `security definer` membuat seluruh penjagaan di policy `attendance_ins` tak pernah berlaku — teknisi bisa mengabsenkan rekannya dari dalam radius geofence | [0004](supabase/migrations/0004_attendance.sql) | 🔴 Tinggi → ✅ **DIPERBAIKI** ([0053](supabase/migrations/0053_attendance_integrity.sql), + indeks unik [0054](supabase/migrations/0054_attendance_one_per_day.sql)) |
+| F8 | **Absensi terbuka untuk admin**: `is_org_manager()` membuka riwayat kehadiran seluruh tim. UI sudah dirapikan lebih dulu, tapi itu hanya gerbang tampilan — REST langsung tetap melihat segalanya | [0017](supabase/migrations/0017_operational_integrity.sql)/[0028](supabase/migrations/0028_attendance_outlet.sql) | 🟡 Sedang → ✅ **DIPERBAIKI** ([0056](supabase/migrations/0056_attendance_owner_only.sql)) |
+| F9 | **`history` tiket bisa ditimpa**: ditandai append-only sejak `0001` tanpa penegak — perangkat kedua menghapus entri perangkat pertama, dan anggota mana pun bisa mengganti jejak audit lewat REST | [0001](supabase/migrations/0001_init.sql) | 🔴 Tinggi → ✅ **DIPERBAIKI** ([0058](supabase/migrations/0058_service_history_append_only.sql)) |
+| F10 | **Aturan aplikasi tanpa penegak database** (Lunas/Batal owner-only, stok `deducted`, nama pelaku log) — semuanya bisa dilewati lewat REST/RPC langsung | `0065`, `0066`, `0073`/`0075` | 🔴 Tinggi → ✅ **DIPERBAIKI** (trigger; lihat [[Decisions & Bug Fixes]]) |
+| F11 | **Nomor tiket bisa dienumerasi**: `track_service` (anon) menerima UUID toko, yang tercetak di setiap QR, plus nomor berurutan. Remnya 60/menit per organisasi, yang sekaligus bisa dipakai mengunci pelacakan seluruh pelanggan toko | [0060](supabase/migrations/0060_track_service_part_warranties.sql) | 🟡 Sedang → 🟡 **DIMITIGASI, aktif di produksi sejak 12 Nov 2026** ([0100](supabase/migrations/0100_service_tracking_code_and_print_meta.sql)): nota baru memakai kode acak 50 bit, batas 30/menit per IP, dan 429 tersendiri. Jalur lama tetap hidup untuk nota yang sudah beredar |
+
+**Sudah AMAN (diverifikasi):**
+- Link WhatsApp: `encodeURIComponent` + strip non-digit ([notify.ts](src/lib/business/notify.ts) L19-20) → tak ada injeksi.
+- Tidak ada sink XSS (`dangerouslySetInnerHTML`/`innerHTML`/`eval` nihil di `src`).
+- `delete-account`: self-only (hapus `user.id` dari JWT sendiri).
+- `gopay-listener`: shared secret `X-Listener-Secret` + `timingSafeEqual` + **fail-closed** (secret kosong → 503, bukan lolos) + replay guard 15 menit. Klaim lewat `claim_gopay_payment` (service_role-only, `for update skip locked`) → `apply_payment` idempoten. Pelajaran F1 diterapkan sejak awal di sini.
+- **`/operator` (dashboard operator, `0045`) — SATU-SATUNYA permukaan lintas-tenant.** Route di luar `AuthGate`; pertahanan sebenarnya di server: gate `is_platform_admin()` di baris pertama tiap RPC admin, `set search_path = public, pg_temp`, `revoke ... from public, anon`, dan tabel `platform_admins` ber-RLS nol policy. Klien tidak pernah memegang service key. Batas data: metadata + jumlah agregat, tanpa isi bisnis klien. Dijaga `tests/integration/tier2c-platform-admin.integration.test.ts` — asersi terpentingnya: **owner sebuah org BUKAN admin platform**.
+- **Aktivasi operator fail-closed (`0049`).** `admin_reactivate_org` tidak ada lagi; pemulihan akses harus melewati `admin_confirm_manual_payment`. RPC menolak paket selain Solo/Pro, durasi di luar 1–12 bulan, Solo untuk multi-outlet, nominal yang tidak sama dengan harga resmi, referensi/alasan kosong, anon, dan owner biasa. `tier2d` juga menjaga idempotensi referensi serta invoice+expiry+audit satu transaksi.
+- **Regresi `0044` kini terjaga suite.** Sebelumnya nol tes untuk `claim_gopay_payment`/`start_gopay_invoice`; lubang anon-execute ditemukan lewat probe manual. `tier2c` sekarang mengasersikan anon **dan** user login biasa ditolak `claim_gopay_payment` + `expire_stale_gopay_invoices`.
+
+## Rencana 5-tier (urut prioritas)
+
+1. **Tier 1 — Isolasi tenant & eskalasi peran (RLS)** 🔴: 2 org + 2 user beda peran; uji A tak bisa baca/tulis data B; karyawan tak bisa baca `incomes`/`expenses`, `set_member_role`, `UPDATE plan_type`, hard-delete; RPC ditolak utk org/peran salah; gerbang billing (`plan_expired_at` lampau → tulis terblokir).
+2. **Tier 2 — Edge function** 🔴: `create-invoice` tanpa JWT→401; `delete-account` token A tak bisa hapus B; webhook signature salah→no-op + uji F1.
+3. **Tier 3 — Anti-drift klien↔server** 🟡: `config/plans.ts` `roleAllows` konsisten dgn matriks RLS.
+4. **Tier 4 — E2E Playwright + assertion** 🟢: wizard→servis→POS→keuangan→laporan (menggantikan klik manual). Di atas demo/local-adapter.
+5. **Tier 5 — Validasi input & higiene** 🟡: perkuat+uji schema phone (F2), `test:coverage`, `npm audit`.
+
+> [!IMPORTANT]
+> Test Tier 1/2 HANYA terhadap **staging**, TIDAK PERNAH produksi (berisiko data & uang asli).
+
+## Hasil testing (22 Sep 2026)
+
+- **Unit (offline)**: **1090 lolos / 82 berkas** (21 Nov 2026, Nuara Dashboard sesudah disalin dari FixMaster: tujuh berkas tes milik bagian SaaS yang dibuang ikut hilang, yaitu landing, metadata landing, halaman statis legal, harga, saldo unit, operator, dan lead demo; `deploymentRoutes.test.ts` ditulis ulang untuk aplikasi internal yang seluruhnya noindex. Sebelumnya **1196 lolos / 89 berkas** per 17 Nov 2026, sesudah landing fokus HP & laptop: `LandingPage.test.tsx` menambah tes tiga aturan harga (inti tebal + keterangan) dan FAQ unit yang membaca angka dari `pricing.ts`; `landingMetadata.test.ts` menjaga FAQ kasir di JSON-LD. Sebelumnya 1194 / 89 berkas, sesudah HTML statis per halaman publik: `staticPages.test.ts` (baru) menguji title/description/canonical/og per halaman, sinkron dengan i18n legal, JSON-LD landing terbuang, noscript, cakupan sama dengan sitemap, dan build gagal bila tag `index.html` hilang. Sebelumnya 1182 / 88 berkas, sesudah quick win audit SEO: `deploymentRoutes.test.ts` menambah empat tes header crawler (noindex untuk tiap rewrite non-publik, `/`/legal tetap terindeks, canonical berkas agen) dan `landingMetadata.test.ts` menambah tes title statis = `landing.metaTitle` dan batas panjang snippet. Sebelumnya 1177 per 16 Nov 2026, sesudah perbaikan run critique ke-2 landing: `LandingPage.test.tsx` menambah tes isian hero yang terbawa ke gerbang penutup, nama toko di label perangkat dan potongan HP, gelembung demo yang tertutup Escape/tombol, dan fokus sesudah "Ganti nama toko". Sebelumnya 1176, sesudah adegan landing jadi komputer + HP dengan menu sinkron: `LandingPage.test.tsx` menguji mulai di detail tiket, pindah bersamaan setelah kedua gambar termuat, klik bottom nav HP, dan ajakan demo untuk menu yang tidak direkam. Sebelumnya 1175, sesudah saringan nomor gerbang demo `0104`: `demoLead.test.ts` menambah tabel kasus dan membaca migrasinya; `uji-0104.sql` lulus di simulasi lokal. Sebelumnya 1156, sesudah perbaikan landing dari critique + audit: `LandingPage.test.tsx` menambah tes strip ponsel, sinkron dua gerbang, dan urutan fokus sesudah error; `i18n.test.ts` menambah tes registry kamus lazy. Sebelumnya 1152 per 15 Nov 2026: landing "Dua Adegan", gerbang demo `0102`, batas bulanan per cabang `0103`). `npm run test`. Ini satu-satunya tempat angka ini dicatat (AGENTS.md §5); perbarui di sini bila jumlah tes berubah.
+- **Integration RLS/RPC (staging)**: **149 lolos / 12 berkas** (sebelum `0101`). Berkas ke-14, `tier3i-unit-pricing` (8 tes: kuota gratis, potong saat INSERT bukan upsert-UPDATE, penjaga kolom `unit_balance`, ledger owner-only, refund batal 10 menit, hapus tiket owner/bersih/tercatat, batas −20), plus suite yang ditulis ulang untuk `0101` (`tier2-rpc` gerbang penangguhan, `tier2c` kolom saldo di `admin_list_orgs`, `tier2d` isi saldo/koreksi/aktifkan kembali, `tier3b` kuota terbuka) **belum dijalankan**: sesi 14 Nov tidak punya `.env.test.local`, dan `0101` belum diterapkan di staging. Lolos type-check lewat tsconfig sementara (AGENTS.md §4). Pengganti sementara di level SQL: `scripts/selfhost/simulasi/jalankan.sh <migrasi> <berkas-uji>` (PostgreSQL 16 lokal + tiruan Supabase, migrasi 0001 sampai sebelum target, dua toko, berkas uji, penerapan + penerapan ulang); `0101` lulus 15 Nov 2026. Berkas ke-16, `tier3k-monthly-cap` (3 tes: unit ke-100 dipotong lalu tiket berikutnya `capped` 0 unit di cabang yang sama, tiket tanpa cabang tetap dipotong, `unit_month_usage` owner saja; 99 pemakaian tiruan lewat service role), **belum dijalankan**; padanannya di SQL, `scripts/selfhost/uji-0103.sql`, lulus di simulasi lokal 15 Nov 2026. Berkas ke-15, `tier3j-demo-leads` (4 tes: anon mengisi gerbang dan nomor yang sama memperbarui satu baris, hint penolakan nomor/nama, kolom jebakan tidak menulis, daftar kontak tertutup bagi anon dan owner biasa), juga **belum dijalankan**; batas per jaringan sengaja tidak diuji di sana (memblokir IP mesin uji 10 menit) dan diuji `scripts/selfhost/uji-0102.sql`, yang lulus di simulasi lokal 15 Nov 2026. Berkas ke-13, `tier3h-track-code` (kode lacak dan jejak cetak, 0100), **belum pernah dijalankan**: 0100 sudah ada di produksi (12 Nov 2026) tetapi belum di staging, tempat satu-satunya berkas ini bisa jalan. Uji terakhirnya menghabiskan kuota lacak IP mesin selama semenit, jadi beri jeda sebelum menjalankan ulang. `npm run test:integration`.
+- **Probe regresi UI**: `audit-zoom` 11 lebar × 13 halaman dan `audit-mobile` 5 lebar ponsel +
+  5 lebar tablet × 13 halaman. **`docOver` = 0 di SETIAP lebar dan halaman** — itu metrik
+  regresi yang sebenarnya. Temuan tersisa semuanya disengaja: teks ter-ellipsis di `/services`,
+  carousel scroll-snap di landing, dan rail chip horizontal (`overflow-x:auto`) di
+  `/services`, `/customers`, `/pos`. (13 halaman: Kalkulator masuk 10 Nov 2026, Inventori
+  dilebur ke Kasir & Stok di hari yang sama; `/inventory` kini hanya pengalihan. Tab
+  `/settings?tab=nota` masuk 11 Nov 2026; `gotoInApp` menangani path ber-`?` lewat
+  `pushState` + `popstate`, karena muat ulang mengunci kembali ke layar PIN.)
+  **Sisa lama yang tercatat:** tabel `/pos` di lebar 1097 (1920 @ 175%) meluap 16px, identik di
+  HEAD sebelum tahap 7c Nota.
+- **Build + Lint**: bersih.
+
+> [!note] Positif palsu yang berulang di laporan probe
+> Selain `clipped`, `scrollers` juga bukan daftar cacat: ia mendaftar SETIAP elemen yang bisa
+> digeser ke samping, termasuk yang memang dirancang begitu (rail chip, carousel). Yang menandakan
+> regresi hanyalah `docOver` > 0. Tiga hal SELALU muncul di `clipped` dan bukan cacat: `caption._srOnly` (caption tabel khusus
+> pembaca layar, memang disembunyikan dengan clip), `span.fm-visually-hidden` (teks pembaca layar di
+> `Term` dan `EmptyValue`), dan elemen `text.` di dalam SVG (label sumbu
+> grafik — `scrollWidth` pada SVG text tidak berarti apa-apa). Saring ketiganya sebelum membaca
+> hasil, kalau tidak tiap laporan terlihat merah total.
+> Di `audit-contrast`, jumlah "ADA TEMUAN" juga menghitung langkah yang gagal ("langkah gagal",
+> "navigasi gagal"). Setelah halaman atau selektor berubah, cek baris itu dulu: pada 10 Nov 2026
+> kesepuluh temuannya ternyata langkah Kasir/Inventori yang usang, bukan warna.
+
+### Nilai historis — hasil 11 Jun 2026
+
+- **Unit (offline)**: 288 lolos (naik dari 280; +8 anti-drift Tier 3). `npm run test`.
+- **Integration RLS/RPC (staging)**: 27/28 proteksi lolos. 1 merah = **F5** (apply_payment bypass). `npm run test:integration`.
+- **Audit validasi (offline)**: 3 merah = bukti **F2** (phone terima teks/simbol).
+- **Tier 4 E2E** (`scripts/e2e-demo-flow.mjs`): 12/12 menu demo render OK, 0 console/page error — fungsional solid.
+- **Build + Lint**: bersih.
+- **Kesimpulan**: lapisan server SOLID (isolasi tenant, matriks peran, anti-eskalasi, billing gate, restore anti lintas-tenant, track_service tak bocor history internal semua lolos). 2 isu perlu perbaikan: F5 (tinggi), F2 (sedang). F1/F3 dari audit kode menyusul.
+
+Laporan lengkap: `findings_report.md` (artifact).
+
+## Infrastruktur test (reusable)
+
+- [helpers.ts](tests/integration/helpers.ts) — harness dual-client (anon+JWT / service_role), setup 2-tenant + teardown.
+- `tests/integration/tier1-rls.*`, `tier2-rpc.*`; `src/config/roleMatrix.drift.test.ts` (Tier 3, suite utama); `tests/audit/validators.audit.test.ts` (Tier 5).
+- Config: `vitest.integration.config.ts`; script `npm run test:integration`. Kredensial: `.env.test.local`.
+- **Pola seed**: `create_organization` RPC bootstrap owner; admin/karyawan ditambah via service_role; user test prefix `fmtest+<runId>-...@example.com`, dibersihkan di teardown.
+
+## Fase perbaikan (11 Jun 2026) — SELESAI
+
+Setelah find-first, keempat temuan diperbaiki + diverifikasi:
+
+- **F5** — [0022_apply_payment_guard.sql](supabase/migrations/0022_apply_payment_guard.sql): guard `apply_payment` (hanya service_role / owner pemilik invoice). **Applied ke staging** (repair history 0005–0021 dulu, lalu `db push` 0022). Test tier2 jadi regresi 2-arah: non-owner ditolak (invoice tetap `pending`), owner sukses (invoice `paid`).
+- **F2** — `customerSchema.phone` diperkuat (digit 8–15 + regex pemisah). Audit test kini hijau.
+- **F1** — webhook **fail-closed** saat secret kosong. Temuan ini kini **usang** (fungsi Fersaku dihapus bersama pencabutan gateway), tapi pelajarannya tetap berlaku dan sudah diterapkan di `gopay-listener`: secret kosong → `503`, tidak pernah lolos.
+- **F3** — password wajib huruf+angka (min 8), **hanya saat signup** (login akun lama tak terkunci).
+
+**Verifikasi**: `npm run test` 288 hijau · `npm run test:integration` **36/36 hijau** · build + lint bersih.
+
+## Penegakan outlet per-cabang — RLS 0028 (12 Jun 2026)
+
+Level 2 (tim per-cabang) diaktifkan di staging. Urutan apply: `0023`–`0026` (Expand) → owner assign outlet karyawan via Pengaturan → Tim → jaring pengaman `0027` → RLS lock `0028` (Contract). **Riwayat migrasi staging kini tersinkron penuh** (`supabase migration list` → kolom Local|Remote|Time terisi `0023`–`0028`). Awalnya skema di-apply via SQL Editor (riwayat tak tercatat); lalu di-rapikan via `supabase db push` — semua migrasi idempotent (NOTICE "already exists, skipping" pada objek yang sudah ada), jadi re-apply aman tanpa hapus data. (Catatan: RLS lock sempat bernomor `0027` saat apply manual pertama, lalu di-rename ke `0028` agar urut dengan jaring pengaman `0027_heal_unassigned_outlets`; isi SQL tak berubah.)
+
+- **Test baru**: [tier3-outlet.integration.test.ts](tests/integration/tier3-outlet.integration.test.ts) (6 test) — membuktikan penegakan **server-side** (bukan filter klien): karyawan yang ditugaskan ke Outlet 1 BISA baca/tulis data Outlet 1 + data bersama (`outlet_id null`), tetapi **TIDAK** bisa baca Outlet 2 maupun INSERT service ber-stempel Outlet 2 (ditolak `with check`); manager (owner) lihat **semua** cabang (Model A). Self-contained: bikin org + 2 outlet + karyawan, lalu teardown.
+- **Test baru (0029/0030/0031)**: [tier3b-settle-cancel.integration.test.ts](tests/integration/tier3b-settle-cancel.integration.test.ts) (10 test) — membuktikan kasir **karyawan** bisa menyelesaikan billing lewat RPC di bawah `0028`: `settle_service` **split 2 wallet** (lunas + 2 income ber-nomor + wallet dikredit), **ditolak** untuk outlet di luar penugasan, `cancel_service` **refund DP parsial** (income DP dipertahankan + expense refund tercatat + wallet −refund saja + status batal) & **refund 0** (tak ada expense, wallet utuh), dan `record_down_payment` (income DP + kredit wallet + akumulasi DP; ditolak untuk outlet lain). Plus **`transfer_wallet`** (0031): owner pindah saldo (delta-based), ditolak bila saldo kurang / wallet sama / **non-manager**. Membuktikan rekonsiliasi split-payment × RLS + DP + transfer bekerja end-to-end.
+- **Test baru (0033)**: [tier3c-one-shop-per-email.integration.test.ts](tests/integration/tier3c-one-shop-per-email.integration.test.ts) (4 test) — membuktikan RPC `create_invite` menegakkan **satu email = satu toko**: menolak email yang sudah jadi **anggota aktif** di org lain & email dengan **undangan tertunda** di org lain; **mengizinkan** email baru lalu **memblokir** email sama di org kedua; **mengizinkan** re-invite (ubah peran) di toko sendiri; menolak **non-manager** (karyawan). Memakai harness `setupTenants` (orgA+orgB).
+- **Helper**: `createUser`/`signIn` di [helpers.ts](tests/integration/helpers.ts) di-export agar reusable lintas file test.
+- **Hasil**: `npm run test:integration` **56/56 hijau** (36 lama + 6 Tier 3 + 10 Tier 3B + 4 Tier 3C) — tidak ada regresi, tidak ada lockout, penguncian cabang + billing kasir (POS/lunas/batal/DP) + refund parsial + transfer wallet + satu-email-satu-toko terbukti bekerja. Unit `npm run test` **346 hijau** (321 + 15 `realtime-timing` + 9 `orgConfig` + 1 `isAwaitingPickup`), lint bersih, build hijau.
+
+> [!NOTE]
+> **Model role (revisi 22 Jun 2026, migrasi `0036`).** Owner = akses semua cabang (`is_org_owner`). **Admin kini di-scope per-cabang** (`auth_outlet_ids` + record org-wide), seperti karyawan untuk **cakupan data** — namun **kewenangan** manager-level (delete, settle, kelola tim, tulis keuangan) tetap via `is_org_manager`. Keuangan baca: owner semua / admin per-cabang / karyawan nol. UI Tim: pemilih outlet untuk semua role non-owner; badge "Semua cabang" hanya untuk owner.
+> _Model A lama (admin = manager menembus semua cabang, outlet hanya untuk karyawan) **usang** sejak `0036`._ **Gate**: `0036` belum di-apply cloud — owner WAJIB tetapkan outlet tiap admin sebelum apply, lalu `npm run test:integration` staging + konfirmasi sebelum produksi.
+
+## Status
+
+- `[x]` Audit awal read-only (F1–F4 + bagian aman).
+- `[x]` Setup runner vitest dual-client + `.env.test.local`.
+- `[x]` Tier 1 (isolasi tenant & peran) — 13 test, semua lolos.
+- `[x]` Tier 2 (RPC/billing/restore/track) + 2b (edge auth) + Tier 4 E2E + Tier 3 + Tier 5.
+- `[x]` **Perbaikan F5/F2/F1/F3 — SELESAI & terverifikasi** (36/36 integration hijau).
+- `[x]` ~~Deploy edge function `fersaku-webhook` agar F1 aktif~~ — usang, gateway dicabut.
+- `[ ]` (Opsional) F3 lebih ketat via Supabase Auth password policy.
+
+## Terkait
+- [[Data Layer]] (model peran 3-lapis, RLS, migrations 0016/0017) · [[Decisions & Bug Fixes]] · [[Conventions]]
+
+#testing #security #rls
+
+## Tier 3D — anggota hantu (0042)
+
+`tests/integration/tier3d-ghost-member.integration.test.ts` menjaga aturan **anggota ter-soft-delete tidak punya akses apa pun**. Tiga tes: (1) akses dicabut begitu `deleted_at` terisi — memakai baris pelanggan nyata milik org, bukan tabel kosong yang bisa lolos palsu; (2) `claim_invite` membersihkan `deleted_at` dan mengadopsi peran dari undangan saat rejoin, bukan meninggalkan hantu baru; (3) anggota yang **masih aktif** tak bisa diturunkan perannya lewat klaim (guard lockout owner terakhir). Tes ini terbukti **mereproduksi bug**: sebelum 0042 di-apply, 2 dari 3 gagal di staging.
+
+### Skrip deploy tak boleh meng-echo password (31 Jul 2026)
+
+`deploy-migrations.bat` dulu memakai `set /p` untuk meminta password DB — dan `set /p` **menampilkan ketikan apa adanya**. Insiden nyata: password DB **produksi** tampil di layar, ikut ter-screenshot, lalu terkirim ke percakapan; password harus dirotasi. Kini pakai helper `:askpw` yang membungkus `Read-Host -AsSecureString` (PowerShell) sehingga ketikan tertutup. Aturan umum: input rahasia di skrip mana pun tidak boleh muncul di stdout — layar terminal itu permukaan yang bocor (screenshot, screen-share, scrollback).
+
+## Baseline terkini (30 Agu 2026)
+
+- Unit/komponen: `npm run test` **452/452 hijau** (41 file). Tiga test baru menjaga nomor organisasi stabil dan pencarian berdasarkan nama, nomor pendek, maupun UUID penuh.
+- Integration RLS/RPC staging: **78/78 hijau** (10 file) sesudah `0048` diterapkan. Selain pembayaran manual, suite menjaga non-operator ditolak menghapus, konfirmasi nomor yang salah gagal, organisasi fixture + data tenant terhapus saat konfirmasi benar, dan jejak `delete_org` tetap bertahan setelah FK org menjadi null.
+- `npm run build` dan `npm run lint` hijau.
+- Tambahan terbaru: 4 unit test resolver mobile navigation + 2 test persistence
+  `Organization.settings.mobileNavigation`; verifikasi browser asli mencakup breakpoint
+  360/390/700/721/1440 px, pertukaran slot, simpan/reset, More sheet, POS cart dock,
+  dan pengecualian bottom bar pada detail servis.
+- **`tier2d-operator-controls`** — kontrol operator yang MENULIS (`0046`–`0048`). Menjaga owner org lain ditolak, pembayaran manual atomik, metadata scorecard yang usang tidak lagi diekspos, serta penghapusan organisasi hanya berhasil dengan alasan + nomor konfirmasi server-side. Tabel audit tetap tak terbaca via REST dan jejak penghapusan tidak ikut terhapus.
+
+### Batas keamanan pembayaran manual (`0047`)
+
+- Klien tidak memiliki RPC create/confirm/cancel invoice; tombol WhatsApp hanya membuat pesan.
+- `admin_confirm_manual_payment` menerima hanya plan Solo/Pro, 1–12 bulan, nominal positif, serta referensi + alasan wajib.
+- Baris organisasi dikunci `FOR UPDATE`; invoice, expiry, plan, dan audit ditulis dalam transaksi yang sama. Retry dengan referensi sama idempoten sehingga timeout jaringan tidak menggandakan bulan.
+- RPC di-revoke dari `public, anon`, di-grant ke `authenticated`, lalu tetap fail-closed lewat `is_platform_admin()`.
+- Pending invoice lama tidak dimutasi; UI hanya menampilkan invoice `paid`, sehingga data audit tetap utuh tanpa memberi kesan checkout lama masih aktif.
+
+## Hasil testing dashboard operator (19 Agu 2026)
+
+- **`tier2c-platform-admin`**: 15/15 lolos. Termasuk asersi terpenting — **owner sebuah org DITOLAK `admin_list_orgs`** (hak tertinggi di dalam satu org tidak memberi akses ke org lain), dan setelah dipromosikan barulah ia melihat KEDUA org (bukti lintas-tenant bekerja).
+- **`tier2d-operator-controls`**: kontrol tulis + jejak aksi. Menguji dua sisi: owner org lain ditolak men-suspend (dan `plan_type` org target TIDAK berubah), lalu setelah promosi berhasil dengan jejak lengkap berisi alasan + pelaku.
+- **Teardown bersih diverifikasi**: `platform_admins` kosong lagi dan jumlah org kembali seperti semula setelah suite selesai — tes tidak meninggalkan admin platform menggantung di staging.
+- **Probe REST pasca-`0046`**: `admin_suspend_org`, `admin_apply_promo`, `admin_set_client_note`, `admin_reactivate_org`, `admin_list_operator_actions`, `admin_list_orgs` semuanya `42501` untuk anon. Yang terakhir penting karena ia sempat di-`DROP`+`CREATE` (lihat catatan 42P13 di [[Decisions & Bug Fixes]]) — grant default Supabase memasang ulang EXECUTE untuk anon, dan revoke ulang di `0046` terbukti menutupnya.
+- **Penghapusan `0048`**: owner org biasa ditolak `admin_delete_org`; nomor salah tidak memutasi data; nomor tepat + alasan menghapus organisasi fixture beserta data tenant; audit menyimpan `org_name`, actor, reason, nomor, dan hitungan dampak walau `org_id` menjadi null. Akun Auth sengaja tetap ada.
+
+> [!TIP]
+> **Cara probe RPC tanpa login** (dipakai berulang di sesi ini): POST `/rest/v1/rpc/<fn>` dengan anon key. `42501` = fungsi ADA tapi tertutup (yang kita mau). `PGRST202` = **tidak selalu berarti hilang** — PostgREST mencocokkan nama **dan tanda tangan**, jadi body `{}` untuk fungsi berparameter juga menghasilkan `PGRST202`. Selalu kirim argumen yang benar sebelum menyimpulkan sebuah fungsi belum ter-deploy. Kesalahan ini sudah dua kali hampir menghasilkan kesimpulan salah.

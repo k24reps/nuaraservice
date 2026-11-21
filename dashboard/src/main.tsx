@@ -1,0 +1,49 @@
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+import { App } from './App';
+import { initTheme } from './stores/theme';
+import { initZoom } from './stores/zoom';
+import { initSettings } from './stores/settings';
+import { initErrorTracking } from './lib/report';
+import { registerServiceWorker } from './lib/sw-register';
+import { installPreloadErrorRecovery } from './lib/lazyChunk';
+import './styles/global.css';
+
+initTheme();
+initZoom();
+initSettings();
+// Opt-in remote error tracking (no-op unless VITE_SENTRY_DSN is set).
+initErrorTracking();
+// Pulih dari shell basi setelah deploy. Dipasang SEBELUM apa pun yang bisa
+// memicu preload, supaya kegagalan chunk/CSS yang pertama pun tertangkap.
+installPreloadErrorRecovery();
+// App-shell offline caching (production builds only).
+registerServiceWorker();
+
+// DEV-ONLY: expose a demo-seed helper for Playwright + manual testing.
+// Tree-shaken from production builds via the import.meta.env.DEV guard.
+if (import.meta.env.DEV) {
+  void import('./dev/seed').then(({ seedDemoWorkspace }) => {
+    (window as unknown as { __fixmasterSeed?: () => Promise<void> }).__fixmasterSeed =
+      seedDemoWorkspace;
+  });
+  void import('./data').then(({ repository }) => {
+    (window as unknown as { __repo?: unknown }).__repo = repository;
+  });
+  // Session store, so screenshot scripts can flip plan/tier to capture
+  // plan-gated UI (e.g. the Solo \"locked feature\" sidebar state).
+  void import('./stores/session').then(({ useSessionStore }) => {
+    (window as unknown as { __session?: unknown }).__session = useSessionStore;
+  });
+  // Realtime status store, so screenshot scripts can drive the cloud-only
+  // connection badge (live/connecting/offline) which is hidden in demo/local.
+  void import('./stores/realtime').then(({ useRealtimeStore }) => {
+    (window as unknown as { __realtime?: unknown }).__realtime = useRealtimeStore;
+  });
+}
+
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <App />
+  </StrictMode>,
+);

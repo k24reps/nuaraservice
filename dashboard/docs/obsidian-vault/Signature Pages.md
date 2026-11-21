@@ -1,0 +1,1417 @@
+---
+title: Signature Pages
+aliases: [Signature Pages, Halaman Bertanda]
+tags: [fixmaster, signature-page, design-system, frontend]
+created: 2026-06-04
+---
+
+# 📄 Signature Pages
+
+> [!note] Nuara Dashboard
+> Konsep halaman di bawah adalah desain FixMaster. Di Nuara Dashboard tiap halaman dipindah ke
+> dens-ui (Fase 2); landing dan saldo unit sudah dibuang.
+
+Bagian dari [[00 - FixMaster MOC]].
+
+Sembilan halaman utama + halaman detail, masing-masing dengan metafora "alat" tapi berbagi bahasa visual dari [[Design System]]. Screenshot di bawah adalah **render kode asli** (data demo di-seed, difoto via Playwright) — bukan mockup.
+
+> [!info] Fondasi bersama — 9 Agu 2026
+> Landing baru menjadi acuan seluruh produk. `Card`, `StatCard`, form, tombol, badge,
+> modal, toast, sidebar, dan topbar kini diselaraskan dari primitive bersama agar
+> Dashboard sampai Pengaturan memiliki chassis yang sama di desktop dan mobile.
+> Detail token dan breakpoint ada di [[Design System]].
+
+---
+
+## Landing — Dua Adegan, Meja & Ponsel (aktif sejak 15 Nov 2026)
+
+Menggantikan Landing V2 di **`/`** (signed-out) dan **`/landing-preview`**:
+[`LandingPage`](src/features/landing/LandingPage.tsx), adegan
+[`BenchScene`](src/features/landing/BenchScene.tsx), gerbang
+[`DemoGate`](src/features/landing/DemoGate.tsx). Susunan dipilih pemilik lewat sesi
+*shape* impeccable (14 Nov 2026); kontrak arahnya di
+`.impeccable/surfaces/src-features-landing-landingpage-tsx.md`.
+
+- **Gagasan:** teknisi mencatat di meja, pemilik melihatnya di ponsel. Layar pertama
+  memeragakan sinkron itu, bukan judul-kiri / screenshot-kanan. **Narasi (sejak revisi
+  pemilik 15 Nov 2026):** untuk toko yang ingin mulai kerja lebih rapi dan teratur, dari yang
+  masih sendiri sampai yang sudah berkaryawan atau bercabang. **Sejak 17 Nov 2026 pesannya
+  fokus ke konter HP dan servis laptop**; kategori lain (tablet, printer, TV, dst.) jadi
+  pelengkap di FAQ `landing.faq.device`. Judul: "Toko servis HP & laptop yang rapi dan
+  teratur, mulai hari ini." (`landing.heroTitle`; "HP & laptop" dikunci spasi tak-putus).
+- **Konvensional vs FixMaster** (`#perbandingan`, tepat sesudah hero): papan dua lajur,
+  delapan situasi toko berantakan. **Lima terlihat** (unit masuk paling atas, lalu lacak servis,
+  stok sparepart, uang masuk, untung per unit; pilihan pemilik 17 Nov 2026); tiga lainnya (karyawan,
+  garansi, cabang) di baris
+  `<details>` terakhir papan yang menyebut namanya ("Lihat 4 lainnya: …", `landing.vs.more`),
+  sejak 16 Nov 2026. Run critique ke-2 (16 Nov) sempat menurunkan unit masuk ke daftar
+  tambahan; pemilik mengembalikannya ke atas sebagai baris kelima yang terlihat. Lajur konvensional di permukaan tertanam dengan tinta redup,
+  lajur FixMaster di permukaan terangkat; LED hanya di kepala lajur. Di ≤720px tiap baris
+  menjadi blok dengan label lajur di tiap sel (di layar lebar label itu tetap ada untuk pembaca
+  layar). Penutup: "Tutup toko tanpa menghitung ulang apa pun." + tautan ke gerbang
+  (`#coba`). Tiap jawaban dicocokkan ke fitur nyata (nota + nomor lewat WA, tautan lacak,
+  stok menipis, hitung kas dengan selisih, PIN, klaim garansi dari tiket asli, dashboard
+  semua cabang). Baris **Lacak servis** membawa contoh alamat lacak mono
+  (`fixmaster.app/t/K7Q2M9XAPD`, bentuk kode 0100) dengan ikon QR redup; garis dan spine
+  cyan-nya dicabut 16 Nov 2026 (cyan = bacaan instrumen, bukan penanda unggulan).
+- **Harga (0103):** "Rp 1.000 per unit masuk" + aturan pertama "paling banyak Rp 100.000 per
+  cabang per bulan". Sumur biaya kini **satu cabang** (10–400 unit, bawaan 60): tick
+  sesudah titik 100 unit bergaris putus sebagai zona gratis dan menyala hijau, readout
+  berhenti di Rp 100.000, fakta "Gratis karena batas" dan bulan pertama (dipotong 50
+  unit gratis). Sejak 16 Nov 2026: bullet aturan berupa tick pendek redup (bukan LED),
+  tombol geser sumur putih bercincin cyan (amber tinggal tombol daftar), label sumur
+  sentence case, dan grid `copy / gauge / actions` membuat ponsel menghitung di gauge
+  dulu baru melihat tombol daftar. **Disederhanakan 17 Nov 2026:** lead "Harga yang adil: Anda
+  membayar sesuai jumlah unit yang masuk, tanpa biaya bulanan tetap. Bulan sepi, tagihan ikut
+  kecil." lalu hanya tiga aturan, masing-masing inti tebal + keterangan redup
+  (`PRICE_RULES`): paling banyak Rp 100.000 per cabang sebulan, 50 unit pertama gratis, saldo
+  unit tidak pernah hangus. Rincian (kasir dan garansi tidak dihitung, unit kembali dalam 10
+  menit, boleh minus 20 unit) pindah ke FAQ `landing.faq.units`, angkanya diinterpolasi dari
+  `pricing.ts`.
+- **Lead hero (16 Nov 2026, fokus HP & laptop 17 Nov 2026)** menyebut segmen dan harga:
+  "Aplikasi untuk konter HP dan servis laptop. … 50 unit pertama gratis, lalu Rp 1.000 per
+  unit." Batas Rp 100.000 sengaja tidak di lead: di ponsel ia menambah satu baris lagi dan
+  bagian harga sudah menonjolkannya. Angkanya
+  diinterpolasi dari `src/config/pricing.ts`, dengan spasi tak-putus. Bukan eyebrow: label di
+  atas judul dilarang mutlak oleh craft floor impeccable.
+- **Layar pertama:** judul (7/12) + gerbang demo (5/12), lalu adegan selebar halaman. Di
+  ≤720px: judul → **potongan layar HP asli** (`heroPeek`: 132×150px bagian atas
+  `detail-phone.webp` sesuai tema, pudar ke bawah, "Begini FixMaster di HP" yang berganti
+  "{nama toko} di FixMaster" begitu nama diketik, tautan "Lihat semua menu" ke `#cara-kerja`)
+  → gerbang → adegan. Pilihan pemilik di run critique ke-2: bukti sebelum permintaan nomor,
+  tanpa memindah gerbang dari layar pertama.
+  **Adegannya layar ASLI aplikasi, dua perangkat dengan menu sinkron** (versi akhir 16 Nov
+  2026, pilihan pemilik): **Komputer** dan **HP** berdampingan di atas garis bench bertitik,
+  tanpa jejak atau tulisan "sinkron" di antaranya (dicabut pemilik 16 Nov 2026 supaya HP bisa
+  lebih besar: kolom HP 0,32 × komputer, sedikit lebih tinggi dari monitor). Keduanya mulai di **Detail Servis FM-0008** (seed demo: ASUS VivoBook
+  X441, keyboard tidak merespons) dan diam sampai diklik: tanpa fase, tanpa autoplay. Klik
+  menu di sidebar gambar komputer, di bottom nav gambar HP (Beranda, Servis, Kasir,
+  Pelanggan), atau di **deret tombol menu** di bawah bench (Detail tiket, Dashboard, Servis,
+  Kasir & Stok, Pelanggan, Keuangan, Laporan; jalur keyboard, sentuh, dan pembaca layar)
+  memindahkan KEDUA layar bersamaan. Layar baru berganti setelah gambar komputer DAN HP-nya
+  termuat (LED tombol berkedip selama menunggu), lalu crossfade.
+  Menu sidebar lain (Kalkulator Biaya, Supplier, Tugas, Absensi, Log Aktivitas, Pengaturan)
+  diredupkan dengan latar sidebar hasil rekaman; kliknya membuka gelembung "… ada di demo
+  lengkap" + tautan ke gerbang, yang tertutup oleh tombol ×, Escape, atau ketukan di luar
+  gelembung, dan isinya diumumkan live region. Area klik di atas gambar `aria-hidden`, tidak
+  ikut Tab, tidak menyimpan fokus (`mousedown` dicegah), dan dikecualikan dari aturan global
+  44px untuk pointer kasar (`global.css`): dulu di 390px kotak bottom nav HP saling tumpuk dan
+  patch redup menutupi menu yang direkam. Pindah layar diumumkan lewat live region setelah
+  pengunjung mengklik. Gambar halaman diminta saat jari menyentuh (`pointerdown`), bukan hanya
+  hover; layar awal dimuat eager. Nama toko yang diketik tampil di kop layar komputer (±10px)
+  **dan** di label perangkat 14px ("Komputer · nama", "HP · nama"), karena HP tidak punya kop
+  toko. Gambar direkam `scripts/shoot-bench-scene.mjs` dari SATU sesi `/demo`:
+  tiap halaman dibuka di lebar desktop (1280×800), dipotret, lalu jendela diganti ke HP
+  (390×844) dan halaman yang sama dipotret, dua tema, WebP lewat kanvas browser
+  (`public/bench/<tema>/<halaman>-desk[-800].webp`, `<halaman>-phone.webp`, total ±2 MB, dimuat
+  lazy; halaman lain baru diminta saat tombol/area menunya disentuh atau diarahkan). Manifest
+  `src/features/landing/benchShots.json`: kotak tiap tautan sidebar dan bottom nav (area klik),
+  kop nama toko (posisi + huruf + warna + latar, untuk menimpakan nama yang diketik di gerbang),
+  dan latar sidebar (peredupan). Faceplate "MODE DEMO" disembunyikan dan fokus otomatis (kolom
+  cari Kasir) dilepas saat rekaman; landing memberi label **Layar asli · data contoh**. Caption
+  memuat narasi: aplikasi yang sama di komputer dan HP, bisa dipasang ke layar utama (PWA;
+  manifest `orientation: any`). **Rekam ulang** (`BASE_URL=… node scripts/shoot-bench-scene.mjs`,
+  dev server hidup) bila salah satu dari tujuh halaman, sidebar, bottom nav, atau seed berubah.
+  **Riwayat:** versi pertama 16 Nov punya tiga perangkat (+tablet) dan fase pasang part →
+  selesai → lunas dengan autoplay, ditambah strip sinkron di atas gerbang ponsel; pemilik
+  memangkasnya ke dua perangkat dengan menu sinkron, dan strip serta hook `useBenchSteps`
+  dihapus. Hero ponsel kembali judul → gerbang → adegan.
+- **Gerbang demo (0102):** nama toko + nomor WhatsApp (cek format, tanpa OTP), kolom
+  jebakan bot, galat per kolom, galat simpan jujur dengan "Coba lagi", batas jaringan.
+  Di bawah kolom nomor hanya tautan **Kebijakan privasi**: kalimat pemakaian nomor + masa simpan
+  90 hari dicabut pemilik 17 Nov 2026 karena sudah ada di kebijakan privasi (kunci
+  `demoGate.note` dihapus; masa simpan tetap `DEMO_LEAD_RETENTION_DAYS`). Sejak 16 Nov 2026: fokus ke kolom yang salah dipindah **sesudah** render supaya error
+  ikut diumumkan, kolom `required`, nama `maxLength` 60. Nomor yang jelas asal-asalan
+  (awalan bukan operator, nol semua, deret urut seperti contoh placeholder) ditolak dengan
+  pesan sendiri (`demoGate.errorPhoneFake`, migrasi 0104); nomor cantik tetap lolos. Pengunjung demo adalah store yang
+  dilanggan (`subscribeDemoVisitor` + `useSyncExternalStore`), jadi "Ganti nama toko" di satu
+  gerbang membuka formulir di semua gerbang.
+  Sejak run critique ke-2 (16 Nov 2026): gerbang hero dan penutup berbagi **satu draf**
+  (`draft` + `onDraftChange`, tipe `DemoLeadDraft`), jadi isian di atas sudah ada di bawah;
+  gerbang `/demo` menyimpan isiannya sendiri. Placeholder nomor `08xx-xxxx-xxxx` (contoh lama
+  ditolak 0104), pesan nomor palsu "Periksa lagi angkanya…", dan "Ganti nama toko" memindah
+  fokus ke kolom nama (dulu jatuh ke `<body>`), mengosongkan nama tapi mempertahankan nomor.
+  Gerbang penutup tidak punya judul sendiri: `labelledBy="landing-closing-title"` memakai judul
+  seksi "Coba dulu dengan nama toko Anda sendiri." (dulu dua judul berdempetan;
+  `demoGate.titleFinal` dihapus).
+  Lolos → nama toko disimpan di browser (bukan nomornya), `/demo` terbuka dengan nama
+  itu. Pengunjung yang kembali mendapat tombol buka + "Ganti nama toko". Gerbang yang
+  sama dipasang di `/demo` untuk kunjungan langsung (`DemoApp`, di luar router). Probe
+  Playwright di dev server (`navigator.webdriver`) melewatinya otomatis; `/demo?gate`
+  memaksanya tampil.
+- **Seksi berikutnya (urutan sejak 16 Nov 2026):** **harga** (`#harga`) dengan sumur instrumen satu-satunya di halaman, **untuk
+  siapa** (`#untuk-siapa`, menggantikan cerita founder yang dicabut pemilik): tiga
+  tahap di satu rel bertitik, masih sendiri → dibantu karyawan → buka cabang, tiap tahap dengan
+  meter LED 1–3 (cyan sejak run ke-2: ukuran toko adalah bacaan, bukan status hijau) dan deret menu yang mulai dipakai ("Yang dipakai" / "Ditambah"); di ≤900px
+  relnya vertikal. Lalu "yang perlu Anda tahu" (koneksi, backup, FAQ yang juga JSON-LD di
+  `index.html`), gerbang penutup, kaki ("Cimahi", mono sentence case). **Dihapus 16 Nov
+  2026:** papan jejak "satu kali pasang part" (mengulang adegan; riwayat pelanggan pindah ke
+  caption adegan, anchor `#cara-kerja` kini menunjuk adegan) dan grid 12 kanal modul (rel tahap
+  sudah memuat menunya). **Dihapus di run ke-2:** lemari part kategori perangkat (laci HP
+  sampai alat rumah tangga): "bukan cuma HP" sudah disebut lead hero dan FAQ, jadi isinya
+  (kategori, keluhan cepat, daftar kelengkapan diatur sendiri) dilebur ke jawaban FAQ
+  `landing.faq.device.a` (JSON-LD `index.html` ikut). Tinggi halaman 390px 11.735 → ±7.400px.
+- **Breakpoint (container):** halaman 1080 (nav tinggal tautan Harga), 900 (gerbang menyempit
+  ke 300–360px; harga satu kolom), 720 (hero satu kolom: judul → potongan HP → gerbang →
+  adegan), 560 (nav hilang; bar ponsel "Harga" + "Coba demo" + WA muncul saat kedua gerbang
+  **dan adegan** di luar layar, karena di 320px bar menutupi bottom nav HP; menuju gerbang
+  **terdekat** dan memfokus kolom setelah gulir selesai). Adegan 900: komposisi bertumpuk,
+  deret tombol jadi satu baris geser (scroll-snap, pudar kanan) **di atas** layar, komputer
+  selebar adegan, HP min(40%, 260px) berdiri di depan sudut kanan bawahnya (margin −30%),
+  labelnya rata kanan melebar ke kiri; nama toko hanya di label HP (label komputer tertutup
+  HP). Di atas 900 HP selebar 0,32 × komputer. Adegan 440: ketukan di gambar komputer mati
+  (baris sidebar < 14px, lebih kecil dari bottom nav HP terkecil); deret tombol jalurnya. `scroll-padding` di dokumen menjaga anchor dan fokus keyboard tidak berhenti
+  di bawah header sticky atau bar ponsel (WCAG 2.4.11).
+- **Amber:** tombol gerbang, lalu "Mulai gratis, 50 unit" di harga (gerbang tidak di
+  layar). Deret tombol menu adalah `--bg-key` dengan LED cyan untuk menu aktif, bar ponsel
+  sekunder, tombol geser sumur cyan.
+- **Kartu pratinjau tautan** (`public/og-image.png`, 16 Nov 2026): judul + lead landing dan
+  ponsel pemilik dengan readout contoh, warna dari `tokens.css`, font self-hosted. Dibuat
+  `renderOpenGraph()` di `scripts/render-brand-assets.mjs`; render ulang bila judul atau
+  `src/config/pricing.ts` berubah (angkanya ditulis tangan di sana).
+- **i18n:** `landing.*` dan `demoGate.*` (ID + EN). Kunci `landingV2.*` dihapus.
+- **Verifikasi:** `LandingPage.test.tsx` (intent auth, nama toko di kop layar komputer,
+  label kedua perangkat, dan judul potongan HP, isian hero terbawa ke gerbang penutup, kedua
+  layar mulai di detail tiket dan pindah bersamaan setelah keduanya siap, klik bottom nav HP
+  memindah komputer juga, menu yang tidak direkam menawarkan demo dan tertutup oleh Escape
+  atau tombol tutup, ganti nama toko membuka semua gerbang dan memfokus kolom nama, fokus
+  mendarat sesudah error terpasang, gerbang: nomor salah, sukses, gagal simpan + ulang,
+  pengunjung kembali). Critique + audit 16 Nov 2026 (run 1: 29/40, 15/20; run 2: 28/40,
+  15/20) beserta perbaikannya: lihat [[Decisions & Bug Fixes]]. Foto: `scripts/shoot-landing.mjs` (11 foto, dua tema, 390–1440px, reduced
+  motion, luberan-x 0). `audit-contrast` (landing-preview dua tema): 0 gagal; sembilan kasus
+  "gradien, periksa manual" di sumur harga tema terang adalah positif palsu (lapisan scanline
+  transparan dibaca sebagai latar halaman; fotonya gelap). Probe khusus landing lama
+  (`audit-landing-owner`, `audit-landing-priorities`, `shoot-landing-compare`) dihapus karena
+  seksi yang mereka ukur sudah tidak ada. Gambar vault belum disematkan (sinkron butuh PowerShell).
+
+## Landing V2 — Repair Flow Console (diganti 15 Nov 2026)
+
+> Kode `LandingPageV2.*` dihapus 15 Nov 2026; isi di bawah adalah catatan sejarah.
+
+Rombak total landing dibuat **terpisah** pada 9 Agu 2026, lalu disetujui menjadi
+landing utama signed-out di **`/`** lewat
+[`LandingPageV2`](src/features/landing/LandingPageV2.tsx). Route
+**`/landing-preview`** dipertahankan sebagai alias review yang stabil. Implementasi
+lama `LandingPage` tidak dihapus atau ditimpa sehingga masih bisa dirujuk/diaktifkan
+kembali bila diperlukan.
+
+![[landing-v2-dark.png]]
+
+- **Arah narasi**: bukan lagi daftar fitur + komparasi panjang. Janji utama adalah
+  **“catat servis sekali”**: satu tiket mengikuti unit dari penerimaan → pengerjaan →
+  sparepart → uang dan margin tercatat, sehingga nilai produk terbaca sebagai hubungan
+  operasional yang konkret—bukan sekadar “semua fitur di satu aplikasi”.
+- **Hero**: headline menamai mekanisme khas FixMaster (stok dan margin ikut terhitung),
+  lalu konsol pekerjaan aktif membuktikannya lewat tiket FM-0241, rail status, antrean,
+  stok, kas, dan readout Volt. Semua angka bersifat data contoh, bukan klaim performa
+  pelanggan. Demo aplikasi asli menjadi CTA utama; trial 14 hari tetap tersedia sebagai
+  aksi kedua.
+- **Ritme**: pain rail (empat gejala toko) → alur empat tahap → pandangan owner/tiket
+  digital → screenshot produk asli → dua paket berbasis cara kerja → FAQ → CTA. Pain rail
+  menggantikan trust rail generik agar calon klien mengenali masalahnya sebelum membaca
+  solusi. Halaman tetap lebih pendek dan lebih visual dari V1.
+- **Bukti margin owner (29 Agu 2026)**: empat kartu generik diganti diagnostic rail yang
+  menghubungkan margin, waktu pengerjaan, sparepart, serta aktivitas tim. Tiket contoh
+  menampilkan sumber angka secara eksplisit—**tagihan Rp1.250.000 − modal sparepart
+  Rp830.000 = margin Rp420.000**—dan diberi label “Contoh data”. Klaim margin jadi dapat
+  diperiksa calon klien, bukan angka hijau tanpa asal perhitungan.
+- **Narasi lintas layar (11 Agu 2026)**: hero kini menyebut alur yang sama di meja dan
+  ponsel, ukuran judul + jarak hero dipadatkan khusus layar kecil, dan section produk
+  tidak lagi mengecilkan screenshot desktop menjadi bukti yang sulit dibaca. Desktop
+  menampilkan dashboard besar dengan ponsel sebagai instrumen pendamping; mobile
+  menampilkan screenshot ponsel lebih dahulu, kemudian konteks desktop. Pesan, CTA,
+  dan urutan cerita tetap sama—hanya prioritas visualnya yang mengikuti perangkat.
+- **Bukti produk desktop + mobile**: `demo-dashboard-{dark,light}.png` dan
+  `demo-mobile-{dark,light}.png` di `public/screenshots/` berasal dari `/demo` asli;
+  bukan mockup. `scripts/shoot-demo.mjs` meregenerasi keduanya ke `scripts/shots/` dan
+  menyalin pasangan yang dipakai landing ke `public/screenshots/`, sehingga bukti produk
+  tidak tertinggal dari UI hidup. Frame ponsel memakai bezel (speaker, kamera, tombol
+  samping, home indicator) tanpa label yang menutup bottom navigation.
+- **Identitas**: tetap memakai token dark/light, mono readout, LED cyan, spine tiket,
+  divider titik, serta VOLT Probe sebagai pendamping diagnostik dan logo compact. Tidak
+  memakai aset/komponen eksternal baru.
+- **Polish VOLT (29 Agu 2026)**: readout hero kini menjadi diagnostic dock lengkap dengan
+  indikator sinyal alur, bukan maskot kecil yang mengambang. CTA akhir menempatkan varian
+  penuh dalam probe bay dengan trace, LED, dan status “bench siap” sehingga karakter,
+  mekanisme produk, dan aksi trial membentuk satu komposisi. Motion hanya tinggal pada
+  momen brand CTA dan otomatis berhenti saat reduced motion.
+- **Teknis**: `AuthGate` hanya memulihkan sesi cloud dan memuat V2/Auth secara lazy;
+  bootstrap repository, wizard, PIN, dan shell aplikasi pindah ke `WorkspaceGate` yang
+  baru dimuat setelah sesi membutuhkan workspace. `app/router.tsx` juga memuat V2 dan
+  `AppLayout` secara lazy. Copy memakai namespace i18n `landingV2.*`; CTA hero primer
+  menuju `/demo`, sedangkan CTA trial membuka panel auth.
+- **Hardening funnel + discovery (1 Sep 2026)**: setiap CTA kini membawa intent eksplisit
+  (`login`/`signup`), sumber CTA, dan pilihan `standard`/`enterprise` dari pelat harga;
+  demo juga keluar langsung ke signup. Vercel Web Analytics merekam tujuh event funnel
+  tanpa PII dan menyensor URL sensitif. Rewrite Vercel berubah dari catch-all menjadi
+  allowlist route aplikasi sehingga URL asing benar-benar 404. `robots.txt` menyatakan
+  kebijakan crawler AI; `llms.txt`, `llms-full.txt`, `index.md`, dan `pricing.md`
+  menyediakan versi agent-readable yang jujur dan dapat ditemukan dari header `Link` di `/` dan
+  `llms.txt`. Sejak 17 Nov 2026 berkas itu keluar dari sitemap dan ber-canonical `/` (header).
+- **Guardrail copy (28 Agu 2026)**: klaim offline dibedakan secara jujur antara mode
+  lokal satu-perangkat dan mode cloud yang memerlukan koneksi; jargon “row-level” diganti
+  bahasa akses toko; trial tidak lagi mengaku membuka “semua fitur” karena ekspor/impor
+  memang dikecualikan. Tombol harga tidak lagi berpura-pura memilih Solo/Pro ketika alur
+  auth belum membawa pilihan paket. Metadata, noscript, dan FAQ JSON-LD memakai janji
+  “catat sekali” yang sama; klaim kanal pembayaran QRIS yang belum final dibuang.
+- **Koreksi perpindahan data (1 Sep 2026)**: FAQ tidak lagi mengklaim impor Excel yang
+  belum tersedia. Copy visible, noscript, JSON-LD, `pricing.md`, dan `llms-full.txt`
+  menyatakan bahwa data inti masih perlu dimasukkan bertahap. Test menjaga semua FAQ
+  schema dan harga Solo/Pro tetap sinkron dengan i18n + `config/plans.ts`.
+- **Polish aksesibilitas (28 Agu 2026)**: light theme memakai token foreground dengan
+  kontras minimum 4.5:1, focus ring solid, skip link, target sentuh 44 px, teks mobile
+  minimum 14 px, serta maskot yang tunduk pada reduced motion. Scaffold nomor berulang
+  dibuang; urutan angka tinggal pada alur reparasi yang memang bersekuens.
+- **Aksesibilitas mobile (1 Sep 2026)**: skip link kini memindahkan fokus aktual ke
+  `main#top`; status VOLT CTA berlantai 14 px; tombol WhatsApp fixed disembunyikan pada
+  ≤520 px dan aksinya dipindahkan ke footer agar tidak menutup konsol hero.
+- **Verifikasi**: render asli dark/light desktop 1440×960 dan mobile 390×844; sapuan
+  320/360/375/390/414/744/834/980/981/1025/1440 px nol overflow dokumen, nol teks
+  terpotong, dan nol target di bawah 44 px. Direct text-contrast audit sebelumnya tetap
+  nol pelanggaran; build + lint bersih dan 470/470 test lulus.
+  `scripts/audit-landing-owner.mjs` khusus menjaga section owner pada 320–1440 px,
+  synthetic long copy, RTL, forced-colors, serta text scaling 200%.
+  `scripts/audit-landing-priorities.mjs` menjaga intent auth/paket, fokus skip link,
+  font VOLT, serta relokasi WhatsApp mobile.
+  `scripts/shoot-landing.mjs` meregenerasi gambar di bawah dan
+  `scripts/sync-vault-attachments.ps1` menyelaraskannya ke vault.
+
+![[landing-owner-dark.png]]
+
+![[landing-phone-frame-desktop.png]]
+
+![[landing-phone-frame-mobile.png]]
+
+- **WhatsApp tanpa tumpang tindih (7 Nov 2026).** Di ≤760px tombol WhatsApp masuk ke bar aksi
+  bawah sebagai tombol persegi 44px di samping "Lihat paket & harga". Dasar layar yang tertutup
+  turun dari 120px ke 61px. Di layar lebar chip melayang baru muncul setelah layar pertama digulir
+  (scroll timeline 0–60vh), karena di 1440×900 dan tablet 820 ia menimpa pain rail saat halaman
+  dibuka. Nomor langkah `flowNo` tak lagi memakai `opacity` (4,1:1 → kontras penuh).
+
+![[minor-landing-bar-phone-light.png]]
+
+## Landing V1 — Instrument Bench (historis; nama berkas `LandingPage.tsx` kini dipakai landing Dua Adegan)
+
+Pintu depan saat **cloud signed-out**. Versi pertama terasa "vibecoded" (gradient hero + icon-card grid + floating pricing badge — template SaaS generik). Di-redesign jadi **sepotong instrumen diagnostik** sefamili dengan auth "Terminal Akses Bench". **Revisi total (9 Jun 2026)** menambah elemen konversi (diadopsi dari analisis kompetitor FixNova/FixMate, tapi **diterjemahkan ke bahasa bench** — bukan tiru visual) + memperbaiki klaim plan yang basi. [`LandingPage`](src/features/landing/LandingPage.tsx):
+- **Hero faceplate**: pelat bersekrup 4 sudut, `unitTag` LED hijau, judul ber-engrave gradient, **coverage chips** (HP/Laptop/Tablet/Printer/Konsol/Elektronik — tegaskan cakupan semua elektronik), plus **panel readout hidup** (CAKUPAN, MODUL 14/14, SYNC, DATA + **uptime tick** per detik).
+- **Komparasi 3-mode** (`#banding`, data `COMPARISON`, **gantikan** fault panel + module rack + galeri sejak 23 Jun 2026): 5 area operasional (Servis & Garansi, Pelanggan & Loyalitas, Penjualan & Stok, Keuangan & Laporan, Tim/Kontrol/Data) yang memuat **semua 14 modul + fakta jaminan**. Tiap area = **`<details>`/`<summary>` accordion** — di desktop semua terbuka (pointer-events none via `@media min-width:861px`), di mobile ≤860px user bisa lipat/expand (chevron muncul, panel default tertutup kecuali area pertama yang open). Header (`compareHead`): ikon brand + judul + nomor `B0x` + chevron. Dua kolom **MODE MANUAL** (LED merah, `bg-base` redup, item `times` danger) ↔ **MODE FIXMASTER** (LED hijau, border brand, item `check` success), lalu pita **NAIK KELAS** (LED brand, spine gradient, `brand-soft`) berisi pertumbuhan yang dibuka. Semua **fakta dari kode** (margin/turnaround, period comparison, aging, part terlaris, recurrence). Menjawab masalah M1 audit (doomscroll di mobile).
+- **Demo langsung** (section "DEMO LANGSUNG · UNIT HIDUP"): dalam **bingkai instrumen** (title-bar 3 dot + address `fixmaster · /demo`), poster kini **berlatar screenshot dashboard produk asli** (theme-aware: `demo-dashboard-dark/light.png` di `public/screenshots/`, diberi **scrim radial** dari token agar judul + tombol play tetap terbaca). Tujuannya mengakhiri "kotak kosong" pasca-penghapusan iframe **dan** memamerkan produk nyata sebelum klik. Poster **meng-link ke rute `/demo` layar penuh** (navigasi browser penuh, **bukan iframe**). Lihat section **Demo Interaktif** di bawah.
+- **Strip jaminan** (setelah hero, sebelum fault panel): 4 **fakta produk terverifikasi** — Data terisolasi (RLS per toko), Jalan tanpa internet (lokal-first), Cadangkan kapan saja (ekspor utuh), Tanpa kontrak (trial 14 hari tanpa kartu). **Bukan testimoni/jumlah pelanggan karangan** — menjaga kejujuran yang sama dengan idiom "?" di matriks. Ikon brand-soft, dipisah garis titik atas-bawah.
+- **Module rack & galeri menu: DIHAPUS (23 Jun 2026)** — dilebur ke komparasi 3-mode di atas (kolom FIXMASTER memuat tiap modul). Mengurangi panjang halaman dari ~13–15 layar ke target ~6 layar; bundle index ikut turun (~168→163 kB). 16 screenshot `menu-*` tetap di repo (dipakai histori; tak lagi dirujuk landing).
+- **Ritme section**: section demo, banding, & manual memakai `sectionAlt` (panel `bg-base` ber-border-radius) agar **berselang** dengan section `bg-app` — memecah monotoni pola pelat-sekrup yang seragam.
+- **Spec plates** (pricing): label alat bersekrup, harga mono besar + **framing harga harian** ("± Rp x/hari · setara kopi"). Klaim **diperbaiki agar jujur**: Solo = 1 pengguna · 1 outlet · 2 dompet (bukan lagi "tugas/absensi" / "karyawan tak terbatas"); Pro = pengguna tak terbatas, **outlet tak terbatas** (+Rp50rb/outlet) — bukan lagi render rusak "s/d -1 cabang". Sumber `config/plans.ts` agar tak basi.
+- **Matriks banding** (3-brand): **datasheet bench** bersekrup membandingkan FixMaster vs FixNova vs FixMate. Pagar: hanya baris **FixMaster unggul/imbang** (keunggulan kompetitor spt CRM tak ditampilkan); sel kompetitor belum pasti = **"?" amber** (bukan tebakan ya/tidak); 3 fitur khas (Supplier+PO, Tugas, Audit) ber-tag `KHAS`; kolom FixMaster ber-LED "UNIT INI" + brand-soft. Disclaimer bertanggal.
+- **Manual plate** (FAQ): pertanyaan jadi `<details>` bergaya lembar manual (data aman? bisa offline? servis apa saja? dst) — bunuh keberatan umum.
+- **Serial/compliance plate** (footer): pelat regulasi (SN, ©) menampung tautan legal.
+- CTA → `onStart` → `AuthGate` buka `AuthPage`. **Label trial disatukan** jadi **"Mulai Gratis 14 Hari"** (hero + CTA akhir) untuk konsistensi; "MASUK" tetap untuk login, "Pasang Solo/Pro" kontekstual di pricing.
+- **Top rail**: kini memuat **toggle tema** sun/moon (`useThemeStore`) di samping tombol MASUK. Anchor nav kini **Perbandingan/Demo/Paket** (`#banding`/`#demo`/`#spec`); di **mobile** anchor disembunyikan agar rail tak berdesakan — sisakan logo + toggle tema + MASUK.
+
+### SEO (revisi 11 Jun 2026, diperbarui 17 Nov 2026)
+Landing adalah CSR (dirender di `AuthGate`), jadi SEO bertumpu pada **`index.html` statis** + aset publik:
+- **Rute non-konten = `X-Robots-Tag: noindex`** dari `vercel.json` (bukan meta, karena semua rute
+  memakai satu `index.html`): `/t/*`, `/track`, `/demo`, `/operator`, `/reset-password`,
+  `/landing-preview`, dan rute aplikasi. Yang boleh terindeks hanya `/`, `/privacy`, `/terms`.
+  `deploymentRoutes.test.ts` menolak rewrite baru tanpa noindex.
+- `public/robots.txt` dibelah: crawler AI di-Disallow dari `/demo`, `/track`, `/t/` (mereka tidak
+  terikat noindex); mesin pencari (`*`) tidak di-Disallow apa pun supaya header noindex terbaca.
+- `public/sitemap.xml` (`/`, `/privacy`, `/terms`).
+- **HTML statis per halaman publik (17 Nov 2026).** Plugin `staticPageHeads` di `vite.config.ts`
+  menulis `dist/privacy.html` dan `dist/terms.html` dari `index.html` hasil build lewat
+  `renderStaticPage` (`src/config/staticPages.ts`): title, description, canonical, og/twitter
+  sendiri, JSON-LD dan alternate Markdown milik landing dibuang, noscript diganti judul dokumen.
+  `vercel.json` me-rewrite `/privacy` → `/privacy.html` dan `/terms` → `/terms.html`. Halaman
+  publik baru yang ingin diindeks wajib masuk `STATIC_PAGES` **dan** sitemap; tes menolak bila
+  keduanya tidak sama.
+- `index.html`: title `Aplikasi Servis HP & Laptop | FixMaster` (≤60 karakter, istilah yang
+  dipakai pembeli dan pesaing di SERP) dan description ≤160 karakter, keduanya dijaga
+  `landingMetadata.test.ts` bersama sinkronnya dengan `landing.metaTitle`; `<link rel=canonical>` + `og:url`, **JSON-LD** (`SoftwareApplication` + offers dari `src/config/pricing.ts` (`UNIT_PRICE`) + **`availability: InStock`**, `Organization`, `WebSite`, `FAQPage`), dan **`<noscript>`** berisi H1 + value-prop + daftar fitur agar crawler non-JS tetap dapat konten nyata. Meta keywords diperbarui: "bengkel elektronik" diganti "konter hp, toko servis hp".
+- **`useEffect` title** di `LandingPage.tsx` kini **sinkron** dengan `index.html` (sebelumnya kehilangan keyword "HP/Laptop/Kasir"). Crawler tetap dapat yang dari `index.html` statis, tapi tab browser history kini konsisten.
+- **Eyebrow di atas H1**: `<p className={styles.eyebrow}>Software Manajemen Konter HP & Elektronik</p>` — teks mono brand berwarna sebagai sinyal on-page keyword yang terlihat user, sekaligus memperkuat relevansi H1 yang masih puitis.
+- Domain kanonikal: `https://fixmaster.app` (domain kustom di Vercel sejak 1 Jul 2026; sebelumnya `getfixmaster.vercel.app`). Dirujuk di `index.html` (canonical, og:url, JSON-LD), `public/robots.txt`, `public/sitemap.xml`. Link tracking/reset password pakai `window.location.origin` (adaptif otomatis).
+
+> [!important] Galeri menu masalah→solusi (revisi 22 Jun 2026)
+> Matriks banding bernama (FixMaster vs FixNova vs FixMate) **DIHAPUS** atas keputusan user. Diganti **galeri menu** (`#galeri`, data `MENU_GALLERY`): satu kartu per menu (Dashboard, Servis, POS, Inventaris, Pelanggan, Keuangan, Laporan, Pengaturan) berisi **screenshot asli** (dark/light auto-swap, `loading="lazy"`) + dua baris narasi bench: **"Tanpa sistem"** (baris FAULT, LED merah — keluhan tanpa aplikasi) → **"Dengan FixMaster"** (baris FIX, LED hijau — manfaat menu). Nav "Banding"→"Galeri". Screenshot diregenerasi via `scripts/shoot-menus.mjs` → `public/screenshots/menu-<slot>-{dark,light}.png` (16 file). Demo interaktif tetap ada. Aturan tetap: klaim fiktif (statistik/testimoni) dilarang.
+>
+> **Redesign showcase (22 Jun 2026, malam):** grid 2-kolom polos diganti **showcase imersif** (`.showcase` → `.showRow`). Tiap menu = screenshot dibingkai sebagai **layar instrumen** (bezel ber-LED `LIVE` + label menu + stamp, 4 sekrup sudut pakai kelas `.screw` bersama, sheen `.showScan`, hover zoom halus) di satu kolom, dan **panel info** (slot mono, judul besar `font-display`, divider titik, baris TANPA SISTEM→FIXMASTER) di kolom lain. **Desktop**: baris **berselang kiri/kanan** (`data-flip` ganjil → `order:2` pada layar) untuk ritme. **Mobile** (≤860px): menumpuk 1 kolom (layar di atas info, flip di-reset). Token-only, dark/light auto. Verifikasi via Playwright (desktop dark/light + mobile dark).
+>
+> **DICABUT → komparasi 3-mode (23 Jun 2026).** Atas keputusan user ("tetap hapus showcase"), galeri + module rack + fault panel **dihapus** dan diganti **section komparasi `#banding`** (lihat bullet "Komparasi 3-mode" di atas). Alasan: showcase membuat landing terlalu panjang ("seperti PDF di-scroll"); komparasi sakit→beres→tumbuh lebih ringkas, SEO-friendly, dan menjual tanpa klaim fiktif. Visual produk asli tetap ada di **section Demo** (poster `/demo`). Verifikasi via Playwright (`scripts/shoot-landing-compare.mjs`: desktop dark/light + mobile dark).
+
+> [!note] Audit landing (23 Jun 2026)
+> Perbaikan berdasarkan audit sisi tampilan/mobile/SEO/copy:
+> - **Copy**: CTA final diubah jadi value re-statement ("Kontermu rapi, uangmu jelas, pelangganmu kembali."); section labels di-humanisasi ("PAKET & HARGA", "PERTANYAAN UMUM · Q&A", "5 AREA"); "FX · BENCH OS" → "Manajemen Konter Reparasi"; "v1.0" dihapus → "SERVIS REPARASI"; fine print semua caps → sentence case.
+> - **SEO**: title useEffect sinkron; eyebrow keyword; JSON-LD availability InStock; meta keywords lebih tepat; alt text gambar demo deskriptif.
+> - **Mobile UX**: comparison `<article>` → `<details>`/`<summary>` accordion — di mobile collapse/expand (chevron), di desktop non-interaktif (semua open). Menyelesaikan doomscroll M1.
+> - **Visual**: demoPlay ring putih 4px untuk kontras lebih tinggi di overlay gelap.
+
+![[landing-full-dark.png]]
+
+## Demo Interaktif — Bench Hidup (publik, tanpa login)
+
+- **Data sebulan (28 Sep 2026).** Seed (`src/dev/seed.ts`, juga dipakai `/demo`) menyebar tiket, penjualan, dan kas di hari-hari bulan berjalan (dijepit ke tanggal 1) — dulu semuanya "hari ini", sehingga sakelar Hari ini/Bulan ini tampak tak berfungsi. Total bulan tetap (Pemasukan 6,45 jt, Pengeluaran 1,35 jt); Hari ini: 1 unit masuk, 1 selesai (FM-0007), INV-0001.
+
+Pengunjung **memakai FixMaster yang sungguhan** sebelum daftar — bukan video, bukan mockup statis. Route publik **`/demo`** (intersep di level `App`, bukan child router). Landing **meng-link** ke route ini (poster + tombol), **tidak** lagi meng-embed via iframe.
+
+**Arsitektur isolasi** (lihat [[Data Layer]] § InMemoryAdapter):
+- [`DemoApp`](src/features/demo/DemoApp.tsx) saat mount: `installRepository(new InMemoryAdapter())` (RAM-only, nol jejak disk — IndexedDB asli pengunjung tak tersentuh), `useDemoStore.enter()`, lalu **pakai ulang seed yang sudah ada** (`src/dev/seed.ts` via `commitWizard({forceLocal:true})`) → konter gadget terkurasi. Sesi masuk sebagai **owner** → semua menu terbuka (termasuk Laporan, Aktivitas, Pengaturan).
+- Berjalan di **`MemoryRouter`** sendiri yang memakai ulang `appChildRoutes` (rute anak yang sama dengan app asli, via [`appChildRoutes.tsx`](src/app/appChildRoutes.tsx)) → navigasi sidebar tetap di dalam demo, URL browser tetap `/demo`.
+- **Nested-router trap**: `MemoryRouter` tak boleh di dalam `BrowserRouter`. Solusi: `App` mengintersep `pathname.startsWith('/demo')` **sebelum** `RouterProvider` mount → DemoApp jadi satu-satunya router. Route `/demo` **dihapus** dari `router.tsx`.
+- **Bersih saat unmount**: `resetRepository()` (kembali ke adapter asli) + `session.reset()` + hapus meta `noindex`.
+- **Fidelity visual**: shell demo transparan sehingga memakai grid blueprint/PCB global yang
+  sama dengan production, dengan intensitas 72% selama `body.fm-demo-active`. Demo selalu
+  mulai pada zoom 100% melalui sesi zoom sementara; kontrol zoom tetap bekerja tetapi tidak
+  mengubah preferensi tersimpan pengguna, lalu nilai sebelumnya pulih saat unmount.
+- **`noindex`**: meta robots disuntik selama demo mounted (demo = sandbox, bukan konten SEO).
+
+**Faceplate demo** ([`DemoChrome`](src/features/demo/DemoChrome.tsx)): bar instrumen menetap di atas app — sekrup sudut, **LED warning berdenyut**, readout mono `MODE DEMO · data contoh · tidak tersimpan`, tombol **Reset Demo** (re-seed dataset awal), dan CTA brand **Daftar Gratis** (`exitDemoToSignup` → `/?auth=1`). Bukan banner SaaS generik.
+
+Bar ini container `demobar`. Keterangan "data contoh · tidak tersimpan" hilang utuh bila isi bar di bawah 772px (terukur, semua label tampil), dan kata "MODE" mengalah di bawah 329px. Keduanya container query karena Pembesaran aplikasi mengubah lebar bar tanpa menggeser media query (7 Nov 2026).
+
+**Aksi sensitif dijinakkan** (`demoGuard()` di [`stores/demo.ts`](src/stores/demo.ts)): Keluar/ganti akun (Sidebar), Reset & Hapus Akun + Backup/Restore (Settings), Kirim WhatsApp & Cetak Nota (NotifyModal) → semua menampilkan toast + ajakan daftar, **tanpa** menjalankan logika destruktif/keluar-app.
+
+**Landing**: poster "Coba Langsung" + tombol "Buka Demo Layar Penuh" sama-sama **meng-link ke rute `/demo`** (navigasi penuh). Iframe embed sudah **dihapus** (gagal di produksi karena header `X-Frame-Options: DENY` / CSP `frame-ancestors 'none'` — yang kini dikembalikan ke setelan paling ketat). Detail di [[Decisions & Bug Fixes]].
+
+![[demo-dashboard-dark.png]]
+
+## Legal — Dokumen Teknis Terkontrol (publik, wajib UU PDP)
+
+Dua route publik standalone (`/privacy`, `/terms`, di luar `AuthGate`) agar bisa ditaut dari consent signup, gateway pembayaran, app store. Di-redesign dari prosa biasa jadi **dokumen teknis terkontrol**. Shell [`LegalLayout`](src/features/legal/LegalLayout.tsx) kini menerima prop `docId`:
+- **Doc plate masthead** bersekrup: kode `DOK. PRIVASI-001` / `SK-001`, `REV 2026.06.07`, spec rows (STATUS ber-LED, DASAR UU PDP, BAHASA).
+- **Section bernomor manual**: `h2` di-prefix counter `decimal-leading-zero` (01, 02…) lewat CSS counter + badge brand mono.
+- Cross-link bergaya kode dokumen. Konten [`PrivacyPage`](src/features/legal/PrivacyPage.tsx) mengacu **UU PDP No. 27/2022**; [`TermsPage`](src/features/legal/TermsPage.tsx) mencakup langganan/trial, pembayaran, larangan, batasan tanggung jawab, penghentian. Keduanya **template itikad baik** — perlu review hukum sebelum launch (ada callout). Signup `AuthPage` menampilkan baris consent bertaut ke kedua halaman.
+
+![[privacy-dark.png]]
+
+- **Panjang baris (7 Nov 2026).** Paragraf, butir, dan intro dibatasi `65ch` (median 68 karakter di 1440px; dulu 90–104). Pelat dokumen dan judul bagian tetap selebar wadah 800px.
+- **Revisi 27 Sep 2026 (`PRIVASI-001` §3–4).** Lokasi data mengikuti server sungguhan: VPS di Jakarta, lalu lintas lewat Cloudflare (HTTPS), cadangan 2×/hari terenkripsi AES-256 di penyimpanan cloud. Kalimat "gateway pembayaran" diganti — langganan dikonfirmasi manual sejak `0047`. Pihak pemroses: penyedia server, jaringan, dan pengiriman email. Ubah bagian ini setiap kali lokasi server berpindah ([[Self-Hosting]]).
+
+## Fallback Error — Fault Panel
+
+`ErrorBoundary` (root + route) juga di-redesign dari icon-card generik jadi **panel diagnostik fault** sefamili bench: pelat bersekrup, header **`FAULT` stamp** ber-LED danger berdenyut + **kode fault** (`FX-SYS-500` root / `FX-MOD-500` route), aksi pulih (Coba Lagi / Muat Ulang). Lihat [[Decisions & Bug Fixes]].
+
+---
+
+## Kasir & Stok — Register Readout
+
+**Satu menu untuk jual dan stok (10 Nov 2026).** Kasir dan Inventori membaca koleksi yang sama
+(`inventory`), jadi keduanya dilebur. Menu bernama **Kasir & Stok** (`/pos`; label pendek "Kasir"
+di nav bawah ponsel lewat `shortLabelKey`). `/inventory` dialihkan ke `/pos` dengan query tetap
+ikut, sehingga markah lama dan `?stock=low|out` dari peringatan Dashboard tetap bekerja.
+- **Satu kartu per barang** (`PosCatalog`): nama, cabang (di Semua Outlet), readout mono
+  `LED N · min M`, harga jual. Area tambah adalah `<button>`; tuts kelola duduk di bawahnya
+  sebagai saudara, bukan di dalamnya (tak ada tombol bersarang). Spine kiri 3px menyala amber
+  saat menipis dan merah saat habis; kartu aman tanpa spine.
+- **Tuts kelola hanya untuk owner/admin** (`roleAllows(role, 'inventory.write')`, sama dengan
+  RLS): **Ubah** membuka `InventoryModal`; **+ Stok** muncul pada kartu menipis/habis dan membuka
+  modal yang sama berjudul "Tambah Stok" dengan fokus di kolom stok (isinya terpilih). Keranjang
+  tidak tersentuh. Hapus barang pindah ke kaki modal Ubah, dengan peringatan bila barang masih
+  dipakai servis aktif.
+- **Strip ringkasan = saringan.** `PageSummary` menerima `onSelect`/`pressed`: Semua / Menipis /
+  Habis jadi tombol `aria-pressed` (ketuk lagi = kembali ke Semua), Nilai Stok tetap readout dan
+  hanya untuk manajer. Tombol "+ Barang" di sebelah kolom cari.
+- **Barang habis tetap tampil**, redup (opacity 0.55 hanya pada area tambah, tuts + Stok tetap
+  terang) dan diurutkan ke akhir. Saringan Menipis mengurutkan stok terendah dulu. Batas mati 50
+  diganti "Tampilkan N lagi" per 60 kartu. Aturan keadaan dan urutan ada di
+  `lib/business/stock.ts` (`stockState`, `stockSummary`, `filterCatalog`), dipakai juga badge
+  sidebar dan Dashboard.
+- **Karyawan** melihat kartu yang sama tanpa tuts, tanpa Nilai Stok, tanpa "+ Barang".
+- **Semua Outlet boleh dijelajah.** Panel "Pilih cabang kasir" yang menggantikan katalog dihapus.
+  Cabang baru ditanya saat barang pertama masuk keranjang; barang itu langsung ditambahkan
+  setelah cabangnya dipilih (bila memang milik cabang itu).
+
+![[kasir-stok-dark.png]]
+
+- **Bayar via & kembalian tunai (0095, 28 Sep 2026).** Pad tender berlabel **Bayar via** (bukan "wallet"/"baris") dan hanya menawarkan wallet bersama + wallet cabang aktif. Kembalian selalu dipotong dari pembayaran **tunai** (`changeRowIndex`), berapa pun urutan ketukannya — aturan tertulis "Kembalian selalu diambil dari Tunai (uang tunai)."; chip nominal cepat mengisi baris tunai. Tanpa wallet bertanda tunai: perilaku lama (baris terakhir). LCD menulis "{n} jenis barang".
+
+Panel keranjang jadi **mesin kasir**: layar LCD total bergaya segment-display (digit mono, glow amber, ghost "88.888", scanline, indikator LIVE), badan **struk thermal monospace** dengan garis titik-titik, **perforasi sobek**, footer checkout. Tombol qty mekanis (turun saat ditekan).
+
+**Tab bar (11 Jun 2026).** Halaman dipecah jadi dua tab bergaya bench (mono uppercase, underline brand saat aktif): **Kasir** (grid produk + register) dan **Transaksi Terakhir** (riwayat + void, manager-only, dengan badge jumlah). Sebelumnya panel riwayat menumpuk di bawah register dan mengganggu alur kasir; kini terpisah sehingga layar kasir bersih dan riwayat punya ruang sendiri. Modal void diangkat ke level halaman agar bisa dipanggil dari tab manapun.
+
+**Mobile cart dock (9 Agu 2026).** Setelah produk ditambahkan, dock ringkas tetap
+terlihat di dasar layar dengan jumlah item + total. Tap membawa pengguna langsung ke
+register `#pos-cart`; grid produk tetap dua kolom. Sejak bottom navigation 11 Agu,
+dock otomatis duduk di atas bar + safe-area sehingga kedua aksi tetap dapat disentuh.
+Ini mencegah status keranjang dan aksi bayar hilang beberapa layar di bawah katalog.
+Sejak 27 Sep dock **disembunyikan selama register terlihat** (IntersectionObserver),
+dan `#pos-cart` punya `scroll-margin-top` agar LCD tak mendarat di bawah header.
+
+**Critique tahap 2 (27 Sep 2026)** — alur uang dibentuk ulang seperti laci kasir:
+- **Cabang dulu** (diganti 10 Nov 2026: katalog kini boleh dijelajah, cabang ditanya saat barang
+  pertama). Di "Semua Outlet" dengan >1 cabang, kolom katalog diganti panel
+  **Pilih cabang kasir** (kanal ber-LED) — memanggil `setActiveOutlet`, sama dengan
+  selektor sidebar. Pita LCD memuat **chip cabang** (ketuk → jendela ganti cabang).
+  Cabang berganti dari mana pun → keranjang dikosongkan dengan pemberitahuan (stoknya
+  milik cabang lama).
+- **Pad tender.** Satu tuts per wallet; tuts baru terisi **sisa tagihan** (pas = satu
+  ketukan). Nominal = uang **diterima**; lebih bayar = **kembalian**, dipotong dari baris
+  terakhir (`settleTender`). Chip uang lazim (`cashSuggestions`: pas, pembulatan
+  10rb–1jt) untuk baris terakhir. Baris kedua LCD: SISA / KEMBALIAN / UANG PAS.
+- **LUNAS.** Setelah simpan, register menahan total + kembalian; panel berisi Cetak
+  Struk (struk memuat Dibayar/Kembalian), Kirim WA (bila pelanggan punya nomor), dan
+  **Transaksi Baru**. Toast sukses dihapus. Sejak 28 Sep fokus pindah ke kolom cari (bukan
+  ke tombol): Enter kosong di cari atau pindaian berikutnya memulai transaksi baru. Register
+  desktop kini setinggi layar (lihat "Area bayar muat satu layar" di bawah).
+- **Cepat.** Cari mencakup SKU; Enter menambah SKU persis atau satu-satunya hasil
+  (`pickOnEnter`, pemindai barcode); "/" memfokuskan cari; fokus otomatis hanya untuk
+  mouse. Barang habis tampil redup "Habis" saat dicari (sejak 10 Nov selalu tampil, di akhir).
+- **Riwayat (28 Sep):** dikelompokkan per hari (total tanpa yang batal), tiap baris jam ·
+  wallet · kasir · pelanggan, tombol kirim ulang WA untuk penjualan berpelanggan; kepala
+  menyebut cabang aktif. Keranjang: qty bisa diketik, Kosongkan bisa dikembalikan.
+  Kolom pelanggan: saran selalu menjelaskan diri (kurang huruf / mencari / tidak ditemukan) dan
+  menawarkan **Tambah pelanggan baru** (`CustomerModal`, terisi dari kueri).
+- **Baris keranjang dua baris** (nama selebar struk; harga · qty · jumlah), input uang
+  `inputMode="numeric"`, toggle Rp/% ber-`aria-pressed`.
+
+**Area bayar muat satu layar (7 Nov 2026, critique layout).**
+- **Desktop (≥1025px):** register setinggi layar dan sejajar tab, bukan di bawah kotak cari.
+  `.pagePos` jadi grid dua kolom dan `.layout` memakai `display: contents`, sehingga panel
+  bisa merentang dari baris tab. Yang menggulir hanya daftar barang (`.cartItems`, minimal
+  104px). LCD tetap di atas dan bar **Proses** (`.payBar`) menempel di bawah. Di 1280×800 dan
+  1366×768 tombol Proses terlihat tanpa menggulir.
+- **Pelanggan & Diskon dilipat** jadi dua tuts bergaris putus (`.extraKey`, mono, 44px).
+  Masing-masing terbuka sendiri bila sudah berisi. Ringkasan Subtotal/Diskon/Total hanya
+  muncul bila ada diskon, karena total sudah tertulis di LCD dan di readout bar Proses.
+- **Status bayar** di desktop hanya tampil bila memberi info baru: lebih dari satu
+  pembayaran, lebih bayar, atau belum ada uang masuk. Sisa/kembalian biasa sudah ada di baris
+  kedua LCD.
+- **Tanda masih ada isi:** daftar barang memudar di bawah selama masih bisa digulir, dan bar
+  Proses mendapat bibir pudar bila seluruh panel menggulir (diskon + beberapa pembayaran).
+  Keduanya scroll-driven animation; peramban tanpa dukungan tetap berfungsi tanpa pudar.
+- **Ponsel & tablet (≤1024px):** bar Proses menempel di dasar layar, di atas menu bawah.
+  Dock keranjang menyerahkan tempatnya ke bar itu tepat saat register masuk layar.
+- Kartu pilih cabang diberi padding; "Kosongkan" setinggi 44px.
+
+**Kasir di ponsel (9 Nov 2026, critique 23/40).** Lima tahap, satu commit per tahap:
+- **Kolom tak ikut melebar.** Trek grid memakai `minmax(0, 1fr)` di semua lebar, dan baris chip
+  kategori menggulir sendiri. Dulu 13 kategori melebarkan kolom ke 1266px di layar 390px, sehingga
+  total LCD keluar layar.
+- **Dock tak menutupi Proses.** Observer membaca entri terakhir. Batas serah terima diambil dari
+  tinggi dock yang benar-benar tergambar, jadi zoom aplikasi ikut terhitung.
+- **Satu tampilan katalog: kartu**, di desktop dan ponsel. Pemilih Kartu/Daftar/Ringkas dihapus
+  atas permintaan pemilik. Kartu menurunkan nama produk ke baris berikutnya secara utuh, jadi nomor
+  model di ujungnya (A1989, Pro Max) tetap terbaca. Tanpa pemilih, kolom cari selebar baris.
+- **Bar Proses = aksi + readout uang.** Label aksi di kiri, readout mono di kanan (TOTAL, SISA,
+  KEMBALIAN, atau Uang pas). Keadaannya dari `payBarState()` di `lib/business/pos.ts`. Bila belum
+  siap ("Pilih cara bayar", "Uang kurang", "Lebih bayar · cek pembayaran", "Diskon melebihi
+  batas"), bar memakai `aria-disabled` bergaris putus, bukan `disabled`. Ketukan memfokus tuts
+  bayar, kolom nominal, atau diskon yang kurang, dan `scroll-margin-bottom` menjaga kolom itu
+  tetap di atas bar.
+- **Riwayat dua baris.** Nomor + jam dan total di baris pertama, rincian di baris kedua, tuts di
+  kanan. Di wadah ≤432px tuts turun ke barisnya sendiri di bawah divider titik.
+- **Teks 320px.** Angka LCD mengecil sesuai jumlah karakter (`--lcd-chars`), sehingga total 9
+  digit tetap sebaris. Di wadah pembayaran ≤270px nama dompet naik ke atas kolom nominal (label
+  mono). Chip cabang boleh selebar register. Daftar saran pelanggan bisa ditutup dengan Escape
+  atau ketukan di luar (kolomnya kini `combobox`). Pembaca layar hanya mendengar total, bukan
+  seluruh register. Tab menunjuk panelnya.
+
+![[kasir-ponsel-bar-320.png]]
+![[kasir-ponsel-riwayat.png]]
+
+Detail dan angka ukurnya: [[Decisions & Bug Fixes#Kasir di ponsel: critique 23/40 dalam lima tahap (9 Nov 2026)]].
+
+![[pos-dark.png]]
+
+## Inventori — Parts Bin (dilebur ke Kasir & Stok, 10 Nov 2026)
+
+> [!note] Halaman ini tidak ada lagi
+> `InventoryPage` dihapus; daftar stok kini katalog [[#Kasir & Stok — Register Readout]].
+> Yang tetap hidup: `InventoryModal` (tambah/ubah/hapus barang dan panel Stok masuk di bawah),
+> dibuka dari tuts Ubah, + Stok, dan "+ Barang". Catatan di bawah adalah riwayat desainnya.
+
+Dulu tabel jadi **grid laci komponen**. Tiap sparepart = bin berlabel kategori, dengan **LED status** (cyan aman / amber menipis / merah habis), angka stok mono besar, dan **fuel-gauge** ber-tick relatif terhadap stok minimum.
+
+- **Ringkasan stok (7 Nov 2026).** Baris teks "5 item · 2 menipis · Rp …" diganti `PageSummary`: Item, Menipis (LED amber), Habis (LED merah), dan Nilai Stok untuk manajer. Nilai rupiahnya kini mono. Di ponsel tiga hitungan berbagi satu baris dan Nilai Stok turun ke baris sendiri. Strip ini kini ada di Kasir & Stok sebagai saringan.
+
+- **Stok masuk: dari mana? (29 Sep 2026, masih berlaku di `InventoryModal`).** Menaikkan stok (edit) atau mengisi stok awal (barang baru) memunculkan panel ber-garis-titik yang WAJIB dijawab: **Dibeli sekarang** (harga beli/unit termasuk ongkir + Bayar dari wallet cabang, atau "Sudah dicatat di Keuangan") atau **Koreksi stok** / **Stok yang sudah ada** (tanpa uang keluar, alasan opsional). Pilihan = kartu radio dengan LED brand + spine. Readout: "Stok jadi N · modal rata-rata Rp X · kas −Rp Y". Harga modal dikunci & dihitung otomatis saat membeli. Satu langkah menggantikan dua (koreksi stok + catat Sparepart di Keuangan) — lihat 0096 di [[Data Layer]].
+
+![[inv-dark.png]]
+
+## Dashboard — Diagnostic Panel
+
+- **Servis Baru di ponsel (7 Nov 2026, critique layout).** Aksi cepat konsol hanya tampil di desktop. Navigasi bawah menautkan ke daftar Servis, bukan ke tiket baru, jadi di ponsel Dashboard tidak punya jalan langsung ke Servis Baru. Kini ≤720px tombolnya ada di dok zona jempol `ThumbDock` (`/services?new=1`), dan tombol di konsol disembunyikan supaya tidak dobel. Di tablet sentuh, aksi cepat dan "Lihat semua" naik dari 36px ke 44px.
+
+![[dashboard-dock-390-light.png]]
+
+- **Peran & target (28 Sep 2026).** Sel hero **Laba servis** hanya untuk **owner** (Laporan, sumber angkanya, owner-only); admin tetap melihat arus kas, Pemasukan, Pengeluaran. **Target Servis** kini menghitung unit **selesai** bulan ini (`serviceMargin(profitMonth).units`, sumber yang sama dengan Laba servis), label "N / target unit selesai" — dulu unit masuk. Label target di Pengaturan & wizard ikut. Karyawan tetap mendarat di Dashboard "Meja saya" (keputusan pemilik, 13a).
+
+Panel diagnostik: metric tile mono + level-meter. Membaca KPI dari `computeKpis()` di [[Data Layer]].
+
+- **Action-first + state data jujur (28 Agu 2026).** Panel **Perlu Tindakan** kini tepat di bawah
+  laba dan setiap baris membuka antrean terfilter (`status=konfirmasi`, `pickup=awaiting`, atau
+  `stock=low/out`) — bukan notifikasi pasif yang harus diingat. Servis Terbaru memakai `<Link>`
+  penuh ke tiket spesifik (keyboard-focusable), bukan `<li onClick>` ke daftar generik.
+- Dashboard membedakan **loading / refresh / gagal / kosong**: skeleton saat fetch pertama,
+  timestamp data terakhir saat refresh, fault plate + retry saat gagal, dan angka disembunyikan
+  bila koleksi gagal sebelum pernah berhasil. Seluruh copy dashboard kini lewat i18n ID/EN.
+- Mobile: BENCH CONSOLE dipadatkan 205→74 px, label KPI kembali ke batas 12 px, dan lima KPI
+  menjadi rail satu baris; panel tindakan sudah terlihat di viewport pertama. Breakpoint yang
+  bergantung ruang memakai `@container dashboard`, bukan viewport. Gauge memakai `scaleX()` dan
+  collapse sidebar diskrit sehingga tak ada animasi properti layout.
+- **Arah uang pada tile KPI (23 Sep 2026).** Dua dari lima tile — Pemasukan & Pengeluaran —
+  membawa spine 3px + warna angka, menyalin pola kartu ringkasan Keuangan. Tiga sisanya tetap
+  netral. Ini **bukan** pengembalian prop `tone` yang dilepas 13 Sep 2026: `flow` hanya punya
+  dua nilai dan menyatakan satu hal terukur (arah uang), sedangkan `tone` membiarkan tiap tile
+  memilih rona sendiri sehingga hijau berarti "Selesai" di satu kartu dan tak berarti apa-apa
+  di kartu berikutnya. "Unit masuk", "Belum selesai", dan "Total saldo" tidak diberi warna
+  karena tidak punya arah baik/buruk. Lihat [[Decisions & Bug Fixes]].
+- **Critique tahap 3 (27 Sep 2026) — "hari ini & yang perlu saya".** Urutan kini:
+  1. **Konsol** = cabang yang dilihat + denyut **HARI INI** (Masuk dari `useServiceSummary(today)`,
+     Selesai dari `useCategoryProfit(today)`, Hadir) + data; aksi cepat **Servis Baru**
+     (`/services?new=1`) & **Kasir** di desktop (ponsel: sudah di navigasi bawah). Tanggal & jam dibuang.
+  2. **Karyawan: Meja saya** — strip Tiket saya (`/services?tech=me`), Tugas (sinyal rel), Absensi.
+  3. **Perlu Tindakan** — LED + angka mono + **umur** tertua (`alertAges` dari tiket terbuka,
+     `openOnly`, maks 60 baris kolom daftar).
+  4. **Hero (owner/admin)** — sakelar **Hari ini | Bulan ini**; Pemasukan/Pengeluaran menaut ke
+     Keuangan; **Laba servis** = `serviceMargin(category_profit)` (biaya final − harga part tiket
+     yang SELESAI) menggantikan "Margin 79%" (arus kas ÷ pemasukan) dan "Rasio biaya" (100 − itu);
+     catatan "arus kas, bukan laba".
+  5. **Strip readout** (bukan tile ikon, bukan carousel): Unit masuk, **Dalam proses** (definisi
+     sama dengan readout Servis), Saldo ("semua cabang" saat satu cabang dipilih). Tiap sel = tautan.
+  6. **Target** dengan **penanda laju** (`monthPace`) dan warna menurut jarak ke laju
+     (`targetState`); disembunyikan saat satu cabang dipilih (targetnya milik seluruh usaha).
+     Sejak 29 Sep 2026 ada baris **Perlu hari ini** (owner/admin, target pendapatan > 0):
+     `dailyRevenueTarget` = (target − omzet s/d kemarin) ÷ sisa hari termasuk hari ini — angka
+     tetap sepanjang hari, progres hari ini yang bergerak; hilang begitu target bulan tercapai.
+     Target Pendapatan = **omzet** operasional (tanpa modal/prive), bukan laba.
+  7. **Break-even bulan ini** (owner saja, 29 Sep 2026): satu baris readout di layar hero —
+     gauge + persen + LED nada + vonis singkat ("Kas naik, laba belum menutup biaya tetap ·
+     kurang Rp 115.000") → Laporan. Komponen `BreakEvenReadout` terpisah supaya tarikan
+     pengeluaran 3 bulan & penjualan hanya jalan untuk owner. Belum ada overhead → petunjuk
+     mencatat, menaut ke Keuangan.
+  7. Papan teknisi: rupiah hanya untuk owner/admin; meter karyawan mengikuti unit selesai.
+
+![[dash3-dark.png]]
+
+## Pelanggan — Contact Registry
+
+**Grid kartu arsip**: plate inisial, **ID mono** (ID-XXXXXX), baris kontak HP/email/alamat mono, readout aktivitas (jumlah servis + total transaksi), penanda **Pelanggan Setia** (LED cyan).
+
+- **Ringkasan di kepala halaman (7 Nov 2026).** Baris teks di bawah chip kategori dipindah ke atas toolbar sebagai `PageSummary`: Pelanggan, Pelanggan Berulang, dan Ditampilkan. Label pendek di ponsel adalah Total, Berulang, dan Tampil.
+
+- **Drawer Riwayat Servis (19 Jun 2026).** Klik kartu pelanggan → **panel geser kanan** (`CustomerHistoryDrawer`) berisi daftar tiket pelanggan itu (newest-first): **LED status per tone** (pakai `STATUS_TONE`), no tiket mono, perangkat (`category · device`), tanggal, biaya, + link ke detail tiket. Data servis sudah di-load di halaman (untuk statistik) → tanpa fetch baru. Kartu kini `role=button` + keyboard (Enter/Space); tombol edit/hapus pakai `stopPropagation` agar tak ikut membuka drawer. Menjawab kebutuhan "lihat unit apa saja yang pernah masuk", bukan sekadar angka jumlah.
+
+- **Filter kategori perangkat + Kirim WA (22 Jun 2026).** Toolbar dapat **dropdown "Semua Perangkat"** — daftar kategori diturunkan dari **riwayat servis** tiap pelanggan (`custCategories`: map customerId → set `service.category`), bukan field di Customer (Customer tak punya kategori sendiri). Filter hanya muncul bila ada ≥1 kategori. Tiap kartu pelanggan ber-nomor kini punya tombol **WhatsApp** (LED hijau hover `--success-soft`) di footer: buka `wa.me` (helper `waLink`/`toWaNumber` dari [[Data Layer]]) dengan sapaan ber-merek toko (`Halo {nama}, {toko} di sini.`) yang bisa diedit user sebelum kirim. **Demo-guarded** (`demoGuard`) seperti `NotifyModal`. Batasan jujur: `wa.me` hanya buka **satu chat per klik** — tak ada auto-blast massal (butuh WA Business API). Tombol hanya tampil bila pelanggan punya nomor.
+
+![[cust-dark.png]]
+
+## Supplier — Vendor Ledger
+
+Tab berlabel **"PO" dan "Supplier"**, masing-masing dengan chip hitungan mono bergaris titik (`.tabCount`), dalam `role="group"` + `aria-pressed`. Dulu "Purchase Order (1)". Modal buat PO berjudul "PO Baru".
+
+Tab PO jadi **baris docket** dengan spine status (biru dipesan / amber sebagian / hijau diterima / abu draft), chip PO mono, total tabular, **tombol Terima mekanis**. Tab Supplier jadi kartu vendor + readout pembelian.
+
+- **Docket dua baris di daftar sempit (7 Nov 2026).** Satu baris docket butuh 685px tanpa nama (status terlebar "Sebagian Diterima" + Terima + ubah = 369px). Di bawah 845px isi (`@container polist (max-width: 52.99rem)`, mis. 1097px @100% atau laptop dengan Pembesaran), status dan tombol turun ke baris kedua: status di kiri, tombol mengumpul di kanan. Nama supplier membungkus maksimal dua baris, tidak lagi dipotong "PT Sumber Kom…".
+
+Deret ringkasan menampilkan **total PO, PO aktif, dan jumlah supplier** sehingga halaman
+tetap memberi orientasi saat data sedikit; tombol aksi memenuhi target sentuh mobile.
+Sejak 7 Nov 2026 deret itu memakai `PageSummary` bersama. Dulu ada tiga kotak dengan angka
+±330px dari labelnya. PO aktif kini membawa LED cyan bila ada.
+
+- **Sinkron PO → Keuangan + void otomatis (19 Jun 2026).** ReceiveModal kini menampilkan **readout nilai diterima** (mono) + **checkbox "Potong dari wallet"** (default ON + wallet utama) dengan pemilih wallet. Terima barang → otomatis catat **Expense `'Pembelian stok PO <no>'`** (partial-aware: senilai yang masuk saat itu) & (bila tunai) potong saldo wallet — atomik via RPC `receive_goods_v2` di cloud, tulis berurutan di lokal. Tiap docket PO (non-draft/non-cancelled) punya **tombol batalkan** (ikon danger): **void otomatis** balikkan stok, refund wallet, hapus expense ter-link, set `cancelled`. Lihat [[Data Layer]] migrasi `0034`.
+
+![[sup-dark.png]]
+
+## Keuangan — Cashbook Tape
+
+- **Per cabang & ponsel (0095, 28 Sep 2026).** Tampilan satu cabang hanya memuat wallet bersama + wallet cabang itu; wallet khusus cabang punya persamaan lengkap (awal + masuk − keluar ± transfer), wallet bersama tetap "gerak cabang ini"; Total berlabel "cabang ini + bersama". Catat Pemasukan/Pengeluaran menawarkan wallet yang sah untuk cabangnya (memilih wallet cabang di "Semua Outlet" mengisi cabangnya), Hitung saldo membuka Tunai cabang dan tak bertanya cabang untuk wallet khusus cabang. Ponsel (≤560px wadah): ringkasan satu baris tiga sel, gerak wallet tanpa "Rp", tombol **Hitung** menempel di sel Total — baris pertama buku kas naik dari y=735 (tertutup navigasi) ke y=709 di 375×812. Pengaturan › Wallet: wallet bisa diubah cabang & penanda **Uang tunai (laci)** kapan saja (dulu hanya ganti nama).
+
+Wallet jadi **meter readout**. Buku kas jadi **pita thermal monospace** dengan spine income/expense (hijau/merah), nominal +/- mono — senada struk POS.
+
+> [!note] Koreksi (27 Sep 2026)
+> Paragraf lama ("horizontal rail, Buku Kas di viewport pertama") dan poin "income tidak bisa
+> diedit" di bawah sudah usang: pemasukan manual bisa diedit, dan tata letak diganti critique tahap 4.
+
+- **Critique tahap 4 (27 Sep 2026).** Urutan: **pemilih bulan** (‹ September 2026 ›, menggerakkan
+  ringkasan DAN buku kas; menggantikan "Muat bulan sebelumnya") → **strip wallet** (sel Total +
+  tiap wallet: saldo dan pergerakan bulan `walletMovement` +masuk −keluar ⇄transfer; sel = filter)
+  → **strip ringkasan** yang ikut filter wallet → aksi (sebaris 3 di ponsel) → **buku kas per
+  hari** (kepala hari = tanggal + arus bersih; baris tanpa kolom tanggal, di wadah sempit dua
+  tingkat: keterangan selebar pita, lalu nominal + aksi). Alasan kunci ditulis sebagai tag
+  ("terkunci · bulan lalu", "ubah dari tiket/Kasir"), bukan tooltip. Filter wallet di ponsel
+  menggulir ke buku kas.
+- **Kolom nominal seragam (7 Nov 2026).** Kolom aksi pita selebar dua tombol (`--tape-btns`,
+  82px; `max(40px, --control-h)` × 2 pada sentuh) walau baris hanya punya satu tombol atau
+  tidak ada. Dulu `auto`, sehingga tepi kanan nominal melompat 1293/1335/1387px dalam satu
+  pita. Arus bersih di kepala hari diberi padding kanan yang sama, jadi sejajar dengan kolom
+  nominal (1293px di 1440, 621px di 768). Di wadah ≤560px tata letak dua tingkat tetap.
+
+![[finance-tape-columns-dark.png]]
+- **EntryModal:** cabang di baris pertama bila `mustPickOutlet`; tanggal `min` awal bulan /
+  `max` hari ini (`entryDateError`, cermin 0091); kategori pemasukan hanya Modal/Lainnya;
+  saldo di pilihan wallet; `inputMode="numeric"`; `<form>` (Enter menyimpan); **Simpan & tambah
+  lagi** (tanggal/kategori/wallet/cabang dipertahankan); peringatan catat ganda
+  (`findRecentDuplicate`, 10 menit) — Simpan kedua melanjutkan.
+- **Hitung saldo (28 Sep 2026)** — `CountModal`: pilih wallet (kanal ber-LED), ketik uang yang
+  benar-benar ada (isi laci / saldo aplikasi bank), readout satu persamaan Aplikasi | Dihitung |
+  Selisih (LED: cocok hijau, kurang merah, lebih amber). Selisih dicatat satu ketukan sebagai
+  pengeluaran/pemasukan **Lainnya** hari ini (`reconcileWallet`), sehingga saldo = hitungan tanpa
+  menimpa angka diam-diam. Baris "awal Rp X" per wallet (bulan ini, semua cabang) melengkapi
+  persamaannya.
+- **Hapus:** dialog menyebut barisnya (`−Rp 75.000 · Tunai · Beli lem`) dan akibatnya; tombol
+  terkunci selama proses (klik ganda tak menghapus dua kali).
+
+- **Edit pengeluaran (19 Jun 2026).** Tiap baris **pengeluaran** punya tombol **Edit** (pensil); income tidak (income sistem dari servis/POS — hanya `expense.update` ada di `ActivityAction`, tak ada `income.update`). `EntryModal` kini punya **mode edit**: prefill record + **rekonsiliasi saldo wallet** (wallet sama → selisih `old−new`; wallet diganti → kembalikan lama, potong baru). Log `expense.update` dengan `meta.prevAmount`.
+- **Transfer antar wallet (19 Jun 2026).** Dulu **hanya di Pengaturan**; kini tombol **Transfer** juga di menu Keuangan (muncul bila ≥2 wallet) → `TransferModal` memakai helper murni `transfer()` + RPC `transfer_wallet` (atomik, manager-only) yang sama. Transfer **tak membukukan income/expense** (bukan untung/rugi → laporan tak menggelembung), hanya pindah saldo + log `wallet.transfer`.
+- **Riwayat transfer + filter per-wallet + paging baris (31 Jul 2026).** Tiga perbaikan yang saling terkait di Buku Kas:
+  1. **Tab `TRANSFER`** — transfer antar wallet kini **ikut tampil** di Buku Kas (tab Semua & tab Transfer). Sumbernya **activity log** (`action = 'wallet.transfer'`) karena transfer memang tak punya tabel/ledger sendiri; dibaca lewat `useCollectionRange('activity','createdAt', …)` + `rangeForTimestamp` pada jendela bulan yang sama. Baris transfer bergaya **netral** (spine `--text-muted`, tanpa +/− hijau-merah) dan **tak bisa dihapus/diedit** — audit log immutable. **Batasan sadar:** RLS `activity_select` = **owner-only**, jadi admin melihat tab Transfer kosong (`ponytail:` di kode → bikin tabel `wallet_transfers` kalau admin perlu).
+  2. **Klik kartu wallet → filter transaksi wallet itu.** Kartu wallet jadi `<button>` (aria-pressed, hint `LIHAT TRANSAKSI`); judul kartu berubah jadi `Buku Kas · <wallet>` + tombol **Semua wallet** untuk reset. Transfer cocok bila wallet asal **atau** tujuan = filter, dan tandanya jadi berarah (`+` masuk / `−` keluar).
+  3. **Cap 100 baris → paging.** Dulu `slice(0,100)` keras: "muat bulan sebelumnya" tak berguna karena baris lama tak pernah kebagian slot. Kini `limit` state (`PAGE_SIZE = 100`) + tombol **Tampilkan lebih banyak**; hint footer jadi `X dari Y baris`. Footer (termasuk "muat bulan sebelumnya") kini **ikut dirender saat kosong** — dulu tersembunyi di cabang `EmptyState`, sehingga filter wallet tanpa hasil jadi jalan buntu.
+  - Logika murni pemetaan log→baris ada di `transferEntries()` ([`lib/business/finance.ts`](src/lib/business/finance.ts), 4 unit test: pemetaan dua sisi, abaikan aksi lain, trim tepi ±1 hari dari `rangeForTimestamp`, log tanpa `meta`).
+- **Transfer bisa diedit & dibatalkan (0086, 25 Sep 2026).** Sumber tab Transfer kini tabel `walletTransfers`, bukan activity log (poin 1 di atas usang: admin pun melihatnya, `transferEntries` dihapus). Tiap baris transfer punya **pensil** (edit; bulan lalu hanya keterangan) dan **batalkan** (bulan berjalan saja) → `ConfirmDialog` "Batalkan Transfer?". Yang dibatalkan tetap tampil: `.tapeRow.voided` = teks dicoret + redup, spine putus-putus, tag `DIBATALKAN` `--danger-text` + "oleh X", tanpa tanda arah. `TransferModal` dapat field **Keterangan** (jadi deskripsi baris; kosong → "Transfer antar wallet"). Tombol "Balikkan" dihapus.
+
+- **Kategori `Modal` & `Prive` — arus kas pemilik (31 Jul 2026).** Bug lapangan dari toko pilot: pemilik menyuntik uang pribadi ke wallet untuk modal beli sparepart dan mencatatnya sebagai **Pemasukan** (satu-satunya cara menambah saldo). Akibatnya suntikan terhitung omzet — Rp 13,5 jt dalam sebulan menggelembungkan laba **43%** (Rp 31,6 jt dilaporkan vs Rp 18,1 jt sebenarnya; margin 66% vs 53%) **tanpa satu pun error**. Berulang tiap bulan karena siklusnya: awal bulan saldo ditarik habis (prive), tengah bulan disuntik lagi (modal).
+  - Perbaikan: `IncomeCategory` += `'Modal'`, `ExpenseCategory` += `'Prive'`. Uangnya **tetap** menggerakkan saldo dan **tetap** tampil di Buku Kas (baris netral seperti Transfer — bukan hijau/merah, karena bukan untung/rugi), tapi **tak pernah** ikut agregasi omzet/laba.
+  - **Sumber kebenaran tunggal**: `isCapitalFlow` / `operatingIncomes` / `operatingExpenses` di [`lib/business/finance.ts`](src/lib/business/finance.ts). Penyaringan dilakukan **di dalam** fungsi agregasi (`summarize`, `computeKpis`, `revenueSeries`, `trendSeries`, `outletComparison`, dan `periodComparison` lewat `summarize`), **bukan** di pemanggil — supaya halaman baru tak bisa lupa lalu diam-diam berbohong. `transactionRows` (Laporan) sengaja **tetap** menampilkannya: itu daftar transaksi mentah, bukan ringkasan laba.
+  - Signature `trendSeries`/`outletComparison`/`periodComparison` dilebarkan agar membawa `category` — tsc langsung menandai dua pemanggil yang belum ikut saat perubahan dibuat.
+  - **Nol migrasi**: kolom `category` bertipe `text` tanpa `CHECK` (0001). Data lama diperbaiki **sendiri oleh pemilik** — edit baris lama, ganti kategorinya; karena nominal & wallet tak berubah, rekonsiliasi menghitung delta **nol** sehingga **saldo tidak bergerak**. Semua bulan ikut terkoreksi otomatis karena pengecualian berbasis kategori, bukan tanggal.
+  - Catatan `.capitalNote` di bawah panel ringkasan menampilkan total setoran modal & prive bulan berjalan — supaya turunnya Pemasukan setelah re-kategorisasi ada penjelasannya, bukan angka yang hilang diam-diam. Muncul hanya bila ada nilainya. `EntryModal` menampilkan hint penjelas saat kategori itu dipilih.
+
+- **Filter kategori (29 Sep 2026).** Pita tab buku kas punya pilihan kategori (mono, garis titik;
+  baris penuh di ponsel) yang bisa digabung dengan tab jenis dan filter wallet. Opsinya kategori
+  yang ada di bulan itu. Ringkasan dan judul buku kas ikut ("Pengeluaran · Tunai · Gaji").
+  Terbuka lewat `?cat=Gaji&month=2026-08` dari Laporan: nama kategori di kartu Pemasukan/
+  Pengeluaran per Kategori dan di rincian break-even adalah tautan ke Keuangan tersaring — cara
+  memeriksa isi "Lainnya" atau memastikan gaji sudah dicatat. Laporan multi-bulan membuka bulan
+  terakhir periodenya. Opsinya dikelompokkan (`<optgroup>`) sama dengan form catat.
+- **Kategori catat = dropdown berkelompok (29 Sep 2026)**, `Select` dengan `groups` (`<optgroup>`):
+  Beban Operasional · overhead (Gaji, Sewa, Listrik & Air, Internet & Pulsa, Transportasi & Bensin,
+  Perlengkapan & ATK, Perawatan & Perbaikan, Pemasaran & Iklan, Pajak, Retribusi & Iuran (sampah,
+  karang taruna, keamanan), Biaya Admin Bank, Konsumsi, Selisih Kas Kurang, Operasional, Lainnya) / Beban Langsung (Garansi, Refund Penjualan, Ongkos Kirim) /
+  Persediaan (Sparepart) / Aset Tetap (Peralatan & Inventaris) / Piutang (Kasbon Karyawan) / Prive.
+  Pemasukan: Pendapatan (Lainnya) / Non-operasional (Modal, Pelunasan Kasbon, Selisih Kas Lebih). Keterangan di bawah
+  mengikuti kategori/kelompok (kasbon dipotong gaji = Gaji penuh + Pelunasan Kasbon; ongkir stok →
+  harga beli). Sempat berupa tombol "Uang ini untuk apa?" berbahasa awam — dikembalikan ke dropdown
+  atas permintaan pemilik. Tombol **Kamus istilah** di bar bulan; "Arus Kas Bersih" = `Term`.
+  Catatan arus non-operasional di bawah ringkasan kini merinci semua kategori non-operasional.
+
+- **Bayar Gaji (29 Sep 2026).** Tombol di baris aksi Keuangan membuka `PayrollModal`: karyawan (label memuat sisa kasbon / "sudah dibayar"), gaji penuh (terisi gaji terakhir), potong kasbon (terisi sisa kasbon), dibayar dari, tanggal, keterangan; readout mono bergaris titik "Gaji (beban) · Potong kasbon · Ditransfer · Sisa kasbon setelah ini". Satu simpan = Gaji penuh + Pelunasan Kasbon (RPC `pay_salary`, 0098).
+- **Chip karyawan di buku kas (6 Okt 2026).** Baris Gaji / Kasbon Karyawan / Pelunasan Kasbon memuat chip bergaris titik berisi nama karyawan atau "+ Karyawan"; klik membuka `LinkEmployeeModal` (readout catatan + pilihan karyawan, "Tanpa karyawan" untuk melepas). Tampil juga di bulan terkunci — hanya menautkan, uangnya tetap (0099). Form edit catatan bulan ini juga menampilkan pilihan karyawan.
+
+![[fin-dark.png]]
+
+## Kamus Istilah — Datasheet (29 Sep 2026)
+
+Rute `/istilah` (semua peran, **tanpa item sidebar**): dibuka dari istilah bergaris titik (`Term`)
+dan tombol "Kamus istilah" di Laporan & Keuangan. Tiap istilah = lembar data `TERM-nn` dengan LED,
+definisi, readout rumus mono, contoh angka konter, dan "muncul di". Anchor yang dibuka menyalakan
+spine + LED brand; `scroll-margin-top` 9rem supaya judul tak tertutup topbar menempel. Judul
+topbar diambil di `AppLayout` (bukan NAV_ITEMS). Isi di `features/glossary/terms.ts`.
+
+- **Indeks = daftar isi bernomor (7 Nov 2026).** Nomor indeks sama dengan kode TERM-nn. Di layar
+  lebar indeks tersusun dalam kolom 17rem (tiga kolom, dibaca ke bawah, istilah terpanjang tetap
+  satu baris). Di bawah tiga kolom (container `glossary` ≤53.99rem) ia jadi satu baris geser 44px
+  dengan tepi pudar. Dulu awan chip: 8 baris (300px) di ponsel sebelum istilah pertama.
+
+## Laporan — Analyzer Printout
+
+Metric tile mono (spine + LED), break-even jadi **tick gauge**, breakdown kategori + leaderboard jadi **channel analyzer** dengan bar proporsi relatif. Sejak 19 Jun 2026 diperkaya **8 visual analitik** (logika agregasi murni di [`lib/business/reports.ts`](src/lib/business/reports.ts), teruji 19 unit test):
+
+Deret empat metrik: empat kolom sebaris (ikon di kiri) bila wadah ≥1063px, empat kolom dengan
+ikon di atas angka sampai 871px, lalu dua kolom (ikon sebaris lagi sampai 510px, di bawahnya
+ditumpuk). Ambangnya `@container laporan`, diturunkan dari lebar terukur: 13 karakter mono
+("Rp 99.999.999") selalu sebaris; angka yang lebih panjang membungkus setelah "Rp", tak pernah
+terpotong. Di ponsel nilai menyusut `clamp(--text-sm, 6.4cqi - 4.2px, --text-xl)`. Kontrol
+tanggal menumpuk tanpa overflow.
+
+**Tab bagian (14 Nov 2026; dulu indeks lompat "Isi laporan", 7 Nov).** Di bawah metrik ada
+`role="tablist"` berlabel "Isi laporan": **Ringkasan** (Laba Rugi & Break-even, Target Bulan Ini, Tren) · **Uang**
+(Pemasukan/Pengeluaran per Kategori, Perbandingan Antar-Outlet, Rincian Transaksi) · **Servis**
+(Mutu & Kecepatan Servis, Unit Menunggu Diambil, Laba per Kategori Perangkat, Tahapan Servis,
+Performa Teknisi) · **Kasir & Stok** (Penjualan Kasir, Part
+Terpakai di Servis — dulu "Sparepart Terlaris", Nilai Stok di Rak, Saran Restok) · **Pelanggan**
+(Pelanggan Periode Ini) · **Piutang**. Vonis, tanggal, dan empat metrik tetap di atas semua tab.
+Tiap tab = label + readout mono ("margin 58%", "10 transaksi", "7 tiket", "2 perlu restok",
+"Rp 350.000"); LED hanya pada kanal berstatus (impas/belum bila overhead tercatat, restok,
+piutang 31+ = merah), jadi deret ini tetap ringkasan tanpa menggulir. Tab terpilih = kanal
+menyala seperti item aktif sidebar (`--rail-active`, tepi `--border-brand`, sorot atas). Pola
+WAI-ARIA: roving tabindex, panah kiri/kanan + Home/End memindah fokus dan memilih, panel
+`role="tabpanel"` dengan `hidden` (aturan `.panel[hidden]` perlu karena `display:flex` kelas
+mengalahkan `[hidden]`). Tab aktif di URL `?bagian=uang|servis|stok|piutang` (Ringkasan = tanpa
+parameter), `replace` supaya berpindah tab tidak menumpuk riwayat. Kolom 6 → 3 (wadah ≤921px,
+±147px per kanal, ambang lama indeks enam kanal) → 2 (≤456px). Sejak tahap 6 ada enam tab
+(Pelanggan masuk sebelum Piutang); `?bagian=pelanggan`. Readout "…" saat data dimuat. PDF
+tetap mencetak semua bagian. Tinggi halaman di 390px: Ringkasan 2336px (dulu 5336px untuk
+seluruh halaman).
+
+Tanpa data periode lalu, kartu metrik **tidak** menampilkan baris delta sama sekali: vonis di
+atas sudah menyebutnya sekali ("tidak ada data periode lalu untuk dibandingkan"), sebelumnya
+kalimat yang sama diulang di tiga kartu.
+
+**Laba Rugi & Break-even (14 Nov 2026).** Kartu pertama sesudah indeks (dulu kartu Break-even
+di urutan ketiga). Kiri: struk seperti pita Kalkulator Biaya, baris dipisah divider titik,
+total bergaris rangkap: Pendapatan servis (n unit selesai) · Part & pembelian luar ·
+Penjualan kasir · HPP barang terjual · Beban langsung (hanya bila >0) · **Laba kotor + margin
+%** · Overhead (rincian per kategori + tanda est.) · baris akhir ber-LED. Kanan (di bawah bila
+wadah `laba` <52rem): vonis kas × impas, tick-gauge, catatan basis/porsi/Lainnya/gaji, dan
+catatan akrual ("pendapatan servis dihitung saat unit selesai, termasuk yang belum dibayar").
+Angkanya dari `profitLoss` di [`lib/business/overhead.ts`](src/lib/business/overhead.ts):
+total laba kotornya diuji sama persis dengan `grossProfit`, jadi struk dan gauge tak bisa
+saling membantah. **Baris akhir bergantung status periode:** periode masih berjalan (hari ini
+di dalam rentang) = "Kurang untuk impas"/"Surplus setelah overhead", nada warn/ok, karena laba
+kotor baru sampai hari ini sedangkan overhead bulan berjalan dihitung sebulan penuh; periode
+yang sudah tutup = "Laba usaha"/"Rugi usaha" + margin usaha, nada ok/crit. Tanpa overhead
+tercatat: baris Overhead "belum dicatat", tanpa baris akhir, dan petunjuk `beEmpty` tetap
+muncul. Judul memakai `Term` baru `laba-usaha`. Kanal indeks pertama kini "Laba rugi ·
+margin 58%" (LED ok/warn hanya bila overhead tercatat). PDF memuat struk yang sama di bagian
+yang sama, sebelum grafik tren.
+
+**Pembanding yang adil (14 Nov 2026).** `comparisonWindows` di `lib/business/reports.ts`:
+periode berjalan dipotong ke hari ini; satu bulan kalender dibanding tanggal yang sama di
+bulan sebelumnya (1–14 Nov vs 1–14 Okt; Maret vs 1–28 Feb), rentang bebas dibanding jendela
+geser sepanjang bagian yang sudah terjadi. Sumber vonis menyebut rentangnya ("pembanding
+1–14 Okt 2026: Rp X", `fmtDateRange` di `lib/time.ts`). **Grafik tren berhenti di hari ini:**
+`trendSeries` menandai ember `future`, `trendGeometry` tidak menggambar garis/arsiran di sana
+dan mengembalikan `nowX`; layar mengarsir sisa sumbu (`--bg-input`) + garis titik, legend
+"Belum terjadi", dan hover di ember mendatang menulis "Belum terjadi", bukan Rp 0.
+1. **Tren Pemasukan vs Pengeluaran** — grafik garis **SVG murni** (komponen [`TrendChart`](src/features/reports/TrendChart.tsx), tanpa library; geometrinya dari `trendGeometry` di `lib/business/reports.ts`, dipakai bersama grafik di laporan PDF supaya keduanya tak bisa menggambar bentuk berbeda) dengan crosshair hover, area pemasukan, gridline + label mono. Bucket auto: harian (≤31 hr) / mingguan (≤184 hr) / bulanan (selebihnya).
+2. **Rincian Transaksi** — tabel on-screen (versi layar dari CSV): tag jenis, kategori, keterangan, nominal bertanda; cap 100 baris (sisanya via ekspor).
+3. **Laba per Kategori Perangkat** — omzet + laba kotor (finalCost − biaya part) per jenis perangkat (HP/laptop/dst), servis selesai/lunas.
+4. **Sparepart Terlaris + Saran Restok** — part paling sering dipakai (qty+biaya) & item ≤ minStock (neediest first).
+5. **Funnel Servis + Turnaround** — jumlah unit per status (urutan workflow) + rata-rata hari diterima→selesai (dari history).
+6. **Delta vs Periode Lalu** — metric tile pemasukan/pengeluaran/laba menampilkan % perubahan vs jendela sebelumnya yang setara (pengeluaran: naik = merah).
+7. **Perbandingan Antar-Outlet** — income/expense/net per cabang (hanya muncul bila >1 outlet; null = "Tanpa Cabang").
+8. **Aging Piutang** — tabel servis selesai yang belum lunas (sisa = finalCost − DP), umur dari tanggal selesai dengan tag 0-7 / 8-30 / 31+.
+
+**Tab Servis: mutu, unit menunggu, teknisi menurut laba (14 Nov 2026).**
+- **Mutu & Kecepatan Servis:** empat readout mono di atas divider titik (`dl.qGrid`, 4 → 2
+  kolom di wadah ≤766px): *Waktu selesai* (median hari diterima → selesai), *Balik garansi*
+  (klaim masuk ÷ unit selesai), *Batal* (batal ÷ tiket masuk), *Melebihi estimasi* (biaya akhir
+  > estimasi +10%, `OVER_ESTIMATE_TOLERANCE`). Batal & klaim dari tiket MASUK; kecepatan &
+  estimasi dari unit SELESAI tanpa klaim (`serviceQuality`). Median, bukan rata-rata: satu unit
+  tunggu part tiga minggu tak menyeret angka. Tanpa LED, karena ambang "baik" berbeda per toko.
+  Rata-rata hari di header Tahapan Servis dicabut (pertanyaan lain, angka mirip).
+- **Unit Menunggu Diambil:** keadaan sekarang, semua periode, tertua dulu (`awaitingPickup`):
+  selesai/lunas/batal yang belum diambil, umur dari tanggal selesai (batal: tanggal batal, lalu
+  `updatedAt` bila riwayat tak dimuat), tag umur 0-7/8-30/31+ seperti piutang, nomor servis
+  bertaut ke `/services/:id`, maksimal 10 baris + catatan jumlahnya.
+- **Performa Teknisi menurut laba:** `technicianProfit` dari unit selesai periode ini: unit ·
+  median hari · omzet, nilai = laba (biaya final − part). Dulu `service_summary` (0063) memberi
+  jumlah selesai + nilai Lunas, sehingga omzet part mahal memenangkan papan.
+- **Data:** `useCompletedServices` (cloud: `listByDateRange('services','completedAt')`, filter
+  di server lewat kolom 0080; lokal: riwayat via `completionDate`) dan `useAwaitingPickup`
+  (`queryServices({ openOnly, visibleOnly, limit: 500 })`, sama dengan Dashboard) di
+  `hooks/useReportData.ts`. Tanpa RPC atau migrasi baru. Laporan tak lagi memakai
+  `useServiceSummary`.
+- PDF: tabel Mutu, Performa Teknisi lima kolom (unit, median, omzet, laba), Unit Menunggu
+  Diambil (semua baris).
+
+**Penjualan Kasir (14 Nov 2026, tab Kasir & Stok).** Empat readout (`qGrid`): Struk (+ rata-rata
+per struk), Laba kotor kasir (+ margin dan omzet), Diskon diberikan (+ persen dari harga jual),
+Struk dibatalkan (+ nilainya); lalu, di bawah divider titik, delapan barang teratas menurut
+laba ("1 terjual · omzet Rp …"). `salesBreakdown` di `lib/business/reports.ts` membagi diskon
+struk ke barisnya sebanding harga jual, jadi omzet per barang berjumlah sama dengan total struk
+dan laba kasir sama dengan baris kasir di struk Laba Rugi (demo: Rp 930.000). Struk batal
+dihitung terpisah, tidak dibuang. Kartu yang dulu "Sparepart Terlaris" (pemakaian part di tiket
+servis) diberi judul "Part Terpakai di Servis" supaya tidak tertukar dengan barang kasir. PDF
+memuat tabel yang sama dengan daftar barang lengkap.
+
+**Perbaikan kecil (14 Nov 2026).**
+- **Pintasan periode** di atas pemilih tanggal: Hari ini · 7 hari · Bulan ini · Bulan lalu ·
+  Tahun ini (`periodPreset`; bulan/tahun = rentang kalender penuh, seperti bawaan halaman).
+  Tuts mono setinggi `--control-h`, `aria-pressed`, terpilih menyala seperti tab bagian.
+- **Ekspor di Trial** tak lagi hilang tanpa jejak: tombol redup "Ekspor PDF & CSV" + `ProBadge`
+  ke `/settings?tab=langganan`, pola gerbang yang sama dengan kartu Export Data di Pengaturan.
+- **Tautan tindak lanjut:** nomor servis di Piutang dan Unit Menunggu Diambil membuka tiketnya
+  (tempat tombol WhatsApp dan pelunasan; RPC piutang tak membawa nomor HP, jadi tombol WA
+  langsung di Laporan butuh perubahan server); Saran Restok menaut ke `/pos?stock=low` lewat
+  baris di bawah daftarnya (di header ia meluap di 390px).
+- **Grafik tren:** viewBox selebar wadah terukur (`ResizeObserver`), jadi label sumbu tampil
+  12px di semua lebar (dulu ±5px di 390px); label X dijarangkan sampai ±56 unit per label
+  (4 label di ponsel); pad kiri 68 agar "2,63 jt" tidak terpotong; tinggi 200 bila <480px.
+  `aria-label` kini memuat ringkasan (total pemasukan/pengeluaran, puncak dan tanggalnya).
+- ±13 literal UI pindah ke kunci i18n; transisi `width` pada batang dicabut (gerak tersebar,
+  dan detektor menandainya); `.estTag` memakai `--text-xs`.
+
+**Pelanggan, nilai stok, target (14 Nov 2026).**
+- **Pelanggan Periode Ini** (tab Pelanggan): Pelanggan (baru · langganan), Pelanggan kembali (%),
+  Belanja per pelanggan, Pembeli umum (struk tanpa nama); lalu lima pelanggan teratas menurut
+  belanja ("3 kunjungan"). `customerStats`: *baru* = data pelanggan dibuat di periode
+  (`useCollectionRange('customers','createdAt')`), bukan "tiket pertamanya", karena riwayat tiket
+  lama sering tak termuat; belanja = biaya servis SELESAI + kasir (definisi Laba Rugi);
+  kunjungan = tiket MASUK + struk. Readout tab: "3 pelanggan".
+- **Nilai Stok di Rak** (tab Kasir & Stok, sebelum Part Terpakai): Modal di rak (stok × HPP),
+  Nilai jual (stok × harga katalog), Tak bergerak (barang bersisa yang tak terjual dan tak
+  terpakai di periode), Modal mengendap (+ persen dari modal di rak); lima barang tak bergerak
+  dengan modal terbesar, batang netral (`.capital`), karena stok bukan biaya. `stockValue`.
+- **Target Bulan Ini** (tab Ringkasan, setelah Laba Rugi): hanya bila periode tepat satu bulan
+  kalender (`monthTargetPace`, `null` untuk rentang lain) dan target diisi di Pengaturan. Omzet =
+  Pemasukan usaha (`summary.income`, sama dengan Dashboard), Unit selesai = unit Laba Rugi.
+  Tick-gauge dengan penanda titik "laju merata hari ini" (hari ke-n ÷ hari dalam bulan), LED
+  hijau bila di depan laju, jingga bila di belakang (bukan merah: tertinggal target bukan
+  kegagalan). Tautan "Ubah target" ke `/settings?tab=usaha`.
+- PDF: Target Bulan Ini setelah Laba Rugi; Nilai Stok di Rak (15 barang tak bergerak teratas)
+  dan Pelanggan Periode Ini di akhir bagian operasional.
+
+- **Break-even (29 Sep 2026; sejak 14 Nov 2026 satu kartu dengan Laba Rugi, lihat di atas).** **Laba kotor** (laba servis per tanggal selesai + laba penjualan
+  − Garansi − Refund Penjualan) dibanding **overhead dari catatan Keuangan** seporsi panjang
+  periode (hari mendatang tak dihitung) — `lib/business/overhead.ts`, teruji. Overhead = Gaji,
+  Sewa, Operasional, Lainnya; Sparepart (stok) dan Prive tidak. Bulan lewat = realisasi; bulan
+  berjalan = per kategori `max(tercatat, rata-rata ≤3 bulan penuh sebelumnya)`; tanpa riwayat
+  (bulan pertama) = yang sudah dicatat apa adanya, bertanda "mungkin belum lengkap". **Tidak ada
+  isian perkiraan overhead** di wizard maupun Pengaturan — kartu selalu tampil dan, tanpa
+  catatan, berisi petunjuk mencatat Gaji/Sewa/Operasional (itulah cara user baru menemukannya).
+  Kartu menampilkan rincian per kategori, basis angka, surplus/kekurangan, dan peringatan bila
+  bulan lalu tak ada catatan Gaji. Estimasi ditandai **est.**; periode bukan sebulan/sejak tgl 1 diberi catatan "diporsi"; kategori lama tampil "Operasional (lama)" (`categoryLabel`). Sewa cabang **tahunan** (wizard langkah Outlet, atau
+  Pengaturan › Usaha › Sewa Tempat) = nominal ÷ 12, catatan Sewa cabang itu diabaikan agar tak
+  dobel; form Keuangan memberi keterangan "dihitung sebagai overhead" dan, untuk Sewa, "bayar
+  tahunan? atur di Pengaturan" (owner). PDF ikut. Di puncak kartu ada **vonis kas × break-even**
+  (`breakEvenVerdict`: sehat / kas naik tapi belum menutup / untung tapi uang tertahan / rugi),
+  kotak ber-spine & LED nada dengan baris "Arus kas ±X · Break-even ±Y".
+- **Pengeluaran per Kategori dikelompokkan (29 Sep 2026)** menurut perlakuan di break-even
+  (`EXPENSE_GROUPS`): Biaya tetap · overhead / Biaya langsung / Stok · jadi biaya saat dipakai /
+  Pemilik · bukan biaya — subjudul mono + subtotal, kelompok kosong disembunyikan. Bila subtotal
+  overhead (yang dibayar) ≠ overhead break-even (perkiraan/sewa tahunan), ada catatan kecil.
+- **Ekspor CSV (19 Jun 2026).** Tombol **Ekspor CSV** di date bar mengekspor rincian transaksi (pemasukan+pengeluaran) periode terpilih, ter-scope outlet aktif, terurut terbaru. Nama file memuat scope + rentang tanggal.
+  > [!note] Koreksi (21 Sep 2026)
+  > `lib/csv.ts` **tidak lagi** punya `toCsv()`/`downloadCsv()` sendiri. Itu dulu implementasi CSV KEDUA di repo — satu-satunya yang dipakai Laporan, dan satu-satunya yang **tanpa** guard formula-injection serta tanpa tes. Sekarang Laporan memakai `buildCsv`/`csvFilename` dari [`lib/business/export.ts`](src/lib/business/export.ts) yang sama dengan kartu Export Data di Pengaturan; `lib/csv.ts` hanya menyisakan `downloadCsvFile` (Blob + anchor).
+- **Ekspor piutang terpisah (21 Sep 2026).** Kartu Piutang punya tombol **Ekspor** sendiri: daftar inilah yang dibawa saat menagih, dan ia **tidak** mengikuti rentang tanggal laporan — jadi tak bisa ikut di ekspor transaksi.
+- **Ekspor PDF (22 Sep 2026).** Tombol **Ekspor PDF** bersebelahan dengan Ekspor CSV (keduanya dalam satu `.exportGroup` supaya membungkus bersama), gerbang `exportImport` yang sama. Dokumen **A4 potret berkop toko**: kop + jenis dokumen + periode + cakupan cabang, vonis, empat KPI dengan delta, grafik tren, break-even, kategori pemasukan/pengeluaran, laba per kategori perangkat, sparepart terlaris, funnel, performa teknisi, saran restok, perbandingan antar-outlet (lebar penuh — empat kolom uang tidak muat di setengah halaman), piutang + ringkasan umur, lalu **buku transaksi LENGKAP** (bukan cap 100 baris seperti di layar). Kaki berulang tiap halaman. Lewat dialog cetak browser → "Simpan sebagai PDF"; lihat [[Decisions & Bug Fixes]] dan [[Data Layer]].
+
+> [!warning] Akses Laporan kini **owner-only** (migration `0019`)
+> Sebelumnya manager (owner+admin). Sekarang hanya **owner**: nav pakai flag `ownerOnly`, rute dibungkus `OwnerRoute`, dan `reports.view` dicabut dari admin. Lihat [[Decisions & Bug Fixes]].
+
+![[rep-dark.png]]
+
+## Log Aktivitas — Event Recorder · Diagnostic Trace (owner-only)
+
+Halaman `/activity` ([`ActivityLogPage`](src/features/activity/ActivityLogPage.tsx)), **khusus owner** (dijaga `OwnerRoute` + RLS SELECT owner-only, migration `0019`). Menjawab kebutuhan owner mengawasi aktivitas tiap peran. Metafora: **perekam data multi-kanal (event recorder)** sebench dengan POS Register & Cashbook Tape:
+- **Faceplate bersekrup** ber-wash grid blueprint: **LED REC merah berdenyut** (`recBlink`) + judul, dan **panel readout LCD** mono ber-glow amber (`TERMUAT` / `TAMPIL` / `KANAL`, angka zero-pad tabular). `KANAL` = jumlah aktor unik pada hasil filter.
+- **Jendela waktu di QUERY, bukan cuma di DOM (17 Agu 2026).** Dulu memakai `useCollection('activity')` = tarik seluruh tabel; karena `activity_logs` append-only dan tumbuh selamanya (tiap baris membawa `meta jsonb`), itu penyumbang egress besar — **dan** event lama tetap tak terjangkau karena diam-diam terpotong cap `max_rows` PostgREST (1000). Kini `useCollectionRange('activity', 'createdAt', …)` dengan jendela **bulan ini** + tombol **"Muat bulan sebelumnya"** (`monthsBack`), pola sama dengan Keuangan. Batas render `MAX_RENDERED = 300` tetap ada sebagai lapis kedua.
+  - Readout dilabeli **`TERMUAT`**, bukan `TOTAL`: angkanya jumlah event dalam jendela yang dimuat. Melabelinya TOTAL menyesatkan — owner bisa menyimpulkan timnya lebih sepi dari kenyataan hanya karena jendelanya sempit.
+  - Tombol muat-bulan-lama sengaja dirender **di luar** cabang loading/empty/isi. Kalau hanya muncul saat ada isi, bulan yang sepi jadi jalan buntu: owner melihat "Belum ada aktivitas" tanpa cara memuat bulan sebelumnya.
+- **Control strip**: cari (nama aktor / label objek), dropdown peran, dropdown aksi, tombol reset (muncul bila ada filter).
+- **Trace rail**: event dikelompokkan per hari (header tanggal sticky + hitung). Sebuah **spine vertikal putus-putus** (sinyal kanal) membentang di belakang **signal-node** — lingkaran ber-ring tone (success/warning/danger/info via `actionMeta`) berisi ikon aksi. Tiap baris: label aksi, label entitas (tag mono netral bergaris titik, sejak 7 Nov 2026; dulu amber di tiap baris), aktor + badge peran, lalu **garis titik** yang menyambung ke **timestamp `HH:MM`** tabular di tepi kanan.
+- **Filter aksi berkelompok (7 Nov 2026).** 36 aksi dikelompokkan per menu (Servis, Kasir, Pelanggan, Inventori, Supplier, Keuangan, Tugas, Absensi, Akun & sistem) lewat `groupedActionOptions()`; awalan baru jatuh ke "Lainnya", jadi tidak pernah hilang dari filter.
+- **Append-only**: tak ada aksi edit/hapus — jejak audit kebal manipulasi. Aksi tercatat: login, POS jual/void, pemasukan/pengeluaran create+update+delete, transfer wallet, inventori CRUD, pelanggan CRUD, absensi check-in/out/koreksi/hapus, tugas buat/selesai, servis create & ubah status. (19 Jun 2026: ditambah `task.create`, `task.complete`, `attendance.checkin`, `attendance.checkout` — sebelumnya tugas tak di-log & absensi hanya koreksi.) Logika presentasi murni di `lib/business/activity.ts`; penulisan via `logActivity()` fire-and-forget. State kosong & loading juga bertema (pulse / spinner mono). Lihat [[Data Layer]].
+
+![[activity-dark.png]]
+
+## Tugas — Job Board
+
+Tiap tugas jadi **tiket kerja** dengan spine status (amber pending / merah berkedip telat / hijau selesai), **checkbox mekanis**, due-tag mono. Template jadi baris SOP dengan chip recurrence. Logika di `lib/business/tasks.ts` (`isOverdue`).
+
+**Bulk pembuatan template** (`TaskTemplateModal`): saat **buat baru**, kolom Judul Tugas jadi **textarea multi-baris** — satu judul per baris. Semua judul dibuat sekaligus (`repository.putMany`) berbagi setelan pengulangan + penerima yang sama; ada penghitung live "N tugas akan dibuat" (mono, brand). Mode **edit** tetap satu judul (`Input` biasa). Parsing: split `\n` → trim → buang baris kosong.
+
+![[tsk-dark.png]]
+
+![[bulk-task-dark.png]]
+
+## Absensi — Punch Clock
+
+Kartu jam jadi **readout LCD waktu hidup** (berdetak per detik, scanline, LED status). Kehadiran jadi baris **punch-card**; riwayat jadi **timecard ledger** mono.
+
+- **Scoping riwayat per peran (19 Jun 2026).** "Kehadiran Hari Ini" tetap papan tim bersama, tapi **Riwayat Absensi** kini di-scope: **manager** (owner/admin) lihat seluruh tim, **karyawan** hanya barisnya sendiri (`attendance.filter(employeeId===me)`). Sebelumnya semua user lihat semua baris (bocor privasi rekan). Aksi koreksi/hapus tetap manager-only.
+- **Kontrol owner + lokalisasi (9 Agu 2026).** Owner dapat memilih bulan (default bulan
+  berjalan), melihat total jam per karyawan, mengabsenkan manual, serta mengoreksi baris.
+  Readout bulan selalu memakai locale aplikasi (`Agustus 2026`, bukan label native
+  browser berbahasa Inggris). `Absen Keluar` (dulu `Check Out`) memakai aksi secondary—bukan
+  danger—karena menyelesaikan shift bukan tindakan destruktif.
+
+- **Rekap per RENTANG, bukan per bulan (4 Sep 2026).** Periode gaji toko jarang jatuh persis
+  tanggal 1 sampai akhir bulan; 26–25 dan per-dua-minggu sama umumnya. Selektor bulan diganti
+  rentang bebas (`Dari`/`Sampai`) dengan pintasan Bulan ini / Bulan lalu / 7 hari. Rekap DAN riwayat
+  mengikuti rentang yang sama.
+- **Riwayat bisa difilter per karyawan (5 Sep 2026).**
+- **Salinan & toolbar periode (7 Nov 2026).** Tombol, toast, galat, dan label log memakai "Absen
+  Masuk/Keluar" (kode aksi `attendance.checkin/checkout` tetap). Kontrol periode keluar dari
+  kartunya dan jadi toolbar polos (`.periodBar`, `role="group"`), sama dengan halaman lain.
+- **Absensi jadi owner-only (`0056`, 5 Sep 2026).** Halaman ini sengaja TIDAK memakai `isManager()`.
+  Rekap jam kerja seluruh tim adalah dasar perhitungan upah sekaligus potret siapa yang sering
+  telat — itu milik **pemilik**, bukan siapa pun yang kebetulan berperan manager. Admin melihat
+  barisnya sendiri. Sebelumnya batas ini hanya ada di layar; `0056` menjadikannya batas sungguhan
+  di database. Lihat [[Decisions & Bug Fixes]].
+- **Jam kerja tidak bisa dikarang (`0053`–`0054`, 3 Sep 2026).** Clock-in/out lewat RPC yang kini
+  memakai jam server WIB (bukan `now()` polos yang UTC), penjagaan "hanya diri sendiri atau owner"
+  ikut masuk ke dalam RPC, dan satu baris per karyawan per hari dijamin indeks unik — termasuk
+  terhadap REST langsung dan balapan dua perangkat.
+
+![[att-dark.png]]
+
+## Daftar Servis — Repair Job Cards
+
+**Ponsel: antrean di layar pertama (7 Nov 2026, critique layout P1).** Di 390×844 tiket pertama dulu mulai di y=651, hanya 117px terlihat di atas menu bawah. Kini y=373. Penyebabnya diselesaikan begini:
+- **Strip readout** (sejak 7 Nov 2026 komponen bersama `PageSummary`, lihat [[Conventions]]): satu baris empat sel dengan label pendek: Total, Proses, Siap ambil, Selesai (`services.stat*Short`). Sel rupiah tidak tampil di ponsel, dan LED pindah ke depan angka.
+- **Filter:** Teknisi, Urutan, dan sakelar lingkup (Semua · Belum tuntas · Tertahan; sebelum 12 Nov 2026 dua tombol Tertahan dan Sembunyikan arsip) dilipat ke satu tombol slider di samping kolom cari. Angka pada tombol itu = filter lanjutan aktif + filter terlipat yang menyala. Baris filter hilang bila kosong, dan tetap tampil bila ada tombol reset atau chip Siap ambil.
+- **Servis Baru:** pindah ke dok zona jempol (`ThumbDock`), mengambang 8px di atas menu bawah.
+- **Chip status:** memudar di tepi yang masih menyimpan chip, supaya terbaca bisa digeser. Pola ini dipakai bersama lewat `CategoryChips`.
+- **Nomor tiket di kartu** setinggi tombol status di sebelahnya (`--control-h`, 44px). Dulu 59×22px, padahal itu satu-satunya jalan ke detail dari kartu.
+
+Di desktop, nama perangkat boleh dua baris (dulu "MacBook Pro 13" 2019" terpotong di lajur 117px). Di tablet sentuh, ikon aksi 44px dan lajurnya 4 × `--control-h`. Detail: [[Decisions & Bug Fixes#Daftar Servis ponsel: antrean di layar pertama (7 Nov 2026)]].
+
+![[services-phone-queue-390-dark.png]]
+![[services-device-2line-1700-dark.png]]
+
+**Sakelar lingkup (12 Nov 2026, permintaan pemilik).** Tombol Tertahan dan Sembunyikan arsip dilebur jadi satu kontrol tiga posisi: **Semua · Belum tuntas · Tertahan**. Ketiganya bertingkat (tiket tertahan selalu belum tuntas; belum tuntas = semua kecuali arsip), jadi dua tombol lama memberi empat kombinasi untuk tiga hasil, dan saat Tertahan menyala tombol arsip tak berefek apa pun.
+- **Bentuk:** satu rumah berisi tiga tuts yang saling mengunci, seperti bank tombol pemilih di alat ukur. Tepi rumah `--border-control` lewat bayangan inset (tinggi tetap `--control-h` walau aturan sentuh global memaksa tiap tombol 44px). Tuts tertekan = `--brand-soft` + tepi `--border-brand`, menutupi tepi rumah. Sambungan titik di antara tuts, menjorok 10px atas-bawah, hilang di kedua sisi tuts yang tertekan.
+- **Angka:** mono tabular, = tiket yang tampil bila posisi itu dipilih (`scopeCounts`). Semua sengaja tanpa angka: di cloud daftarnya berjendela 31 hari sehingga angkanya akan bertabrakan dengan TOTAL di strip, dan chip status "Semua n" tepat di bawahnya sudah menghitung.
+- **LED** hanya di Tertahan: lampu `--warning` redup bila nol, menyala dengan glow bila ada yang tertahan (Lit-Signal Rule). Belum tuntas bukan sinyal, jadi tanpa LED.
+- **Aksesibilitas:** `role="group"` + tombol `aria-pressed`, pola yang sama dengan chip status (`CategoryChips`) dan strip saringan Kasir & Stok.
+- **Ponsel:** ikut terlipat di tombol filter; di panel ia mengambil satu baris penuh, lebar tuts mengikuti isi (`flex: 1 1 auto`). Dibagi rata, tuts 96px di 320px memecah "Belum tuntas 5" jadi tiga baris; kini terukur 65 + 119 + 104px (= 288px, lebar baris), satu baris tanpa terpotong.
+- **Reset filter** dari Tertahan kembali ke Belum tuntas (Belum tuntas adalah cara pandang, bukan saringan, jadi tak pernah direset dan tak memunculkan tombol reset).
+
+Detail: [[Decisions & Bug Fixes#Sakelar lingkup Daftar Servis: Semua · Belum tuntas · Tertahan (12 Nov 2026)]].
+
+![[services-scope-1440-dark.png]]
+![[services-scope-390-dark.png]]
+
+**Aksi cepat Tambah sparepart (7 Nov 2026, permintaan pemilik).** Tiap baris dan kartu tiket yang masih dikerjakan (belum Lunas atau Batal) punya tombol ikon chip (`microchip`, ikon yang sama dengan baris sparepart di BOM detail). Tombol ini membuka `SparepartPickerModal` yang sama dengan detail tiket, tanpa pindah halaman. Di atas pencarian ada strip tiket tujuan: spine brand, nomor mono, perangkat, pelanggan. Simpannya lewat `addServicePart` (`src/data/serviceParts.ts`), jalur yang kini juga dipakai detail: tiket dibaca ulang, baris inventori `deducted: true`, stok dipotong di transaksi yang sama. Jendela tetap terbuka untuk part berikutnya, dan baris yang sudah masuk terbaca "Tambah lagi". Tiket Selesai yang biaya finalnya sudah ditetapkan mendapat toast peringatan: biaya final belum ikut naik, sesuaikan di detail. Tombol ditaruh paling kiri, sehingga tiga aksi lain tetap sejajar antarbaris. Lajur aksi di Daftar sempat melebar dari 7.5rem ke 10rem, lalu kembali ke 7.5rem pada 9 Nov 2026 (seluruh baris membuka tiket, jadi ikon Lihat tiket hanya tersisa di Kartu). Detail: [[Decisions & Bug Fixes#Aksi cepat Tambah sparepart di Daftar Servis (7 Nov 2026)]].
+
+![[services-quick-part-list-1440-dark.png]]
+![[services-quick-part-390-dark.png]]
+
+**Modal dadakan dari aksi cepat (7 Nov 2026, permintaan pemilik; label UI kini "Pembelian Luar", lihat [[Decisions & Bug Fixes#Audit kata UI: nada & panjang (7 Nov 2026)]]).** Untuk owner/admin, jendela yang sama punya dua tuts sumber di bawah strip tiket: **Inventori** (stok dipotong) dan **Modal Dadakan** (beli di luar, dibayar dari wallet). Tutsnya bergaya bench: LED menyala di sumber aktif, tepi bawah 3px, seperti tombol wallet di Hitung saldo. Tab Modal Dadakan memuat form yang sama dengan panel BOM detail: keterangan, nominal, wallet (default wallet terakhir), dan catatan bahwa saldo berkurang dan tercatat di Keuangan. Bila pencarian inventori kosong, ada pintasan "Catat "{nama}" sebagai modal dadakan" yang membawa teks pencarian ke keterangan. Setelah tersimpan, form dikosongkan untuk part berikutnya. Di tab ini Selesai menjadi tombol sekunder, sehingga Simpan Modal satu-satunya aksi utama. Karyawan tidak melihat tuts ini (pengeluaran kas, RLS 0087), dan pemilih di detail tiket tetap hanya inventori. Detail: [[Decisions & Bug Fixes#Modal dadakan dari aksi cepat sparepart (7 Nov 2026)]].
+
+![[services-quick-modal-1440-dark.png]]
+![[services-quick-modal-320-light.png]]
+
+**Tampilan ditentukan perangkat (7 Nov 2026, permintaan pemilik).** Pemilih tampilan (Kartu · Daftar · Ringkas) dihapus dari bilah alat. Ponsel (viewport ≤720px) selalu menampilkan **Kartu**; layar yang lebih lebar selalu **Daftar**. Tampilan Ringkas dihapus seluruhnya (markup dan CSS `.tileGrid`/`.tile*`). Ambang 720px sama dengan tata letak ponsel halaman ini di CSS, dibaca lewat hook baru `useMediaQuery` (`src/hooks/useMediaQuery.ts`), dan berganti langsung saat jendela diubah ukurannya. Daftar di layar sempit (tablet 768px, atau laptop dengan Pembesaran 150%) tetap dijaga `@container svcRows`. Inventori dan Pelanggan tetap punya pemilih tampilan. Kasir sejak 9 Nov 2026 hanya memakai kartu. Detail: [[Decisions & Bug Fixes#Tampilan Daftar Servis mengikuti perangkat (7 Nov 2026)]].
+
+![[services-view-phone-390-dark.png]]
+![[services-view-list-1440-light.png]]
+
+**Keluhan & Penanganan satu kolom (7 Nov 2026, permintaan pemilik).** Di tampilan Daftar, kedua teks itu kini satu segmen `data-seg="notes"`: Keluhan di atas (jepit 2 baris), Penanganan di bawah (jepit 3 baris). Dulu keduanya segmen terpisah; saat segmen membungkus di layar laptop (kontainer ≤1180px, mis. viewport 1100–1440), Keluhan jatuh di bawah nomor tiket dan Penanganan di bawah pelanggan. Lajurnya 2,5fr bila keduanya aktif (jumlah dua lajur lama), judulnya "Keluhan & Penanganan". Dua sakelar kolom di Pengaturan tetap terpisah dan menentukan baris mana yang tampil. Label di dalam segmen hanya disembunyikan bila toko memakai satu jenis saja, keluhan SAJA atau penanganan SAJA (`data-single`, bukan lagi `.clamp:only-child b`: sejak 9 Nov 2026 baris Penanganan kosong tak tampil sebelum tiket selesai, dan `:only-child` akan ikut menghapus label dari tiket yang belum punya penanganan); kalau keduanya tampil, label tetap ada supaya baris keluhan dan penanganan bisa dibedakan. Saat membungkus, segmen ini `flex: 2 1 14rem` agar tidak sesempit kolom teknisi. Tampilan Kartu dan Ringkas tidak berubah. Terukur di demo 1700px (tata letak berjudul): tinggi baris 56–78px, segmen 313px. Detail: [[Decisions & Bug Fixes#Keluhan & Penanganan satu kolom di Daftar Servis (7 Nov 2026)]].
+
+![[services-notes-1700-dark.png]]
+![[services-notes-1280-light.png]]
+
+**Daftar di laptop: tetap tabel, bisa dipindai (9 Nov 2026, critique 25/40, lima tahap).** Detail dan angka ukur: [[Decisions & Bug Fixes#Daftar Servis di laptop: critique 25/40 dalam lima tahap (9 Nov 2026)]].
+- **Bentuk:** di 1280–1440px judul kolom dulu hilang dan baris jadi tumpukan 150–193px. Kini baris tetap tabel dengan judul; tiap lajur utama punya lantai (`minmax`) dan ambang judul dihitung dari jumlah lantai + lajur kanan: **1156px** wadah (5 segmen) atau **1056px** (≤4). Seluruh baris adalah tautan ke tiket (`openTicket`), jadi lajur aksi 7.5rem dan ikon Lihat tiket hanya tersisa di Kartu ponsel. Kolom Teknisi hilang sendiri bila semua tiket punya satu nama yang sama.
+- **Identitas:** nomor tiket `--text-sm` tebal, nomor HP mono (lajur pelanggan 8.25rem muat "+62 812-3456-78901"), nama pelanggan boleh dua baris, dan nama + HP punya `title`.
+- **Spine + satu zona status:** tiap baris punya spine 3px dari `STATUS_TONE`, berbagi aturan CSS dengan `.jobCard`. "Belum diambil/Diambil" pindah ke lajur Status, di bawah lencana dan di atas "Tertahan N hari".
+- **Keyboard & pembaca layar:** nama tombol memuat nomor tiketnya ("Ubah status FM-0006: Diterima"), tombol ikon `aria-describedby` ke nomor tiket, label margin lewat teks tersembunyi, judul kolom `aria-hidden` dan tiap sel membawa labelnya sendiri, pensil status tampil di `:focus-visible`.
+- **Konteks bertahan (Tahap 5):** kotak cari, saringan, urutan, dan gulir dipulihkan sesudah tiket dibuka, lewat "Kembali ke daftar", sidebar, atau Back/Forward peramban (`lib/business/serviceListView.ts` + `features/services/listMemory.ts`, sessionStorage per tab, 30 menit). Tautan Dashboard pada entri riwayat baru tetap menang atas ingatan. Sejak 10 Nov 2026 `limit` ("Tampilkan lebih banyak") ikut diingat, dan gulir menunggu jendela serta arsip yang diminta pencarian/rentang sebelum dipulihkan (`scrollRestoreStep`).
+- **Urut per kolom (10 Nov 2026, pilihan pemilik):** judul **No. Servis, Pelanggan, Status, Biaya** di tata letak lebar adalah tombol. Klik = naik, klik lagi = turun, klik ketiga = kembali ke Terbaru (No. Servis: hanya Terbaru ↔ Terlama). Panah mono muncul di kolom aktif (warna brand) dan samar saat hover/fokus; target ≥24px. Dropdown "Urutkan" tetap dan sinkron dua arah, jadi Kartu di ponsel ikut terurut. Biaya = nominal yang tampil (final, atau estimasi bila final belum ada); nilai kosong selalu di dasar; seri jatuh ke Terbaru. Kolom yang disembunyikan toko tetap bisa diurutkan lewat dropdown.
+- **Kolom Biaya tiket batal + tombol hapus cari (13 Nov 2026).** Tiket Dibatalkan menampilkan DP yang ditahan (biaya cek), dengan label readout mono **BIAYA CEK** di bawah angka; estimasi tiket batal tidak lagi tampil karena tak pernah dibayar. Isi sel dari `costReadout` (`lib/business/serviceFilters.ts`), sumber yang sama dengan urutan Biaya. Kolom cari memunculkan tuts mekanis ✕ selama berisi (prop `onClear` di `Input`); Esc juga mengosongkan. Detail: [[Decisions & Bug Fixes#Kolom Biaya tiket batal dan tombol hapus cari Servis (13 Nov 2026)]].
+
+![[servis-laptop-1440-dark.png]]
+![[servis-laptop-1280-light.png]]
+![[servis-laptop-1366-padat.png]]
+![[servis-fokus-status.png]]
+![[servis-konteks-pulih.png]]
+![[servis-urut-kolom-1440-dark.png]]
+
+**Critique UX tahap 1 (27 Sep 2026).** Lima StatCard diganti **strip readout** satu panel (3+2 di ponsel, sel rupiah dua jalur): tiket pertama kini terlihat di atas navigasi bawah (y 778 → 647 di 375px). Di ponsel pilihan Teknisi & Urutan dilipat ke "Filter lainnya" (hitungannya ikut); tautan nomor tiket berarea sentuh 45px. Detail: [[Decisions & Bug Fixes#UX Servis — critique tahap 1 (27 Sep 2026)]].
+
+Halaman `/services`: **tabel padat di desktop**, **kartu kompak di mobile** (responsif). Tiap baris/kartu = job card dengan badge status bertone, nomor servis mono, biaya tabular, dan kolom aksi.
+
+**Responsive task hierarchy (9 Agu 2026).** Lima KPI berada dalam satu baris desktop;
+mobile memakai KPI rail. Pada lebar ≤1100 px tabel diganti dua kolom job card (≤720 px
+menjadi satu kolom), sehingga profit, status, dan aksi tidak terpotong di tablet. Badge
+status sendiri menjadi pemicu edit; tombol “Status” duplikat dihapus untuk mengurangi
+kepadatan aksi.
+
+**Paginasi 100 baris (17 Agu 2026; potongan kini 50, `LIST_PAGE_SIZE` di `lib/business/serviceListView.ts`).** Sebelumnya halaman ini menggambar **seluruh tiket sejak toko berdiri**, dua kali (tabel desktop + kartu mobile) — untuk bengkel lama itu ribuan baris dan browser tersendat. Kini `shownRows = rows.slice(0, limit)` (hanya bila hasil arsip ikut digabung) + footer **"Tampilkan lebih banyak"**, pola & class (`.loadMore`, `.loadMoreHint`) dipakai ulang dari Keuangan agar terasa satu produk. `limit` di-reset ke `PAGE_SIZE` saat salah satu dari empat filter berubah (query, status, perangkat, pengambilan).
+
+> Yang **wajib dijaga**: lima KPI (`stats`) tetap dihitung dari `visible` — **seluruh** tiket — bukan dari `shownRows`. Kalau tidak, "Total Servis" dan "Pendapatan Aktual" berubah mengikuti seberapa banyak baris yang kebetulan sudah dimuat, dan itu laporan yang menyesatkan di halaman yang menampilkan uang. Terverifikasi di render asli: filter ke "Lunas" → 3 baris, footer `3 dari 3 tiket · 6 total`, sementara KPI tetap `6` dan `Rp 3.550.000`.
+
+Catatan: ini paginasi **render**, bukan paginasi query — `useCollection` masih menarik koleksi penuh (dibatasi cap `max_rows` PostgREST). Untuk memangkas egress dibutuhkan limit sisi server + RPC agregat untuk KPI; lihat [[Decisions & Bug Fixes]].
+
+**Kolom Modal & Profit (owner-only).** Di desktop, tabel menambah kolom **Modal** (total HPP sparepart + modal dadakan) & **Profit** (`finalCost − modal`, tone hijau untung / merah rugi); kartu mobile menambah baris Profit. Keduanya **hanya tampil untuk owner** (`role === 'owner'` via session) — admin & karyawan tak lihat margin. Profit hanya muncul saat `finalCost > 0` (sebelum biaya final pasti → em-dash, agar tak menyesatkan).
+
+**Tiga kolom uang dibedakan warna (11 Jun 2026).** Untuk scan cepat: **Biaya** = amber (`--brand-hover`), **Modal** = biru info (`--info`), **Profit** = hijau/merah (untung/rugi). Semua mono tabular, lewat token (otomatis benar dark/light).
+
+**Status bisa diklik + aksi Update Status mencolok (11 Jun 2026).** Badge status di tabel & kartu kini **tombol** — klik membuka StatusModal langsung (ikon pensil muncul saat hover, hover brand-soft). Di kolom aksi, tombol update status diubah dari ikon polos jadi **pill brand berlabel "Status"** (border brand, hover terisi penuh + shadow-brand) agar jadi aksi utama yang jelas. Dua jalur ini berbagi handler yang sama dengan ikon-aksi lain.
+
+**Status pengambilan barang (16 Jun 2026).** Pengambilan fisik unit dilacak terpisah dari status bayar (field `pickedUp`/`pickedUpAt`, kolom DB sejak `0006`). Definisi "menunggu diambil" = helper murni **`isAwaitingPickup`** (`!pickedUp` & status `selesai`/`lunas`/`batal`) di `lib/business/services.ts` — satu sumber kebenaran, dipakai bersama dashboard. Di `/services`:
+- **Filter Pengambilan** (select baru): Semua / Belum diambil / Sudah diambil.
+- **Stat card "Menunggu Diambil"** (tone warning, ikon box) di deret atas.
+- **Indikator visual** per baris tabel & kartu mobile — bench motif: **LED warning + readout mono** "Belum diambil" (menonjol) vs penanda redup "Diambil" (hanya dirender untuk unit selesai/lunas/batal; unit proses tak berisik).
+- **Aksi cepat "Tandai Diambil"** langsung dari daftar (toggle, tanpa buka detail) — **khusus owner/admin** (karyawan lihat status tapi tak lihat tombolnya).
+
+**Quick-suggest pelanggan di Servis Baru (22 Jun 2026, anti-duplikasi).** Form `ServiceModal` (Servis Baru) kini menampilkan **dropdown saran pelanggan terdaftar** saat mengetik di field Nama / No. HP — maks 5, cocok via nama (substring) atau HP ternormalisasi (helper murni `searchCustomers`, [[Data Layer]]). Klik saran → isi nama+HP sekaligus, mencegah pembuatan pelanggan **nyaris-duplikat** akibat ketik ulang nama berbeda tipis. Dropdown bergaya bench: **spine kiri brand saat hover**, nama + **readout HP mono** di kanan. Backstop tetap: saat simpan, `findByPhone` me-link ke pelanggan existing (tak buat baru). Hanya untuk servis **baru** (bukan edit). Field **Nama Pelanggan** & **Perangkat** kini auto-kapital tiap kata (prop `autoCapWords`, [[Conventions]]).
+
+![[modal-profit-table-dark.png]]
+
+- **Penanganan wajib, kolom yang bisa diatur, filter & tiga tampilan (6 Sep 2026).** Catatan
+  penanganan wajib diisi saat status → Selesai, dan kini disimpan di kolomnya sendiri
+  (`services.completion_note`, `0059`) supaya bisa tampil di tabel tanpa memuat ulang `history`
+  tiap tiket. Kolom tabel bisa dipilih pemilik (tersinkron di baris organisasi); tiga mode tampilan.
+- **Daftar servis tidak lagi memuat `history` (`0058`, 6 Sep 2026).** Kolom itu menyumbang **±78%
+  ukuran tiap baris** — sumber egress terbesar di produk. Daftar memakai `SERVICE_LIST_COLUMNS`;
+  **kolom baru WAJIB ikut ditambahkan ke sana**, dijaga tes integrasi tier3e.
+
+## Detail Servis — Repair Ticket
+
+- **Batal + biaya pengecekan (29 Sep 2026).** Form Batal punya bagian "Biaya pengecekan dibayar sekarang" (nominal + wallet). Tombol berbunyi "Batalkan · terima Rp X", konfirmasi menyebut wallet-nya; hasilnya tampil sebagai "DP ditahan" + profit unit. Bila ada DP, keterangan mengarahkan: biaya cek yang dipotong dari DP = kurangi refund saja.
+
+**Critique UX tahap 1 (27 Sep 2026).** Bilah aksi = satu daftar `TicketAction`; di ≤760px aksi sekunder masuk tombol **Lainnya** (panel bawah) — dulu Edit, Cetak Nota, Tandai Diambil, Klaim, dan Koreksi Biaya lenyap di ponsel. *Traveler* hanya mencentang tahap yang tercatat di riwayat; yang dilompati bersimpul putus-putus + "dilewati". BOM di bawah 470px (container `bom`) jadi dua baris. Jendela Update Status: kanal status ber-LED, chip "Pakai estimasi", Penanganan tepat di bawah biaya, garansi part & Riwayat dilipat, tombol utama menyebut konsekuensi ("Terima Rp X", "Batalkan · refund Rp X" merah + konfirmasi berisi ringkasan).
+
+Halaman `/services/:id`: traveler strip mengikuti status + timestamp asli, BOM sparepart dari data nyata, panel biaya (sisa tagihan & profit), action bar ke modal Edit/Status/WhatsApp.
+
+- **Servis ditunggu (0089, 25 Sep 2026).** Update Status: Selesai tersedia dari status kerja mana pun; bila target Selesai, owner/admin melihat baris ber-spine brand "Pelanggan menunggu?" dengan sakelar mono LED `TIDAK` / `LANGSUNG LUNAS`. Menyala → blok pembayaran muncul dan tombol jadi **Selesai & Lunas** (selesai + lunas + diambil sekali klik). Detail di [[Decisions & Bug Fixes#Servis ditunggu — paket C (0089, 25 Sep 2026)]].
+- **Catatan kecil (28 Sep 2026).** QR di customer stub kini QR lacak **sungguhan** (`qrSvg`, gelap di atas `--paper` di kedua tema) — dulu ikon yang tampak bisa dipindai. Log Teknisi, riwayat Update Status, dan halaman lacak publik menulis **Diambil** / **Batal diambil** untuk tanda ambil (`historyKind` mengenali `PICKUP_NOTE`/`UNPICK_NOTE`; halaman lacak dulu menampilkan "edit" mentah ke pelanggan). Istilah diseragamkan jadi **Ubah Status** (tombol, judul jendela, tooltip). Pemilih sparepart tetap terbuka setelah Tambah (tombol Selesai menutup). Daftar Servis: tombol **N** membuka Servis Baru. Saran pelanggan Servis Baru & Kasir bisa dipilih dengan panah + Enter.
+- **Penerimaan unit (0094, 28 Sep 2026).** Servis Baru menambah **IMEI / No. seri**, **Kondisi fisik** (chip cepat Normal · Lecet · Retak layar · Penyok · Bekas air, ditambahkan seperti chip keluhan), dan **Kunci layar** (Tidak dititipkan / PIN / Pola / Sandi + isian bebas autofill, dengan petunjuk "terhapus otomatis saat unit diambil"). Isi kunci layar tak ikut draf intake. Di detail, panel INTAKE menampilkan IMEI/SN mono, Kondisi, dan **Kunci layar** tersamar `PIN ••••` + tombol Tampilkan (menutup sendiri setelah 30 detik); karyawan yang bukan teknisinya melihat "hanya teknisi & owner/admin"; setelah diambil: "PIN · dihapus saat diambil". Nota mencetak IMEI/SN + Kondisi, tidak pernah kunci layar.
+- **Serah unit & tiket baru (0093, 28 Sep 2026).** Tiket Selesai (owner/admin) punya aksi utama **Serahkan unit**: Update Status terbuka di Lunas dengan "tandai diambil" menyala, tombolnya "Lunas & serahkan · Rp X". Tiket Lunas yang belum diambil: aksi yang sama langsung menandai diambil. Keduanya berakhir di `TicketDoneModal` — stempel miring **DISERAHKAN**, readout unit/pelanggan/lunas/garansi, **Cetak nota** + **Kirim WA** (template baru `diambil`). Servis Baru yang tersimpan membuka panel yang sama dengan stempel **DITERIMA** (cetak tanda terima, WA `diterima`, Lihat tiket). Part/modal yang ditambah setelah biaya final ditetapkan memunculkan peringatan ber-LED amber di panel BIAYA (tombol Sesuaikan biaya / Koreksi Biaya). Tiket **batal**: baris **DP ditahan** + profit = DP ditahan − (part terpakai + modal dadakan); tiket batal lama tanpa catatan refund tetap "—". Tiket **Lunas**: tombol tambah sparepart hanya owner/admin.
+- **Sparepart & Batal (0087/0088, 25 Sep 2026). Modal Dadakan tambah/edit/hapus lewat RPC atomik. Part terpasang di tiket **Lunas** tak punya tombol hapus (stoknya tak bisa kembali). Saat **Batal**, tiap part stok dipilih lewat toggle mono `KE STOK` / `TERPAKAI`; di tiket batal, label BOM jadi `TERPAKAI` / `KEMBALI KE STOK`. Detail di [[Decisions & Bug Fixes#Sparepart tiket servis — paket B (0088, 25 Sep 2026)]].
+
+**Hierarki aksi + kejujuran billing (9 Agu 2026).** Tiket lunas menampilkan
+`Pembayaran / Lunas`, bukan “sisa” senilai total biaya. Sebelum biaya final ditetapkan,
+readout berkata `Belum ditetapkan`/`Menunggu biaya final`, bukan Rp0 yang tampak pasti.
+`Tandai Diambil` hanya tersedia ketika status memang menunggu pengambilan; pada tiket
+lunas-belum-diambil ia menjadi satu-satunya aksi primary. Klaim garansi baru primary
+setelah unit diambil, sedangkan koreksi biaya tetap secondary.
+
+Fitur tambahan (revisi Fase 4):
+- **Toggle "Sudah Diambil"** — menandai barang sudah diambil pelanggan, terpisah dari status pembayaran; indikator status ambil tampil di header. **Tombol kini khusus owner/admin** (16 Jun 2026) — karyawan tetap melihat indikator, tapi tak bisa men-toggle. Aksi sama tersedia sebagai aksi cepat di Daftar Servis.
+- **Garansi saat "selesai"** — saat status → `selesai`, StatusModal menampilkan input lama garansi **Jasa** & **Sparepart** (hari), wajib minimal salah satu, prefill default dari Pengaturan. **Chip template (revisi 22 Jun 2026)**: tiap field punya baris chip **angka hari** sendiri (`7 · 14 · 30`) yang mengisi field di atasnya — konteks Jasa/Sparepart dari label field, bukan teks chip (dulu 6 tombol "Jasa 7h / Part 14h" yang ramai). Menghasilkan `warrantyServiceUntil` & `warrantyPartsUntil` terpisah (tampil dua baris di header detail).
+- **Tombol "Klaim Garansi"** — muncul hanya pada tiket `lunas` yang masih dalam masa garansi → membuka [[Data Layer|tiket klaim tertaut]] gratis lewat `WarrantyClaimModal`, dengan opsi catat kerugian garansi manual.
+  - **Klaim per BAGIAN (`0064`–`0065`, 14–17 Sep 2026).** Modal memilih bagian yang diklaim (jasa
+    dan/atau sparepart tertentu), dan hanya bagian yang garansinya masih berlaku. Server
+    memvalidasi ulang pilihan itu; seluruh klaim ditulis dalam satu transaksi, bukan beberapa
+    langkah klien. Klaim lama diisi mundur (`0068`).
+  - **Garansi ditetapkan PER SPAREPART saat tiket Selesai** (`warrantyDays`/`warrantyUntil` di dalam
+    JSONB `services.spareparts`, tanpa kolom baru), dengan isian awal dari garansi bawaan item
+    inventori (`inventory_items.warranty_days`, `0067`). Halaman lacak publik menampilkan nama part
+    + tanggal akhir garansinya saja — harga TIDAK pernah ikut (`0060`).
+
+Fitur tambahan (profit per unit — revisi 11 Jun 2026):
+- **Panel SPAREPART** (dulu berlabel "SPAREPART · BILL OF MATERIALS"; label "+ Modal Dadakan" kini "+ Pembelian Luar", "Perbarui Modal" kini "Perbarui Pembelian") punya dua tombol: **"+ Sparepart"** (buka `SparepartPickerModal` — pilih item inventory + qty, idiom bench: LED stok, SKU mono) dan **"+ Modal Dadakan"** (form inline: keterangan + nominal + **dropdown wallet**). Tiap baris bisa dihapus (ikon trash); baris **modal dadakan** juga bisa **diedit** (ikon pensil, hover brand) — form yang sama terbuka pra-isi dengan label "Perbarui Modal".
+- **Modal dadakan** membuat Expense kategori `Sparepart` (kas keluar) + memotong wallet terpilih; hapus baris membalikkannya (hapus Expense + refund wallet). **Edit** baris menyinkronkan Expense terkait (nominal/wallet/keterangan) dan **men-net saldo wallet** lewat helper murni `walletDeltasForModalEdit` (refund debit lama + terapkan debit baru; edit di wallet sama → satu delta, mis. 100k→150k = −50k; no-op → nol tulisan). Sparepart inventory hanya memotong stok saat Pengerjaan (tak buat Expense) — anti dobel-hitung. Lihat [[Data Layer]] § Sparepart BOM & modal dadakan.
+- **Wallet A1 + ingat terakhir**: dropdown default ke wallet terakhir dipakai (per-perangkat), fallback wallet pertama; bisa diganti per transaksi.
+- **Panel BIAYA** kini **read-only** untuk angka finansial: baris **Modal** & **Profit unit** (tone untung/rugi, **owner-only**), Estimasi, Biaya final, dan bila ada DP baris **DP diterima** (negatif) + **Sisa tagihan**. Tak ada lagi tombol input DP/koreksi inline di sini.
+- **Input finansial terpusat di StatusModal** (tombol **Update Status**; untuk tiket `lunas` ada tombol **Koreksi Biaya** yang membuka modal sama). StatusModal punya **tab sub-aksi** sesuai status + peran:
+  - **Ubah Status** — pilih status tujuan, biaya final, garansi. Saat target **`lunas`** tampil **editor pembayaran (split payment)**: daftar leg `{wallet, nominal}` + tombol **+ Tambah wallet** + ringkasan **terbayar/sisa** (mono, hijau saat balance). Default satu leg menutup penuh; bisa dipecah ke beberapa wallet (mis. Cash + QRIS). Total wajib sama persis dengan sisa tagihan. Memperbaiki kerancuan lama "pelunasan lewat wallet apa" (dulu hard-coded wallet pertama).
+  - **Terima DP** — nominal + wallet; mencatat DP sebagai **kas masuk nyata** (Income kategori Servis + kredit wallet) & mengakumulasi `downPayment`. Saat lunas hanya **sisa tagihan** dicatat; saat batal DP otomatis di-refund.
+  - **Koreksi Biaya** — owner/admin, hanya saat `lunas`; pra-isi `finalCost`, menyesuaikan pendapatan pelunasan & saldo wallet **tanpa membatalkan tiket** (log internal). Guard: tak boleh < DP. Lihat [[Data Layer]] § DP, pelunasan & koreksi biaya.
+- **StatusModal** juga menampilkan ringkasan read-only sparepart & modal terpasang (kelola BOM tetap di halaman detail — satu-satunya input yang tersisa di detail, karena iteratif).
+- **UX karyawan saat hanya bisa DP (16 Jun 2026).** Pada unit `selesai`, karyawan tak bisa ubah status (pelunasan owner/admin) sehingga modal jatuh ke DP-only. Dua perbaikan agar tak menyesatkan: (1) StatusModal menampilkan **catatan kontekstual** di atas form DP ("Pekerjaan selesai. Pelunasan hanya bisa owner/admin. Kamu masih bisa menerima DP.") — gaya bench: spine brand kiri + wash brand-soft; (2) tombol action bar di detail **relabel jadi "Terima DP"** (bukan "Update Status") bila satu-satunya aksi yang diizinkan role ini adalah DP. Dihitung via `nextStatuses` + `canSetStatus` (flag `staffDpOnly`/`onlyDp`). Aturan keamanan tak berubah.
+- **Tombol Cetak Nota di action bar (19 Jun 2026).** Action bar detail kini punya tombol **Cetak Nota** langsung (dulu cetak hanya di modal Notifikasi & nota; modal itu di detail malah tak pernah dibuka/dead). Logika cetak diekstrak ke helper bersama **`printServiceReceipt(service, org)`** (`features/services/printReceipt.ts`) → dipakai NotifyModal + detail, format nota (thermal mono) identik. Guard demo tetap.
+- **Garansi di struk (19 Jun 2026).** `serviceReceiptLines` (`lib/business/notify.ts`) dulu tak pernah menyertakan garansi → struk hanya info toko + biaya. Kini menambah baris **Garansi Jasa s/d** & **Garansi Part s/d** (dari `warrantyServiceUntil`/`warrantyPartsUntil`, terisi otomatis dari default toko saat servis ditandai `selesai`). Lapor user smoke test: "hanya ada info toko saja pada struk".
+- **Lacak servis tanpa `?org=` (19 Jun 2026).** `TrackingPage` meng-gate lookup `enabled: !!orgId`, dan `orgId` hanya dari param `?org=`. Buka `/track` langsung (tanpa link resmi) → query mati, tak ada hasil maupun pesan. Kini fallback ke **org sesi** bila login (skenario owner menguji dari app), + pesan jelas bila benar-benar tanpa konteks toko. Lookup tetap org-scoped (no servis seperti FM-0001 berulang antar toko); link resmi `/track?org=&no=` tak berubah.
+- **Kontak toko + garansi di halaman lacak (22 Jun 2026).** Lapor user: link lacak "kurang memuat info lengkap". `TrackingPage` kini menampilkan, di bawah timeline: (1) blok **Garansi** — baris Jasa/Sparepart "s/d <tanggal>" (mono), muncul bila ada `warrantyServiceUntil`/`warrantyPartsUntil`; (2) blok **Kontak Toko** — tombol **WhatsApp** (`wa.me/<nomor>` dengan normalisasi `0`→`62`) + alamat (`map-pin`). Label blok bergaya readout mono bench, divider titik. **Sengaja TANPA** biaya/estimasi/DP (keputusan: link publik tak bocorkan harga). Jalur cloud dapat field dari RPC `track_service` yang diperluas (migrasi `0035`, [[Data Layer]]); jalur lokal baca `organizations` langsung. Tipe `TrackServiceResult` (`supabase-client.ts`) + `TrackResult` (`TrackingPage`) diperluas.
+- **Alamat lacak pendek `/t/<kode>` (11 Nov 2026, tahap 8).** Rute `/t/:code` (router + `vercel.json`) membuka `TrackingPage` dalam **mode kode**: kode dirapikan `normalizeTrackCode()` (`lib/business/tracking.ts`), lalu RPC `track_service_by_code` (migrasi 0100, [[Data Layer]]). Label, contoh (`7K3M9QXR2D`), dan petunjuk berganti ke kode; input tanpa koreksi otomatis dan berhuruf besar. Bentuk yang salah ditolak di klien tanpa memanggil server. Tak ditemukan di mode kode memberi petunjuk bahwa O dan 0, juga I atau L dan 1, dianggap sama. Kena batas per IP (HTTP 429) → blok tersendiri berikon jam, "Terlalu banyak permintaan lacak dari jaringan ini", "Kode yang Anda buka tidak salah", dan tombol coba lagi; react-query tak mengulang galat itu. Mode lokal/demo tanpa Supabase: mode kode selalu "tidak ditemukan", karena tak ada server untuk menerjemahkan kode (nota lokal tetap mencetak alamat lama). Jalur `/t` tak pernah dikirim ke analitik (`lib/analytics.ts`): kodenya adalah kunci akses tiket. `/track?org=&no=` tak berubah.
+
+![[modal-profit-detail-dark.png]]
+
+![[detail-dark.png]]
+
+![[warranty-detail-dark.png]]
+
+![[warranty-modal-loss-dark.png]]
+
+![[status-warranty-dark.png]]
+
+---
+
+- **Judul & aksi (7 Nov 2026).** Topbar berjudul "Detail Servis" (dulu "Servis", sama dengan
+  daftarnya). Tombol WhatsApp jadi sekunder (transparan, ikon hijau, hover hijau lembut) agar tidak
+  bersaing dengan Ubah Status. Tahap stepper tanpa `min-width: 92px`; di 1025px stepper tidak
+  lagi menggulir.
+
+## Kalkulator Biaya — Register Tape (10 Nov 2026)
+
+Route `/calculator`, kanal grup `ops` tepat setelah Servis, terbuka untuk **semua peran** (fitur
+`services`). Gunanya menyeragamkan harga yang diajukan ke pelanggan. Sejak 10 Nov 2026 sore
+halamannya **meniru sheet price list pemilik**: lima kolom (Modal, Ongkir/Waste, Jasa Pasang,
+Cover Garansi %, Target Profit) → Harga Rekomendasi. Versi pagi (tingkat pekerjaan, part stok,
+biaya tambahan, pembulatan, DP, salin ke WhatsApp) diganti total atas permintaan pemilik.
+Kalkulator **tidak membuat tiket dan tidak mengurangi stok**. Rumus dan penyimpanan template:
+[[Data Layer#Kalkulator Biaya: `settings.quoteRates` (10 Nov 2026)]].
+
+- **Lima kolom** (`ol.fields`, wadah bernama `fields`). Modal selalu diketik. Empat kolom
+  lainnya punya **chip template** dari Pengaturan → Tarif: tuts memori preset (`--bg-key`, 44px,
+  LED 7px, nama + nilai mono dipisah sambungan titik). Mengetuk chip mengisi kotaknya dan
+  menyalakan LED amber (`aria-pressed`). Mengetuknya lagi mengosongkan kolom. Chip padam begitu
+  angkanya diubah tangan, jadi chip yang menyala selalu berarti "angka ini persis template".
+  Chip default (diatur pemilik) sudah menyala saat halaman dibuka dan saat "Mulai ulang".
+- **Tata letak kolom**: di bawah 34rem kotak isian di atas chip. Mulai 34rem dua kolom
+  `minmax(11rem,15rem) minmax(0,1fr)`, chip di samping kotak. `::before` di sisi kanan memakai
+  metrik label Input supaya chip duduk sejajar kotak, bukan label.
+- **Satu instrumen.** Register berisi LCD "HARGA REKOMENDASI" (palet readout, scanline, digit
+  mono amber, ukuran huruf menyusut lewat `--lcd-chars`). Di bawahnya pita struk: subtotal
+  modal + ongkir, cover garansi {n}%, jasa pasang, target profit, lalu garis total ganda 3px.
+  Baris-barisnya selalu berjumlah harga. LCD itu satu-satunya sumur instrumen; kartu isian datar.
+- **Angka pemilik** (`isManager`: owner dan admin): profit estimasi dan markup dari modal +
+  ongkir, readout mono redup di bawah pita, tidak pernah di LCD. Markup tampil "—" bila subtotal 0.
+  Karyawan tidak melihatnya (diperiksa sebagai Rizal, PIN demo).
+- **Tata letak halaman** (`.page` = wadah bernama `calc`): di bawah 49rem satu kolom dan register
+  `position: sticky` di bawah layar (di ≤720px di atas bottom nav), jadi harga terlihat selama
+  mengisi. Seluruh pita register adalah tombol "Lihat rincian harga" yang menggulir ke struk (pola
+  dok keranjang Kasir). Mulai 49rem dua kolom `minmax(0,1fr) minmax(20rem,24rem)`, panel kanan
+  sticky di bawah topbar, dan tombol lompatnya hilang.
+- **Fokus tak tertutup** (WCAG 2.4.11): selama halaman ini terbuka `html` diberi
+  `scroll-padding-bottom` setinggi register (90px terukur tanpa baris DP, jadi 6.5rem) + bottom nav, dan
+  `scroll-padding-top` setinggi topbar. Register memakai `z-index: calc(var(--z-sticky) - 1)`.
+- **Template belum diisi**: kotak-kotak tetap bisa diketik; owner melihat catatan bergaris putus
+  dengan tautan "Atur template" ke `/settings?tab=tarif`.
+
+![[calc-dark-1440.png]]
+![[calc-dark-390-viewport.png]]
+
+---
+
+## Pengaturan — Tarif (10 Nov 2026)
+
+Tab owner-only **Tarif** (`QuoteRatesTab.tsx`) mengatur **template chip** kalkulator. Sejak
+10 Nov 2026 sore ada empat kartu, satu per kolom sheet: Ongkir/Waste, Jasa Pasang, Cover
+Garansi (%), Target Profit. Modal tidak punya kartu karena harga part selalu diketik.
+
+- **Baris template**: nama (opsional, 24 karakter), nilai (Rp, atau % satu desimal untuk cover;
+  di atas 100 dipotong saat kolom ditinggalkan), saklar LED **Otomatis YA/TIDAK**, dan hapus.
+  Otomatis eksklusif per kartu: menyalakan satu mematikan yang lain. Saklar hijau, bukan amber:
+  amber di layar ini milik tombol Simpan (One Amber Rule).
+- Paling banyak 12 template per kolom; tombol "Tambah template {kolom}" mati di batas itu.
+- **Penahan simpan**: nama kembar di satu kartu, dua template tanpa nama bernilai sama, atau
+  kotak nilai kosong. Galat baru tampil setelah Simpan ditekan.
+- Satu draf untuk seluruh tab (empat kartu = satu objek `quoteRates`), bar simpan menempel di
+  bawah layar begitu draf berubah, dan `beforeunload` memperingatkan selama ada perubahan.
+- Tarif bentuk lama otomatis tampil sebagai template (lihat Data Layer), jadi yang sudah diisi
+  pemilik tidak hilang saat disimpan ulang.
+
+Ambang container (wadah `.wrap` Pengaturan): baris empat kolom; di ≤640px nama + hapus sebaris,
+lalu nilai + saklar; di ≤420px saklar turun ke barisnya sendiri supaya kotak nilai tidak
+menyusut di bawah ±5rem. Bar simpan memakai pola fokus yang sama dengan kalkulator:
+`scroll-padding-bottom` di `html` hanya selama bar menempel, dan z-index satu di bawah topbar.
+
+![[tarif-dark-390.png]]
+
+---
+
+## Pengaturan — Operasional
+
+Halaman `/settings` punya sepuluh tab untuk owner cloud, termasuk **Nota & Struk** sejak 11 Nov 2026 (tab yang tak relevan tetap
+difilter menurut peran/mode). Tab **Operasional** mengelompokkan konfigurasi alur kerja:
+- **Layout profil** — dua kolom sampai 960 px agar ruang desktop terpakai, lalu satu
+  kolom di mobile. Tab mobile membungkus ke beberapa baris (strip geser lama menyembunyikan tab terakhir di 320px).
+- **Kaki simpan (7 Nov 2026)** — tiap kartu (Profil, Target, Sewa, Garansi, Template
+  WhatsApp, Catatan Toko, Navigasi Mobile) menyimpan lewat `.saveFoot`: kanan bawah di balik
+  sambungan titik, dengan petunjuk atau sisa karakter di kiri. Dulu ada tiga posisi. Di ≤640px
+  tombolnya selebar kartu, dua tombol masing-masing setengah.
+
+![[settings-savefoot-dark.png]]
+- **Template Servis** — quick-pick keluhan & kelengkapan (dipindah dari tab Usaha).
+- **Garansi** — default lama garansi Jasa & Sparepart (hari) + preset durasi quick-pick yang dipakai StatusModal.
+- **Template WhatsApp** — editor per-kunci (Diterima/Selesai/Konfirmasi) dengan daftar variabel `{...}` & reset-ke-default. Override disimpan di `orgConfig`, kosong = fallback ke `DEFAULT_WA_TEMPLATES` via `resolveWaTemplates`. **Sejak 31 Jul 2026** default-nya **multi-baris** (sapaan → blok data → satu ajakan aksi → penutup), `*bold*` WhatsApp untuk no servis/nominal/status; `konfirmasi` memakai `{estimasi}` (bukan `{biaya}` yang berisi `finalCost`). Textarea editor `rows=10` & preview NotifyModal `rows=12` agar tak terpotong. Unit test menjaga tiap placeholder ada di `WA_TEMPLATE_VARS` (typo = `{no_service}` mentah terkirim ke pelanggan).
+
+> Kartu **Tampilan** (pemilih skala Kecil/Normal/Besar) **dihapus**. Ukuran UI kini satu baseline tetap (`html { font-size: 16px }`) yang konsisten di semua device; responsivitas ditangani lewat media query, bukan skala font global. Lihat [[Decisions & Bug Fixes]].
+
+![[settings-operasional-dark.png]]
+
+---
+
+- **Tab bagian & Profil (7 Nov 2026).** Tujuh tombol bagian berada dalam `role="group"` dengan
+  `aria-pressed`. Simpan Profil nonaktif sampai nama, alamat, atau telepon berubah, dan tombol
+  utama nonaktif kini netral bergaris putus (lihat [[Conventions]]).
+
+## Pengaturan — Nota & Struk (11 Nov 2026)
+
+Tab **Nota & Struk** (`?tab=nota`, komponen `ReceiptTab.tsx`) adalah satu rumah untuk kertas yang
+dibawa pulang pelanggan. Tahap 1 berisi kartu **Kertas termal**: radiogroup 58 mm / 80 mm
+(default 58) dengan panah/Home/End berpindah fokus sekaligus memilih, LED brand di depan nama,
+miniatur gulungan selebar kertas (58 : 80), dan bacaan mono "31 / 47 huruf per baris" yang dihitung
+`charsPerLine`, bukan ditulis tangan. Di bawahnya empat petunjuk dialog cetak browser (margin None,
+matikan header/footer, skala 100%, printer termal di Android). Kartu menumpuk sendiri lewat
+`auto-fit`, tanpa breakpoint.
+
+**Kertas nyata** (`receiptStyle.ts`, `lib/print.ts`): area cetak = lebar head (384 titik = 48 mm di
+58 mm, 576 titik = 72 mm di 80 mm), isi menyisakan tepi aman 4 titik. Chromium mengabaikan
+`@page { size: 58mm auto }`, jadi skrip cetak mengukur tinggi isi dan menyuntik
+`@page{size:Wmm Hmm;margin:0}` sebelum `window.print()`. Hasil ukur nota IMEI ganda: nol luberan,
+satu halaman, tinta 5,51–52,68 mm di dalam jendela head 4,91–52,91 mm (58 mm).
+
+**Hitam-putih** (tahap 2): seluruh tinta nota `#000`; jahitan pemisah `2px dotted #000`. Di Profil Bisnis, kolom
+Logo toko kini memuat petunjuk bahwa logo tercetak hitam-putih (`settingsPage.logoPrintBw`).
+
+**Isi yang benar** (tahap 3): nota servis berbiaya akhir 0 + DP mencetak "Sudah dibayar (DP)" (tanpa "Sisa Rp 0"); tiket batal hanya mencetak nasib DP, tanpa garansi dan QR. Struk batal berkotak **BATAL** dan TOTAL dicoret, cetak ulang bertanda "CETAK ULANG" + tanggal-jam, metode bayar dari `sale.payments`. Aturannya di `lib/business/receiptContent.ts`.
+
+**Dokumen batal** (tahap 6b): tiket batal dan struk batal sama-sama berkotak **BATAL** (`voidMarkHtml`, bingkai 2px) tepat di bawah tanggal, dan tak berpamitan: `ReceiptDoc.voided` membuang ucapan kaki, bawaan maupun buatan toko. Jahitan dan atribusi tetap tercetak.
+
+**Bilah jendela cetak** (tahap 7a): jendela nota dan laporan punya bilah layar-saja di dasar, pita `#111` bertick-gauge dengan dua tombol, **Cetak lagi** (amber) dan **Tutup**, supaya pengguna yang membatalkan dialog cetak tak terjebak. Bilah `position: fixed` dan disembunyikan di `@media print`, jadi tinggi gulungan yang diukur `fit()` tak berubah (terbukti 38 PDF sebelum/sesudah). Jendela tak menutup sendiri; hanya klik "Tutup" yang memanggil `window.close()`, dengan pesan bila browser menolak. Pratinjau Pengaturan (`roll: null`) tak berbilah. Alasan `afterprint` dan iframe tersembunyi ditolak: [[Decisions & Bug Fixes]].
+
+**Nota mengikuti tahap tiket** (tahap 7b): nota servis bukan lagi satu dokumen untuk semua tahap. `serviceDocPlan(service)` di `lib/business/receiptContent.ts` memetakan 8 status plus `pickedUp` ke lima tahap (`received`, `working`, `ready`, `pickedUp`, `cancelled`) dan dari situ ke tiga jenis kertas:
+
+| Tahap | Judul kertas | Kotak tanda tangan |
+|---|---|---|
+| Masuk, Proses | **TANDA TERIMA** | tidak |
+| Siap (selesai, atau lunas belum diambil) | **NOTA SERVIS** | tidak |
+| Diambil | **SERAH TERIMA** | ya, **PENERIMA UNIT** |
+| Batal | NOTA SERVIS + kotak **BATAL** | tidak |
+
+- **Baris "Status" dihapus.** Ia membeku saat dicetak dan pelanggan menyimpannya berminggu-minggu, jadi cepat menyesatkan. Judul kertas yang menyatakan "tahap saat nota ini dicetak".
+- **Penanda tahap empat tick dihapus (12 Nov 2026, nota ringkas).** Dulu `stageGaugeHtml` mencetak pita Masuk · Proses · Siap · Diambil di bawah tanggal. Judul kertas sudah membawa informasi yang sama, jadi pita itu dibuang bersama `stageGauge`, `GAUGE_STAGES`, `ServiceDocPlan.gauge`, dan kunci `receipt.stage.*`. Lihat **Nota ringkas** di bawah.
+- **Baris "Diambil"** (tanggal, dari `pickedUpAt`) hanya muncul bila `pickedUp` dan tiket tidak batal. Nota serah terima juga mengganti kalimat kaki dengan "Simpan nota ini sebagai bukti serah terima unit dan untuk klaim garansi."; syarat servis buatan toko tetap menang.
+- **"Estimasi" dibuang bila "Biaya" ada** (`serviceMoney`): dua angka yang berbeda untuk hal yang sama membingungkan pelanggan.
+- Semua teks lewat `useT()` (`receipt.doc.*`, `receipt.title.*`, `receipt.sign.label`, `receipt.line.pickedUp`), id dan en berpasangan.
+
+**Nota ringkas, QR besar di tengah** (12 Nov 2026): permintaan pemilik, "lebih simple tapi tetap memuat info penting, QR diperbesar di tengah karena kadang tak terbaca". Isi bukti tak berubah (pelanggan, perangkat, IMEI/SN, kondisi, keluhan, kelengkapan, uang, garansi, tanda tangan); yang dibuang hanya pengulang dan hiasan.
+
+- **Blok lacak** (`trackBlockHtml`): QR berdiri sendiri di tengah, modul **6 titik (0,75 mm)** dari `qrModuleDots` dengan **zona sunyi 4 modul**; kode lacak pendek jadi ±25 mm (dulu ±16,5 mm, 4 titik, zona 2, berbagi baris dengan teks). Label "LACAK STATUS" dihapus; di bawah QR satu kalimat "Pindai untuk cek status & garansi" (QR mati: "Cek status & garansi di:") dan alamat tebal dengan titik patah `<wbr>` setelah `/` dan sebelum `?`/`&`, sehingga di 58 mm kodenya turun utuh ke baris kedua.
+- **Penutup satu blok**: catatan kaki lalu ucapan terima kasih tanpa jahitan di antaranya; ucapan bawaan kini satu kalimat ("Terima kasih atas kepercayaan Anda.", kunci `receipt.foot.again` dihapus). Dokumen batal tanpa ucapan ditutup jahitan sebelum atribusi. Berlaku juga untuk struk, karena kepala dan kakinya satu fungsi (`receiptParts`).
+- **Catatan bawaan dipendekkan**: kalimat "pengambilan di luar jam operasional" dibuang; toko yang membutuhkannya menulis syarat servis sendiri atau Catatan Toko.
+- **Nomor telepon kepala** dibungkus `.nw` (nowrap) supaya tak terbelah "0812-/3456-7890".
+- Hasil: nota "siap" 58 mm 35 px lebih pendek walau QR membesar 1,5×. Alasan dan uji pindai di [[Decisions & Bug Fixes#Nota ringkas dan QR besar di tengah (12 Nov 2026)]].
+
+**Syarat & Ketentuan servis** (12 Nov 2026): template S&K bawaan untuk pelanggan, enam pasal (Penerimaan dan biaya, Data, Pembatalan, Garansi, Pengambilan, Batas pengambilan) plus ketentuan tambahan toko. Satu sumber (`termsClauses` di `lib/business/serviceTerms.ts`), tiga permukaan:
+
+- **Pengaturan › Nota & Struk**, kartu **Syarat & Ketentuan** (`TermsCard`, ikon `scale-balanced`, urutan ke-4 di ponsel): batas pengambilan (hari, bawaan 60), biaya simpan per hari dan biaya pengecekan bila batal (Rp, kosong = kalimatnya tak tampil), ketentuan tambahan (`Textarea`, 400 huruf, petunjuk agar tak menulis "bukan tanggung jawab kami"). Readout **Versi berlaku** (LED + mono), laci **Lihat isi S&K** dengan nomor pasal mono `01`–`06` berona brand, kaki simpan dengan LED "Belum disimpan". Isian tak sah (hari di luar 1–365, biaya di atas Rp 10 juta) ditolak dengan `FormError`, bukan dijatuhkan diam-diam ke bawaan. Pratinjau nota membaca isian yang sedang diketik.
+- **Halaman lacak**: laci `<details>` tertutup bawaan di dasar kartu hasil, judul "SYARAT & KETENTUAN" (tinggi 44 px), isinya kalimat versi lalu daftar pasal bernomor mono. Teksnya dari **salinan di tiket**, bukan S&K toko hari ini.
+- **Nota servis**: satu kalimat tebal di blok catatan, "Dengan menitipkan unit, Anda menyetujui S&K versi 12 Nov 2026." (tanggal tak dibelah), dan kalimat di bawah QR menjadi "Pindai untuk cek status, garansi & S&K". Tiket tanpa salinan (dibuat sebelum fitur ini, klaim garansi) dan tiket batal tak mencetak kalimat itu.
+
+**Cetak ulang dan alamat pendek** (tahap 8): nota servis yang dicetak lagi dengan **jenis kertas yang sama** (tanda terima, nota servis, atau serah terima; `isServiceReprint(meta, plan)` di `lib/business/receiptContent.ts`) diberi kotak **CETAK ULANG · tanggal jam** (`reprintMarkHtml`, kini dipakai bersama struk POS) paling atas di isi nota, tepat di bawah tanggal. Naik tahap mencetak dokumen baru, bukan salinan; tiket batal hanya berkotak BATAL. Jejak cetak dicatat hanya bila jendela cetak benar-benar terbuka (`openReceiptWindow` mengembalikan boolean; demo dan popup terblokir tak tercatat), lewat hook `useServicePrint` yang memuat jejak lebih dulu karena `window.open` harus tetap sinkron di handler klik. Dipakai Cetak Nota di detail, modal Notifikasi, dan panel selesai tiket. Alamat lacak berhuruf dicetak **tanpa skema** (`trackingUrlLabel`): `fixmaster.app/t/<kode>`, 1 sampai 2 baris di 58 mm (dulu 6 sampai 9). Sebelum migrasi 0100 diterapkan, nota tetap memakai alamat lama (juga tanpa `https://`) dan tanpa penanda cetak ulang.
+
+**Tata letak baris** (tahap 5): kolom label tak dipatok persen. Label dan nilai berdampingan bila muat; bila tidak, baris ditumpuk, label di atas dan nilai utuh di bawahnya (`fitsBeside` di `receiptPaper.ts`, `receiptRow` di `printReceipt.ts`). Barang struk dua baris: nama, lalu `jumlah× harga satuan` dan jumlah rupiah. Tiap baris di-flex sendiri supaya satu baris tumpuk tak menyempitkan kolom baris lain. Alasan lengkap di [[Decisions & Bug Fixes]].
+
+**Nota yang bisa diatur** (tahap 4): empat kartu di kolom formulir. **Kertas termal** (tahap 1),
+**Isi kertas** (lima kolom teks: kepala 120, ucapan kaki 160, syarat servis 280, syarat struk 280,
+Catatan Toko 280 karakter; penghitung "n karakter tersisa", LED "belum tersimpan", satu tombol
+Simpan), dan **Yang dicetak** (lima saklar LED: kode QR lacak, alamat lacak berupa huruf, IMEI/SN,
+nama teknisi, jam transaksi; tersimpan seketika). Di kolom kanan **Pratinjau** menempel (sticky)
+dan memuat HTML cetak yang sama persis di iframe: pilih Nota servis atau Struk penjualan, bacaan
+mono "58 mm · 31 huruf per baris", saklar **Simulasi 1-bit** (abu-abu hilang di ambang 50%), dan
+tombol "Cetak percobaan" ke dialog cetak sungguhan. Dua kolom di wadah ≥ 720px (container query,
+diturunkan dari ukuran terukur; lihat [[Decisions & Bug Fixes]]); di bawahnya satu kolom dan kertas
+mengecilkan zoom-nya sendiri (maks 1,5×) agar tak bergeser ke samping. Catatan Toko tak lagi di
+Operasional; ia pindah ke sini. Semua teks lewat `useT()` (`receipt.content.*`, `receipt.field.*`,
+`receipt.show.*`, `receipt.preview.*`, `receipt.sample.*`).
+
+![[settings-nota-dark.png]]
+
+Struk penjualan 80 mm dengan simulasi 1-bit menyala, dan tampilan ponsel utuh (satu kolom, pratinjau
+sebagai dok di dasar; tangkapan halaman penuh jadi dok terlihat di tengah, bukan di dasar):
+
+![[settings-nota-sale-1bit-dark.png]]
+
+![[settings-nota-mobile-dark.png]]
+
+**Di ponsel: dok monitor** (tahap 7c). Di wadah < 720px (container query, bukan lebar viewport: di 1025px
+dengan sidebar wadahnya 667px, jadi masuk sini juga) halaman bukan lagi tumpukan satu kolom dengan
+pratinjau di dasar. Tiga hal berubah:
+
+- **Urutan visual**: Kertas termal, **Yang dicetak**, **Isi kertas** (`order` pada kartu; DOM tak
+  berubah). Saklar naik di atas kolom teks, tak lagi terkubur di bawahnya.
+- **Pratinjau jadi dok** (`.previewCol`, `position: sticky` di dasar layar, tepat di atas menu bawah).
+  Bar-nya satu baris: LED + "Pratinjau" + caret di kiri (tombol `aria-expanded` / `aria-controls`),
+  "Cetak percobaan" di kanan, spine brand 3px di tepi kiri. Panel (pilihan nota/struk, bacaan mono,
+  Simulasi 1-bit, kertas) melayang **ke atas** dari bar (`position: absolute; bottom: 100%`), tinggi
+  maks 60% layar, `Esc` atau fokus yang keluar dari dok menutupnya. Tertutup = `visibility: hidden` +
+  `max-height: 0`, bukan `display: none`, supaya iframe tetap terukur dan `measure()` benar. Satu `h2`
+  memuat dua isi (`.dockStatic` teks di lebar lapang, `.peek` tombol di lebar sempit; yang tak dipakai
+  `display: none`, jadi tak ada tombol mati di desktop).
+- **Petunjuk dialog cetak dilipat** ("Lihat" / "Tutup") hanya di lebar sempit; di lebar lapang daftar
+  selalu terbuka dan tombolnya tak ada.
+
+Label saklar kini **status**, bukan aksi: "Dicetak" / "Tidak dicetak" (dulu "CETAK" / "TIDAK" yang
+dibaca sebagai tombol "cetak sekarang"). Lebarnya dikunci ke yang terpanjang (`10.5em` + padding) agar
+tombol tak melompat. Di wadah < 920px baris saklar jadi grid: label dan saklar sebaris, petunjuk
+selebar baris di bawahnya (dulu petunjuk terjepit tiga empat baris di samping saklar).
+
+Terukur di 390×844 (dari 4061 ke 2640 px tinggi dokumen): saklar pertama di y 2081 → 833; bar dok selalu
+di y 706–767 dengan menu bawah mulai 768 di 320, 360, 390, 430px; di 744px (tanpa menu bawah) bar
+826–887 dari layar 900. Panel terbuka di 844px menempati y 200–706. Nol luberan dokumen di semua lebar.
+
+![[settings-nota-mobile-switches-dark.png]]
+
+![[settings-nota-mobile-dock-dark.png]]
+
+---
+
+## Pengaturan — Navigasi Mobile
+
+Tab owner-only **Navigasi** mengatur empat slot utama bottom navigation ponsel.
+Setiap posisi berupa selector eksplisit; memilih menu yang sudah dipakai menukar kedua
+posisi agar tak menghasilkan duplikat. Preview lima slot selalu memperlihatkan
+`Lainnya` sebagai jalur tetap ke menu sekunder, cabang, unit usaha, dan akun.
+
+Konfigurasi disimpan di `Organization.settings.mobileNavigation` melalui `orgConfig`,
+sehingga sinkron realtime ke seluruh perangkat. Saat konfigurasi owner memuat route
+yang tidak boleh dibuka suatu peran, resolver membuangnya dan mengisi fallback aman.
+Default: **Beranda · Servis · Kasir · Pelanggan · Lainnya** (sejak 10 Nov 2026; dulu slot
+keempat Inventori, kini dilebur ke Kasir & Stok — tata letak tersimpan yang masih memuat
+`/inventory` terisi ulang dari default). Bottom bar hanya tampil
+≤720 px; tablet memakai drawer dan desktop mempertahankan rail. Detail servis sengaja
+menyembunyikan bottom bar karena memiliki action bar kritis sendiri.
+
+Verifikasi render asli: 360/390/700 px tanpa overflow; pada 721 px berpindah tepat ke
+hamburger/drawer; desktop 1440 px tidak berubah. Dock Kasir berada di atas bottom bar.
+
+![[settings-navigation-dark.png]]
+
+---
+
+## Pengaturan — Saldo (Unit Meter, 14 Nov 2026)
+
+Tab **Saldo** (`/settings?tab=saldo`, owner + cloud-only; `?tab=langganan` lama
+tetap mendarat di sini) menggantikan tab Langganan saat harga berganti ke
+**Rp 1.000 per unit masuk** (migrasi `0101`, lihat [[Data Layer]]). Komponen sendiri:
+`features/settings/BalanceTab.tsx` + `BalanceTab.module.css`.
+
+- **Unit Meter** — instrumen yang sama dengan License Meter lama: **LED** keadaan saldo
+  (cukup hijau / menipis & minus amber / tiket baru tertahan merah), readout unit **mono**
+  besar, dan **tick-gauge** 24 tick dari −20 sampai 100+. Yang baru: **zona minus** di
+  empat tick kiri digambar bergaris putus, jadi jatah 20 unit sesudah nol terlihat
+  sebagai bagian instrumen, bukan kalimat peringatan. Di bawahnya tiga fakta dipisah
+  divider titik: senilai (Rp), tiket baru tersisa, jatah minus.
+- **Banner keadaan** hanya muncul saat saldo tidak "cukup", dengan kalimat yang
+  menyebut akibat nyata (tiket baru tertahan, tiket lama tetap jalan).
+- **Isi saldo lewat WhatsApp** — tiga langkah bernomor, **tuts nominal mono**
+  (50/100/200/500 ribu, masing-masing menyebut unitnya), kolom nominal dengan validasi
+  minimal Rp 50.000 kelipatan Rp 1.000, readout "+N unit · saldo jadi M". Tombol kirim
+  memakai `aria-disabled` saat nominal salah. Klik hanya membuka chat; saldo baru
+  bertambah setelah operator mencatatnya (`admin_topup_units`).
+- **Riwayat saldo** — daftar ledger dengan LED per jenis (masuk hijau: kuota gratis,
+  isi saldo, unit kembali; koreksi biru; pemakaian tiket tanpa warna, karena
+  pemakaian bukan sinyal), unit bertanda mono, dan saldo sesudahnya. Di demo
+  riwayat diganti keadaan kosong karena ledger hanya ada di server.
+
+- **Bulan ini per cabang (0103, 15 Nov 2026)** — di bawah fakta meter, satu baris per
+  cabang: nama, readout mono `37 / 100 unit`, bilah tipis (info; hijau saat penuh), dan
+  kalimat akibatnya ("63 unit lagi sampai batas…" / "Batas tercapai: tiket berikutnya
+  gratis sampai 1 Des 2026"). Riwayat menampilkan tiket `capped` sebagai "gratis". Di demo
+  angkanya perkiraan dari tiket demo (2/2/3 unit untuk tiga cabang seed).
+
+Sidebar ikut membawa readout saldo kecil (LED + angka mono) di bawah `BENCH OS`,
+lihat [[Sidebar - Live Diagnostic Rail]].
+
+Foto: `scripts/shoot-saldo.mjs` (butuh dev server dengan env Supabase tiruan; lihat
+kepala skrip) menulis `saldo-dark.png`, `saldo-light.png`, `saldo-mobile.png`,
+`hapus-tiket-dialog.png`, `hapus-tiket-ditahan.png`. Gambar lama `billing-dark.png`
+(License Meter) tidak lagi mewakili UI dan sematan-nya dihapus.
+
+---
+
+## Sign Up / Login — Terminal Akses Bench
+
+Halaman auth (`AuthPage`, cloud-only, sebelum workspace boot) — login / daftar / reset. Dulu kartu glass polos di tengah; kini **split-panel "terminal akses bench"** senada identitas produk:
+
+- **Panel brand (kiri)** — logo + wordmark FixMaster, tagline domain
+  (reparasi gadget/elektronik), VOLT Probe penuh yang statis, dan **diagnostic rail**
+  ber-LED (SERVIS SIAP / STOK TERHUBUNG / MARGIN TERHITUNG) bergaya mono — gema dari
+  [[Sidebar - Live Diagnostic Rail]]. QRIS yang belum menjadi janji produk tidak lagi
+  ditampilkan. Wash grid blueprint + radial brand.
+- **Panel form (kanan)** — **faceplate bersekrup** di empat sudut, header "Terminal
+  Akses" dengan **power LED** (accent, berkedip `fm-pulse`) + tag mode terlokalisasi,
+  lalu form (email/password/konfirmasi) + tautan. Header memuat tombol **"Beranda"**
+  ber-ikon di kiri dan **toggle tema** sun/moon di kanan; seluruh kontrol minimal 44 px.
+- **Responsif** — collapse memakai container query `auth` di ≤720px. Panel brand
+  disembunyikan, form jadi faceplate tunggal dengan wordmark dan compact VOLT status
+  module. Pada lebar sangat sempit label terminal dilepas agar kontrol tidak overflow.
+- **Copy per mode + i18n (29 Agu 2026)** — login, daftar, dan reset memiliki heading,
+  hint, CTA, pesan VOLT, validasi, toast, label tema, dan consent yang berbeda sesuai
+  tugasnya melalui namespace `authPage.*` ID/EN. Pesan “Silakan masuk” tidak lagi bocor
+  ke mode daftar/reset. `Input.revealLabels` membuat label aksesibilitas tombol mata ikut
+  bahasa aktif.
+
+Logika auth tak berubah (Supabase Auth: signIn/signUp/resetPassword). Copy toast signup diperbaiki: tak lagi menyebut "cek email untuk verifikasi" karena email confirmation dimatikan — akun langsung aktif → arahkan ke login. Token `var(--...)` saja.
+
+**Show-password + indikator kekuatan (22 Jun 2026).** Field password (login, daftar, reset) kini punya **tombol mata** (`revealable` di `Input`, ikon `eye`/`eye-slash`) untuk toggle tampil/sembunyi. Saat **daftar** (dan di halaman reset), muncul **indikator kekuatan** `PasswordStrength` bergaya bench (BUKAN bar generik): **LED status + readout mono** LEMAH/SEDANG/KUAT, **tick-gauge 4 segmen**, dan chip per-kriteria (min. 8 karakter, huruf, angka, **simbol = bonus**). Warna level lewat token (`--danger`/`--warning`/`--success`). Syarat WAJIB tetap huruf+angka+≥8 (tak mengunci akun lama saat login); simbol hanya menambah skor. Skor dihitung helper murni `scorePassword` (`lib/business/password.ts`, teruji unit).
+
+![[auth-dark.png]]
+
+---
+
+## Terkait
+- [[Design System]] · [[Sidebar - Live Diagnostic Rail]] · [[Data Layer]] · [[Decisions & Bug Fixes]]
+
+#signature-page #design-system
+
+## Dashboard Operator — Bench Console (vendor-only, lintas-tenant)
+
+Halaman `/operator` ([`OperatorPage`](src/features/operator/OperatorPage.tsx)), **di luar `AuthGate`** (lihat [[Decisions & Bug Fixes]]). Bukan halaman tenant — tidak memakai `AppLayout`, tidak ada sidebar, dan mengurus auth-nya sendiri.
+
+- **Login operator = secure bench terminal.** VOLT Probe menjadi anchor identitas, ditemani status jalur terenkripsi, penanda area internal, toggle tema, kontrol tampil/sembunyikan password, error inline, dan tautan kembali ke beranda. Panel dua bagian runtuh menjadi satu kolom di container sempit; semua kontrol tetap 44 px dan tidak overflow pada 390 px.
+- **Readout ringkasan = filter tindakan** (mono, tabular): `KLIEN` / `PERLU TINDAKAN` / `JATUH TEMPO ≤7H` / `KEDALUWARSA` / `DITANGGUHKAN`. Tiap readout adalah tombol filter, bukan angka dekoratif. Status `TAGIHAN · WA MANUAL` dipindahkan ke masthead; sinyal Dormant dihapus karena model dukungan saat ini inbound, bukan daftar follow-up proaktif.
+- **Dua tab** dengan badge jumlah, memakai pola & class yang sama dengan `SettingsPage`: **Klien** dan **Jejak aksi**. Tab Rekonsiliasi GoPay dihapus karena tidak ada lagi invoice gateway yang perlu dicocokkan.
+- **Desktop tabel, container sempit kartu.** Tabel memakai header sticky mono uppercase, angka rata kanan + `tabular-nums`; pada container ≤960 px, organisasi berubah menjadi kartu bench agar tidak bergantung pada scroll horizontal.
+  - **Klien** — pencarian instan berdasarkan nama, nomor pendek `ORG-XXXXXXXX`, atau UUID penuh; LED status + nama + badge DEMO; tanggal pendaftaran; label paket Solo/Pro; status sisa yang tidak pernah memakai angka negatif; tanggal expiry eksplisit; jumlah outlet/user/tiket; aktivitas terakhir; dan catatan internal. Aksi primer adalah **Konfirmasi bayar**; suspend/catatan sekunder; hapus masuk menu `Lainnya` agar bahaya tidak setara visual dengan kerja rutin.
+  - **Jejak aksi** — memuat 50 aktivitas terbaru, dapat dicari berdasarkan organisasi/aksi/alasan/operator, lalu ditambah bertahap sampai 200. `detail` jsonb diringkas jadi kalimat pembayaran yang memuat nominal, paket, dan bulan—bukan JSON mentah.
+- **Satu modal untuk empat mode aksi** ([`OperatorActionModal`](src/features/operator/OperatorActionModal.tsx)): konfirmasi pembayaran, suspend, catatan, dan hapus organisasi. Aktivasi bebas/Trial/Free dihapus; organisasi suspended hanya pulih melalui pembayaran Solo/Pro. Modal bayar menampilkan nomor organisasi, kondisi paket/expiry sebelum tindakan, outlet, pembayaran/ref terakhir, biaya bulanan, total otomatis, dan expiry proyeksi. Server menghitung ulang nominal; refresh daftar yang gagal setelah commit tidak lagi menyamar sebagai kegagalan pembayaran.
+- **Kegagalan data tetap terlihat.** Error pemuatan disimpan sebagai panel persisten dengan tombol retry; loading auth/admin memakai status aksesibel. Login menyebut “operator FixMaster”, bukan nama tabel internal database.

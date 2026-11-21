@@ -1,0 +1,138 @@
+---
+title: Conventions
+aliases: [Conventions, Konvensi, Patterns, Folder Structure]
+tags: [fixmaster, conventions, architecture]
+created: 2026-06-04
+---
+
+# 📐 Conventions
+
+Bagian dari [[00 - FixMaster MOC]].
+
+Pola & gaya yang dipakai konsisten di FixMaster. Baca ini di awal sesi untuk langsung selaras (hemat penjelajahan ulang).
+
+## Struktur folder (`src/`)
+
+| Folder | Isi |
+|---|---|
+| `app/` | Komposisi aplikasi (`AuthGate` untuk sesi cloud, `WorkspaceGate` untuk bootstrap workspace, `AuthSplash`, router) |
+| `components/` | Komponen reusable: `ui/` (Button, Card, Icon, dst) + `layout/` (Sidebar, Topbar, MobileBottomNav, AppLayout, ThumbDock) |
+| `config/` | `navigation.ts`, `plans.ts` (izin peran + penangguhan), `pricing.ts` (harga per unit, sejak 14 Nov 2026) |
+| `data/` | Repository, adapter (`local-adapter`, `supabase-adapter`), `types.ts`, `repository.ts` |
+| `dev/` | Tooling dev, mis. `seed.ts` (data demo) |
+| `features/` | Satu folder per fitur: `pos/`, `inventory/`, `services/`, `customers/`, `suppliers/`, `finance/`, `reports/`, `tasks/`, `attendance/`, `dashboard/`, `settings/`, `onboarding/` |
+| `hooks/` | Hook lintas-fitur: `useCollection`, `useNavSignals` |
+| `i18n/` | Mesin terjemahan type-safe (ID/EN) |
+| `lib/` | `business/` (logika domain murni) + util (`time`, `id`) |
+| `stores/` | Zustand: `session`, `settings`, `theme`, `displayScale` (skala font root 90/100/110%) |
+| `styles/` | `tokens.css` (sumber kebenaran), `global.css` |
+| `test/` | Setup test |
+
+## Penamaan
+- **Komponen**: `PascalCase.tsx` (mis. `SidebarPage.tsx`)
+- **CSS Module**: `NamaKomponen.module.css` berdampingan dengan komponennya
+- **Hook**: `useXxx.ts` (camelCase berawalan `use`)
+- **Logika bisnis**: `lib/business/<domain>.ts` + `<domain>.test.ts` berdampingan
+- **Import alias**: `@/` → `src/` (mis. `@/components/ui`)
+
+## Pola kunci
+- **Warna**: SELALU `var(--token)` dari [[Design System]] — jangan hardcode hex. Otomatis benar di dark/light. **Satu-satunya pengecualian: dokumen cetak** (`lib/print.ts`, `features/services/printReceipt.ts`, `features/reports/printReport.ts`). Dokumen itu dibuka lewat `window.open` sebagai halaman terpisah sehingga tidak mewarisi `tokens.css` sama sekali — dan tinta di kertas tidak punya tema gelap. Di luar ketiga berkas itu (plus `features/services/receiptStyle.ts`, CSS kertas termal yang dipecah dari `printReceipt.ts`), hex literal tetap terlarang. **Ukuran di dokumen termal dihitung dalam titik head, bukan angka bulat**: 1 titik = 96/203 px, huruf dasar 20 titik (±9,46px), tinggi baris 28 titik, semua lewat `dotsToPx()` di `lib/business/receiptPaper.ts`. Ukuran yang jatuh di antara titik dirender dengan tepi lunak lalu menjadi kabur setelah threshold 1-bit. **Warna di nota termal hanya `#000` dan `#fff`** (diuji di `receiptStyle.test.ts`): abu-abu di bawah ambang 50% hilang dari kertas, jadi hierarki dibuat dari bobot, ukuran, dan jarak huruf. **Teks nota & struk lewat `receiptText(key)`** (`features/services/receiptText.ts`, kunci `receipt.*`), bukan literal, karena jendela cetak dibangun di luar React.
+- **Baris nota lewat `receiptRow(label, value, cls, paper)`, jangan menulis `<tr>` sendiri dan jangan mematok lebar kolom persen.** Yang menentukan berdampingan atau bertumpuk adalah `fitsBeside` (hitungan huruf mono, murni, teruji). Baris dibangun flex per baris, bukan tabel otomatis: sel tumpuk selebar baris di tabel biasa menyempitkan kolom baris lain. Barang struk lewat `saleItemRow`.
+- **Pratinjau nota = dokumen cetak yang sama.** Jangan membuat render kedua: pratinjau memanggil `receiptPreviewHtml(org, doc)` (HTML cetak dengan `roll: null`) di iframe. Fungsi cetak (`printServiceReceipt`, `printSaleReceipt`) tetap sinkron; data yang butuh `useCollection` (mis. `outlets`) dibawa pemanggil sebagai argumen.
+- **Dokumen batal diberi tahu lewat `ReceiptDoc.voided`, bukan dengan menyaring HTML.** Nota servis dan struk memakai `voidMarkHtml()` yang sama untuk kotak BATAL, dan `receiptParts` membuang ucapan kaki bila `voided`. Dokumen baru yang bisa batal wajib mengisi bendera itu.
+- **S&K servis lewat `lib/business/serviceTerms.ts` (12 Nov 2026).** Teks pasal bawaan tinggal di kamus `terms.*` dan tidak bisa diketik toko: klausul pelepas tanggung jawab batal demi hukum (UU 8/1999 Pasal 18), dan tes menjaga tak ada "bukan tanggung jawab" di teks bawaan. **Mengubah teks pasal bawaan wajib menaikkan `TERMS_TEMPLATE_VERSION`.** Kalimat bersyarat ditulis utuh per varian (`terms.cancel.body` / `bodyFee`), bukan disambung potongan. Rupiah di dalam kalimat memakai spasi tak-putus.
+- **Data**: baca via `useCollection('<koleksi>')`; mutasi via `repository`. Lihat [[Data Layer]].
+- **Logika domain**: tulis murni & testable di `lib/business/`, panggil dari UI. Jangan taruh aturan di komponen.
+- **Percabangan cloud/lokal**: `isCloudMode()` TIDAK hidup di dalam modal/halaman. Bungkus jadi satu modul tulis di `src/data/` (pola `serviceParts.ts`, `financeEntry.ts`) yang menyembunyikan "RPC atau tulis lokal" dari pemanggilnya. Salinan di tiap modal harus disepakati ulang setiap kali bentuk barisnya berubah, dan jalur lokalnya hanya bisa diuji lewat UI.
+- **Angka yang tampil di dua tempat wajib satu fungsi.** Badge rel navigasi vs daftar halaman, grafik layar vs grafik cetak, kartu vs laci detail — kalau dua permukaan menjawab pertanyaan yang sama, keduanya memanggil helper yang sama di `lib/business/`. Cukup satu salinan untuk membuat keduanya berbohong tanpa ada yang sadar.
+- **Ikon**: hanya lewat komponen `Icon`. Lihat [[Iconography]].
+- **Form/modal**: bangun isi form dengan primitif bersama `FormFields` / `FormRow` / `FormError` (`src/components/ui/Form.tsx`) — jangan inline style. `FormRow` otomatis collapse ke 1 kolom di mobile; `FormError` = fault-readout LED. Validasi pakai `useFormFault` (`src/hooks/useFormFault.ts`): `fail('kolom', pesan)` menampilkan pesan di `FormError` **dan** menandai kolomnya lewat prop `invalid` (`Input`/`Select`/`Textarea`); `setError` untuk galat tanpa kolom (duplikat, server). Tepi kolom isian memakai `--border-control`, bukan `--border-strong`. Komponen `Modal` dasar sudah membawa faceplate aksen + judul ber-LED, jadi modal baru otomatis senada.
+- **Ringkasan halaman & kaki simpan (7 Nov 2026)**: deret hitungan di kepala halaman memakai `PageSummary` (`components/ui/PageSummary.tsx`). Isinya satu panel dengan sel yang dipisah sambungan titik, label mono di atas angka mono, dan LED opsional di depan angka (`tone`). `short` memberi label pendek untuk ponsel, `wide` membuat sel rupiah dua jalur, `hideOnPhone` menyembunyikan sel di ponsel. Komponen ini dipakai Servis, Pelanggan, Kasir & Stok, dan Supplier. Sel dengan `onSelect` + `pressed` membuat strip jadi grup tombol `aria-pressed` (tanpa `dl`, karena `dt`/`dd` tak boleh berisi tombol): dipakai Kasir & Stok untuk saringan Semua / Menipis / Habis (10 Nov 2026). Strip wallet dan ringkasan Keuangan sengaja tetap milik Keuangan, karena selnya berfungsi sebagai filter wallet. Tombol simpan kartu Pengaturan selalu masuk `.saveFoot`: kanan bawah di balik sambungan titik, petunjuk (`span`) di kiri, dan selebar kartu di ≤640px. Lihat [[Decisions & Bug Fixes#Shell: ringkasan halaman, kaki simpan, kolom nominal (7 Nov 2026)]].
+- **Tombol utama nonaktif (7 Nov 2026)**: jangan pudarkan amber. `.primary:disabled:not([aria-busy])` di `Button.module.css` memakai permukaan netral, teks redup, dan garis putus, karena amber pudar tetap terbaca sebagai aksi utama. Saat `loading`, `Button` memberi `aria-busy` sehingga tombol yang sedang menyimpan tetap amber. Untuk simpan yang hanya berarti bila ada perubahan, nonaktifkan sampai form kotor (pola Profil Pengaturan). Bila ketukan pada tombol yang belum siap justru harus menjelaskan apa yang kurang, pakai `aria-disabled="true"`, bukan `disabled`. Tampilannya sama (garis putus, tanpa hover/active), tapi tombol tetap bisa difokus dan diketuk, dan handler-nya memfokus kolom yang kurang (bar Proses Kasir, 9 Nov 2026). Di Playwright tombol ini dianggap tidak aktif, jadi ketuk dengan `{ force: true }`. Status "selesai" juga jangan memakai `opacity` pada seluruh baris (kontras jatuh ke 3,3:1); pakai coretan, warna redup, dan spine.
+- **Ergonomi UI operasional**: teks informasi/aksi minimal 12 px; kontrol pada mobile/touch minimal 44×44 px. Deret KPI panjang memakai horizontal rail agar konten kerja utama tetap masuk viewport pertama. Uji minimal pada 390×844, 1024 px, dan 1440 px dalam dark/light; pastikan nol overflow horizontal.
+- **Aksesibilitas bersama (28 Sep 2026)**: judul halaman = satu `<h1>` di Topbar (judul di dalam halaman mulai `h2`; `CardHeader` bawaan `h2` sejak 6 Nov 2026, `as="h3"` hanya bila kartunya di bawah `h2` lain, heading lepas juga mulai `h2`); skip link "Lewati ke isi halaman" jadi elemen Tab pertama `AppLayout`, target `<main id="konten" tabIndex={-1}>`; `Modal` mengembalikan fokus ke pemicu, dan bila pemicunya hilang (baris dihapus, juga yang hilang SETELAH jendela tertutup) jatuh ke `#konten`. Laci sidebar (≤1024px) = `inert` saat tertutup + `useDrawerFocus` saat terbuka (fokus masuk, Tab berputar, Esc, fokus kembali ke tombol menu); `FOCUSABLE_SELECTOR` dan `trapTarget` di `lib/focusTrap.ts` dipakai bersama `Modal`. Daftar saran di bawah kolom ketik memakai `useListNav` (panah + Enter, `aria-activedescendant`).
+- **Kartu yang menata ulang kepalanya (11 Nov 2026)**: `CardHeader` menerima `className`, `titleClassName`, `actionClassName` dan `CardBody` menerima `id` (sasaran `aria-controls`), karena kelas modul `Card` tak terjangkau dari CSS modul lain. Dipakai dok pratinjau Nota di ponsel (kepala kartu jadi bar sticky); lihat [[Signature Pages]] dan [[Decisions & Bug Fixes]] tahap 7c Nota. Pola yang sama berlaku untuk dok berikutnya: `position: fixed` tak bisa di dalam `.stage` ber-`container-type`, pakai `sticky` dan jadikan induknya blok, bukan grid.
+- **i18n**: teks UI lewat `useT()` + key terjemahan, jangan string literal. Teks berisi nilai: `interpolate(t('ns.key'), { name })` dari `lib/business/notify` (placeholder `{name}`). **Yang disimpan sebagai data tetap literal** — catatan riwayat tiket, `description` baris keuangan, `entityLabel` log, kategori (`Lainnya`, `Sparepart`) — karena ia dibaca semua pengguna apa pun bahasanya dan dibandingkan kode. Label status lengkap: `statusLabel.*` (`status.*` = label pendek traveler). **`t` stabil per bahasa** (`useT` memakai `useCallback`, 29 Sep 2026) — aman dimasukkan ke dependency `useEffect`/`useMemo`; dulu fungsi baru tiap render sehingga pemuat yang men-toast error tak bisa mencantumkannya. Di luar komponen (helper modul): `translate(useSettingsStore.getState().language, key)`. **Kamus selain `id` dimuat lazy** (`i18n/registry.ts`, 16 Nov 2026): `translate` jatuh ke `id` sampai kamusnya tiba, `setLanguage` menunggu kamus sebelum berganti bahasa, dan `src/test/setup.ts` memuat `en` di muka. Jangan impor `@/i18n/en` langsung dari kode aplikasi (hanya tes), atau 37 KB gzip kembali ke jalur kritis. **Logika murni di `lib/business/` mengembalikan kunci** (`TranslationKey`), bukan kalimat; komponen yang menerjemahkan (contoh: `STATUS_LABEL` absensi, `StepError.messageKey` wizard, `NextStep.textKey` lacak). Bila helper butuh kalimat jadi, terima `t` sebagai argumen (`relativeSince(iso, t)`). **Penjaga demo**: `demoGuard('demo.xxx')` menerima kunci. Teks yang SUDAH diterjemahkan (jendela cetak memakai bahasa nota, bukan bahasa UI) dibungkus `demoGuard({ text })`; bentuknya sengaja terpisah supaya string biasa tak pernah terbaca sebagai kunci, sebab kunci yang hilang tampil ke pengguna sebagai kunci itu sendiri dan `tsc` tak bisa membedakannya dari teks (12 Nov 2026).
+- **Tanda baca teks UI (6 Nov 2026)**: em dash (U+2014) tidak dipakai di teks yang tampil: kunci i18n, string komponen, template WhatsApp, dokumen cetak, judul tab. Ganti dengan koma, titik dua, titik, atau kurung; judul modal memakai ` · `, judul dokumen ` | `. **Sel kosong**: `<EmptyValue />` (`components/ui/EmptyValue.tsx`: tanda pisah pendek `–` untuk mata + "kosong" untuk pembaca layar); di string atau placeholder angka yang masih dimuat pakai `EMPTY_VALUE` dari `lib/format.ts`. Pengecualian: string yang kembar dengan pesan server (lihat [[Decisions & Bug Fixes]], audit antislop 001), karena mengubahnya butuh migrasi.
+- **Rute khusus pengembangan**: halaman probe/prototipe didaftarkan lewat `devOnlyRoutes()` di `app/router.tsx` (`import.meta.env.DEV`), jadi tidak masuk bundle produksi dan tidak butuh rewrite di `vercel.json`. Contoh: `/prototype/ticket`.
+- **Area sentuh tautan sebaris**: perbesar lewat `::after` ber-inset negatif di dalam `@media (max-width: 720px), (hover: none), (pointer: coarse)`, supaya tata letak tidak ikut membesar (pola `Term`, `catLink` Laporan). Bila induknya memotong teks (`overflow: hidden`), `::after` ikut terpotong: pindahkan area sentuhnya ke seluruh baris (baris `position: relative`, tautan `position: static`, `::after { inset: 0; z-index: 1 }`), asalkan baris itu tidak memuat kontrol lain.
+- **Aksi utama halaman di ponsel**: bungkus dengan `<ThumbDock>` (`components/layout/ThumbDock.tsx`). Komponen ini memasang tombol mengambang di zona jempol, tepat di atas menu bawah, plus spacer agar baris terakhir tak tertutup. Ia hanya tampil ≤720px, ambang yang sama dengan menu bawah. Tombol aslinya di bilah alat disembunyikan di ukuran itu supaya tidak dobel. Dipakai Daftar Servis dan Dashboard (Servis Baru). Lihat [[Decisions & Bug Fixes#Daftar Servis ponsel: antrean di layar pertama (7 Nov 2026)]].
+- **Input teks**: helper kapitalisasi tinggal di `src/lib/text.ts` (`capitalizeFirst`, `capitalizeLines`, `capitalizeWords`; teruji unit). Komponen `Input` (`components/ui/Input.tsx`) default `capitalizeFirst` (huruf pertama); prop **`autoCapWords`** memakai `capitalizeWords` (huruf pertama TIAP kata — untuk nama orang/perangkat/produk/supplier/usaha, mis. "budi santoso" → "Budi Santoso"); prop **`revealable`** menambah tombol mata show/hide password. Prop **`onClear`** + **`clearLabel`** (13 Nov 2026) menambah tuts mekanis ✕ di kanan kolom selama kolom berisi: klik mengosongkan dan mengembalikan fokus ke kolom, Esc juga mengosongkan tanpa diteruskan ke jendela di atasnya. Hanya untuk kolom terkendali (`value`), dan diabaikan bila `revealable`. Pakai untuk kolom cari; dipasang di Daftar Servis. Komponen `Textarea` (`components/ui/Textarea.tsx`) memakai `capitalizeLines` (huruf pertama tiap baris non-kosong, cocok untuk keluhan/catatan/alamat). Dilewati untuk `type` email/tel/number/password dan saat prop `noAutoCap` (mis. wizard onboarding, no servis). Gunakan `autoCapWords` HANYA untuk field nama diri (jangan untuk field kalimat seperti "Keluhan" — akan salah jadi Title Case). Gunakan `Textarea` untuk field teks bebas multi-baris, jangan `<textarea>` mentah. Indikator kekuatan password: komponen `PasswordStrength` (signup/reset), skor murni `scorePassword` di `lib/business/password.ts`.
+
+## Perintah
+| Perintah | Fungsi |
+|---|---|
+| `npm run dev` | Dev server (Vite, port 5173) |
+| `npm run build` | Type-check + build produksi |
+| `npm run test` | Vitest unit, offline (jumlah terkini di [[Testing & Security]]) |
+| `npm run lint` | ESLint |
+| `npm run type-check` | Cek tipe tanpa emit |
+| `npm run brand:render` | Regenerasi PNG PWA/Apple + OG dari SVG VOLT Probe |
+
+## Verifikasi UI
+Screenshot via Playwright di `scripts/` (mis. `shoot-batch.mjs`, `verify-sidebar.mjs`). Seed data demo lewat `window.__fixmasterSeed()`. Sinkron attachment vault: `scripts/sync-vault-attachments.ps1` (opsional, hanya di mesin lokal Windows; lihat AGENTS.md §5).
+
+Dua probe regresi wajib untuk perubahan UI (butuh dev server; keduanya menulis JSON ke
+`scripts/shots/`):
+
+```bash
+BASE_URL=http://localhost:5173 node scripts/audit-zoom.mjs      # 11 lebar desktop x 13 halaman
+BASE_URL=http://localhost:5173 ZOOM=1.25 node scripts/audit-zoom.mjs   # pembesaran (90/110/125/150)
+BASE_URL=http://localhost:5173 DENSITY=padat node scripts/audit-zoom.mjs  # kerapatan Padat
+BASE_URL=http://localhost:5173 node scripts/audit-mobile.mjs    # 5 lebar ponsel x 13 halaman
+BASE_URL=http://localhost:5173 MOBILE=0 WIDTHS=744,834,1025,1112,1152 node scripts/audit-mobile.mjs
+```
+
+`audit-zoom` juga gerbang **lantai teks 12px**: di pembesaran ≥100% ia keluar dengan kode 1
+bila ada teks informasi di bawah 12px efektif (`TEXT<12` di laporan). Pembesaran dipasang
+lewat pintasan Ctrl+Alt+= setelah halaman demo terbuka, karena demo mem-pin 100% sementara.
+
+Saring tiga positif palsu sebelum membaca hasil: `caption._srOnly` dan `*.fm-visually-hidden`
+(`span.` di mana-mana, `p.` di `/pos`; teks khusus pembaca layar, memang di-clip) serta elemen `text.` di
+dalam SVG (label sumbu grafik). Tanpa itu tiap laporan terlihat merah total. Untuk **dokumen cetak**, ukur pada lebar medianya (A4 = 186 mm setelah
+margin), bukan lebar viewport — dua cacat tata letak PDF hanya muncul di sana.
+
+Untuk perubahan **warna/token**, dua gerbang tambahan:
+
+```bash
+node scripts/audit-tokens.mjs                                     # tanpa server
+BASE_URL=http://localhost:5173 node scripts/audit-contrast.mjs    # DOM sungguhan
+```
+
+`audit-tokens` memeriksa kontras pasangan token **dan** pemisahan antar warna sinyal
+(dE OKLab) — rona yang terlalu mirip langsung membuat status servis tak terbedakan,
+karena `STATUS_TONE` memetakan 8 status ke 6 nada (abu + 5 rona). `audit-contrast` mengukur DOM
+sungguhan, menangkap racikan `color-mix`/lapisan transparan yang tak terlihat dari daftar
+token; ia pernah menemukan 18 elemen yang diloloskan gerbang token. Bandingkan dengan
+palet lama lewat `BASELINE=<tokens.css lama>` untuk memisahkan regresi baru dari warisan.
+
+> [!tip] Default verifikasi
+> Setelah perubahan kode: jalankan build + test + lint. Untuk perubahan UI, foto render asli (bukan asumsi). Lihat pelajaran di [[Decisions & Bug Fixes]].
+
+## Skill proyek (sejak 24 Sep 2026)
+
+Tiga skill ditambatkan di `.claude/skills/` agar tak hilang saat ganti akun:
+`impeccable` (semua visual/UX **dan** teks di dalam UI), `antislop-code` (komentar
+kode saja), `antislop-copywriting` (prosa di luar UI). Skill inti `antislop` dan
+varian UI-nya sengaja tidak dipasang karena bersaing dengan impeccable. Tabel
+wewenang lengkap + alasan: AGENTS.md §7. Biner impeccable di-gitignore (diunduh
+ulang peluncurnya, terverifikasi hash).
+
+## Terkait
+- [[Domain & Scope]] · [[Design System]] · [[Data Layer]] · [[Tech Stack]]
+
+#conventions #architecture
+
+## Istilah keuangan & Kamus Istilah (29 Sep 2026)
+
+Keputusan pemilik: **istilah akuntansi baku** (Arus Kas Bersih, Laba Kotor, Overhead, Beban Langsung,
+Break-Even, HPP, Persediaan, Aset Tetap, Piutang, Modal, Prive, Omzet) — sempat diganti bahasa awam
+lalu dikembalikan. Pemilik yang belum paham membuka penjelasannya: istilah di layar dibungkus
+komponen **`Term`** (`components/ui/Term.tsx`: garis bawah titik + ⓘ, tautan ke `/istilah#<id>`),
+isinya di `features/glossary/terms.ts` (definisi, rumus, contoh konter, "muncul di").
+
+- Satu konsep = satu istilah di layar DAN PDF (teks break-even PDF lewat `translate`).
+- `Term` jangan di dalam tautan lain (anchor bersarang) — mis. baris break-even Dashboard yang
+  menaut ke Laporan tidak memakai `Term`.
+- Istilah baru di UI keuangan → tambah entri di `terms.ts` dan bungkus dengan `Term`.
+- Nama kategori data (Gaji, Listrik & Air, Sparepart, Prive…) tampil apa adanya.

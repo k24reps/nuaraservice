@@ -1,0 +1,23 @@
+project_id = "nuara-dashboard"
+
+# Edge Functions config. Public functions declare verify_jwt explicitly so
+# deployments cannot change their authentication boundary by accident.
+
+[functions.health]
+# Public liveness/readiness probe for external uptime monitors. Returns only
+# a status summary (no tenant data), so no auth is needed.
+verify_jwt = false
+
+[functions.auto-backup]
+# Dipanggil pg_cron, bukan browser, jadi tidak ada JWT pengguna yang bisa
+# diverifikasi. Gerbangnya header rahasia bersama (BACKUP_CRON_SECRET) yang
+# dicek di dalam fungsi. Menyerahkannya ke verify_jwt justru salah: JWT
+# pengguna biasa mana pun akan lolos, dan endpoint ini menyentuh data
+# SEMUA organisasi.
+verify_jwt = false
+
+[functions.backup-email]
+# Sama dengan auto-backup: dipanggil pg_cron (0085), gerbangnya x-cron-secret
+# yang dicek di dalam fungsi, dan ia menyentuh data SEMUA organisasi.
+verify_jwt = false
+

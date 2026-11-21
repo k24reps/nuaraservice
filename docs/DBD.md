@@ -3,6 +3,9 @@
 > Versi: 0.2 | Diperbarui: 2026-11-04 | Merujuk: PRD.md, AFD.md, DESIGN.md (landing page)
 <!-- Dokumen desain visual. Skema database ada di BSD, bukan di sini. Eksekusi visual memakai skill impeccable (CLAUDE.md); token di sini adalah kontraknya. -->
 
+> [!note] Sejak 2026-11-21 (wawancara P13.3)
+> Komponen dashboard diambil dari dens-ui (https://github.com/dendense/dens-ui, MIT, model shadcn, Tailwind v4) dengan warna diganti token di bagian 2. Tema Mars Green dens-ui tidak dipakai. Halaman dipindah bertahap (IPD Fase B); sampai itu, halaman yang belum dipindah masih bertampilan FixMaster.
+
 ## 1. Karakter Brand
 - Kata kunci: tenang, rapi, transparan.
 - Dua wajah, satu brand:

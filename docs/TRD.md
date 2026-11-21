@@ -1,176 +1,127 @@
 # TRD (Technical Requirements Document) - Nuara Dashboard
 
-> Versi: 0.2 | Diperbarui: 2026-11-04 | Merujuk: PRD.md
-<!-- Proyek existing: landing page statis di root repo tetap apa adanya. Dashboard adalah aplikasi baru di folder dashboard/. -->
+> Versi: 0.3 | Diperbarui: 2026-11-21 | Merujuk: PRD.md, IPD.md, `dashboard/AGENTS.md`
+<!-- Proyek existing: landing page statis di root repo tetap apa adanya. Dashboard ada di folder dashboard/.
+Versi 0.2 (Next.js + Drizzle, dibangun dari nol) dibatalkan 2026-11-21 (wawancara P13): dasar kode diganti salinan FixMaster. Isi versi 0.2 ada di riwayat git (commit 215e799). -->
 
 ## 1. Tech Stack
-Versi mayor di bawah dicek ulang ke dokumentasi resmi saat L-01.
-
 | Lapisan | Pilihan | Versi mayor | Alasan (1 kalimat) |
 |---|---|---|---|
-| Frontend | Next.js (App Router) + React, Tailwind CSS, shadcn/ui | Next 16, React 19, Tailwind 4 | Pilihan Pemilik; satu aplikasi untuk tampilan dan server. |
-| Backend | Next.js Server Actions + Route Handlers, Drizzle ORM + postgres.js (`prepare: false`), Zod | Drizzle 0.x/1.x, Zod 4 | Tidak perlu server terpisah; Drizzle menulis Postgres standar sehingga mudah pindah ke Supabase self-host. |
-| Database | Supabase Postgres, region Singapura (L-02: satu proyek pengembangan/tes; L-36: proyek produksi) | Postgres 17 | Pilihan Pemilik; paket gratis, ada tampilan tabel. |
-| Auth | Supabase Auth (email sintetis + password) lewat `@supabase/supabase-js` dan `@supabase/ssr`; peran dan status aktif di tabel `profiles` | - | Keputusan Pemilik 2026-11-04 (mengganti Better Auth): satu penyedia untuk Auth, database, dan Realtime. |
-| Penyimpanan file | Tidak berlaku: tidak ada upload foto/file (PRD 6) | - | - |
-| Hosting/Deploy | Vercel paket Hobby (proyek kedua, Root Directory `dashboard/`), region fungsi `sin1` | - | Sudah dipakai untuk landing page; Hobby dipilih Pemilik walau ketentuan Vercel membatasinya untuk pemakaian non-komersial (bagian 9). |
-| Layanan pihak ketiga | Supabase Realtime (Broadcast), WhatsApp `wa.me`, Google Maps (link rute), RawBT (cetak Bluetooth Android), library `qrcode` | - | Semua gratis; tanpa API berbayar. |
+| Dasar kode | Salinan FixMaster (`k24reps/fixmaster` commit `0175e8d`), bagian SaaS dibuang | - | Keputusan Pemilik 2026-11-21 (P13.1): hampir semua fitur PRD sudah ada dan teruji di FixMaster. |
+| Frontend | Vite + React + TypeScript, react-router, Zustand, TanStack Query | Vite 8, React 19 | Bawaan FixMaster; SPA tanpa server sendiri. |
+| UI | Fase 1: CSS Modules + token FixMaster. Fase 2: Tailwind CSS + komponen dens-ui (Radix, model shadcn) dengan token warna Nuara dari DBD | Tailwind 4 | Keputusan Pemilik (P13.3, P13.7): dens-ui, warna Nuara, dipindah per halaman. |
+| Backend | Supabase: Postgres + RLS per `org_id`, RPC `security definer` untuk operasi uang dan stok, Edge Functions (Deno) untuk backup | Postgres 17 | Bawaan FixMaster; aturan akses ditegakkan database, bukan hanya UI. |
+| Database | Proyek Supabase milik Nuara, region Singapura; migrasi `dashboard/supabase/migrations/` 0001 s.d. 0105 | - | 0105 khusus Nuara: satu toko, tanpa saldo unit (P13.5). |
+| Auth | Supabase Auth email + password; staf bergabung lewat undangan email Pemilik; login PIN karyawan di perangkat bersama | - | Bawaan FixMaster; selisih dengan PRD (username tanpa email) ada di daftar selisih IPD. |
+| Hosting | Vercel paket Hobby, proyek kedua, Root Directory `dashboard/` | - | Sudah dipakai landing page; risiko Hobby di bagian 9. |
+| Pihak ketiga | Supabase Realtime (`postgres_changes`), WhatsApp `wa.me`, Sentry (opsional, aktif bila DSN diisi), Vercel Web Analytics, Resend untuk email backup (opsional) | - | Semua punya paket gratis; tanpa API WhatsApp berbayar. |
 
-Runtime & package manager: Node 24 LTS, npm (bawaan Node). PWA: `app/manifest.ts` + service worker minimal (hanya agar bisa dipasang, tanpa cache data). drizzle-kit hanya mengelola schema `public` (`schemaFilter`); schema `auth` dikelola Supabase dan hanya dirujuk untuk FK `profiles.id`.
+Runtime: Node 22 (CI) dan npm. PWA: `public/manifest.webmanifest` + `public/sw.js` (cache app shell, tanpa cache data).
 
 ## 2. Arsitektur
-Satu aplikasi Next.js melayani dua host: `app.nuaraservice.my.id` (dashboard staf, wajib login) dan `lacak.nuaraservice.my.id` (halaman tracking publik). `src/proxy.ts` (Next.js 16, berjalan di Node.js) hanya mengatur host dan menyegarkan sesi Supabase di host `app.`; host `lacak.` hanya melayani `/<kode>` (di-rewrite ke `/lacak/<kode>`) dan aset statis, serta tidak memanggil Supabase Auth. Semua baca/tulis data lewat Server Actions/Route Handlers yang memverifikasi identitas dengan `getClaims()`, lalu membaca peran dan status aktif dari `profiles` pada setiap permintaan, sebelum memakai Drizzle ke Postgres. Setelah data berubah dan transaksi berhasil, server mengirim sinyal Realtime berisi ID saja; browser yang mendengar mengambil ulang data lewat server. Channel `staff` bersifat privat (hanya staf aktif yang bisa menerima, klien tidak bisa mengirim); channel `track:<kode>` publik tanpa data. Kabar ke pelanggan dikirim staf lewat link `wa.me`. Backup mingguan dibuat GitHub Actions.
+SPA statis di Vercel. Browser memakai `@supabase/supabase-js` dengan kunci publik (anon/publishable); keamanan data ditegakkan RLS Postgres per `org_id` dan RPC `security definer` yang memeriksa peran pemanggil. Tidak ada server aplikasi sendiri.
 
-```mermaid
-flowchart LR
-  Staf["Browser staf (app.nuaraservice.my.id)"] --> Next["Next.js di Vercel: proxy.ts + Server Actions"]
-  Pelanggan["Browser pelanggan (lacak.nuaraservice.my.id)"] --> Next
-  Next -- "login, Admin API" --> Auth["Supabase Auth"]
-  Next --> DB[("Supabase Postgres")]
-  Next -- "sinyal ID saja" --> RT["Supabase Realtime"]
-  RT -- "channel privat staff" --> Staf
-  RT -- "channel publik track:kode" --> Pelanggan
-  Staf -- "wa.me" --> WA["WhatsApp workshop"]
-  GHA["GitHub Actions"] -- "pg_dump mingguan" --> BK[("Artifact terenkripsi")]
-```
+- Lapisan data: pola repository (`src/data/`). `useCollection('<koleksi>')` untuk baca, `repository` untuk tulis. Adapter Supabase dipakai bila env Supabase diisi; tanpa env, adapter IndexedDB di browser (mode lokal untuk pengembangan).
+- Realtime: langganan `postgres_changes` per tabel organisasi; cache TanStack Query diinvalidasi saat ada perubahan.
+- Satu toko: skema tetap multi-organisasi (tidak dibongkar, P13.5), tetapi `create_organization` menolak toko kedua (0105). Akun pertama yang menyelesaikan wizard menjadi Pemilik.
+- Tracking pelanggan: rute publik `/t/<kode>` (kode acak per tiket, migrasi 0100) dan `/track`, dilayani host yang sama dengan dashboard, lewat RPC `track_service_by_code` yang bisa dipanggil anon dengan kolom terbatas.
+- Backup: `auto-backup` (pg_cron harian) menyimpan salinan JSON per toko di Storage; `backup-email` (pg_cron Senin) mengirim tautan unduh ke Pemilik bila Resend diisi.
+- Harness pengembangan: rute `/demo` hanya di dev server (`src/dev/DevSandbox.tsx`), berisi data contoh di RAM, dipakai skrip foto dan probe UI.
 
 Keputusan penting:
 | Keputusan | Alternatif ditolak | Alasan |
 |---|---|---|
-| Server Actions sebagai lapisan data | REST API terpisah | Satu aplikasi, lebih sedikit kode; kontrak operasi di BSD bagian 6. |
-| Drizzle ORM + postgres.js lewat pooler Supabase, `prepare: false` | Prisma; query lewat supabase-js | Postgres standar, ringan di serverless, siap pindah ke self-host; pooler mode transaksi tidak mendukung prepared statements. |
-| Supabase Auth dengan email sintetis `<username>@staf.nuaraservice.my.id`; akun dibuat Pemilik lewat Admin API, pendaftaran publik dimatikan | Better Auth (rencana awal); Auth Supabase tanpa username | Keputusan Pemilik 2026-11-04. Supabase Auth hanya mengenal email atau telepon, jadi username dipetakan ke email sintetis yang tidak pernah dipakai mengirim email. Masalah peran `admin` yang berkuasa penuh di plugin admin Better Auth ikut hilang. |
-| Peran dan status aktif hanya di `profiles`, tidak di JWT, `user_metadata`, atau `app_metadata` | Klaim peran di JWT (custom claims atau Auth hook) | Nonaktif akun harus berlaku di permintaan berikutnya, sedangkan JWT yang sudah terbit tetap valid sampai kedaluwarsa; `user_metadata` bisa diubah pengguna sendiri. |
-| Identitas dari `getClaims()`, peran dan `is_active` dari `profiles` di setiap permintaan | `getUser()` tiap permintaan; `getSession()` | `getClaims()` memverifikasi tanda tangan JWT (lokal bila proyek memakai signing keys asimetris); `getSession()` tidak boleh dipercaya di server. |
-| `src/proxy.ts` hanya rewrite host + segarkan sesi; pemeriksaan database di layout server dan Server Action | Semua pemeriksaan (peran, `is_active`, `must_change_password`) di proxy | Dokumentasi Next.js: proxy untuk logika ringan, dan Server Action tidak otomatis terlindungi proxy. |
-| Realtime: Broadcast berisi ID saja; `staff` privat (RLS pada `realtime.messages`, tanpa policy kirim untuk klien), `track:<kode>` publik | `postgres_changes` + RLS; semua channel publik | Klien tanpa login tidak bisa menerima atau memalsukan sinyal staf; data tetap diambil ulang lewat server. |
-| Server mengirim Broadcast lewat REST (`httpSend`) dengan secret key, setelah transaksi berhasil, best-effort | `realtime.send` dari database | Tidak bergantung pada partisi harian `realtime.messages`; kegagalan kirim tidak menggagalkan penyimpanan. |
-| RLS aktif tanpa policy di semua tabel `public` + Data API Supabase dimatikan | Mengandalkan publishable key tidak dibagikan | Publishable key ada di browser (Realtime, sesi); tabel tidak boleh terbaca lewatnya. |
-| Satu aplikasi, dua host via `proxy.ts` | Dua aplikasi Next.js | Satu deploy, satu basis kode. |
-| Host `lacak.` hanya melayani tracking dan aset; host `app.` menolak `/lacak/*` | Semua rute terbuka di kedua host | Tracking publik tidak mengekspos `/masuk`, `/api`, atau rute staf. |
-| Cetak lewat halaman cetak + CSS `@page` 58/80 mm | Perintah ESC/POS langsung | Jalan di driver printer Windows dan print service RawBT di Android. |
-| Kabar WA lewat `wa.me` | WhatsApp API | Gratis, tanpa risiko nomor diblokir (P5.F05.1). |
-| Uang integer rupiah; saldo dihitung dari mutasi kas | Kolom saldo yang diubah langsung | Akurat dan bisa diaudit; pembatalan tidak menghapus jejak. |
-| CI menjalankan lint, typecheck, unit test, build; E2E dijalankan lokal tiap langkah | E2E di CI | E2E memakai database tes bersama; menghindari data bentrok. |
+| Salin FixMaster sekali jalan, tanpa sinkron upstream (P13.2) | Fork dengan riwayat git dan tarik perubahan berkala | UI berbeda total setelah Fase 2, jadi tarikan upstream selalu konflik; perbaikan logika boleh disalin manual. |
+| Skema multi-organisasi dipertahankan + penjaga satu toko (P13.5) | Bersihkan `org_id` dari skema | `org_id` muncul 1.161 kali di migrasi; membongkar RLS berisiko membuka celah dan menulis ulang tes integrasi. |
+| Perilaku FixMaster dulu, selisih PRD diputuskan per butir (P13.6) | Sesuaikan semua ke PRD saat menyalin | Aplikasi cepat bisa dipakai; tiap selisih diputuskan Pemilik dengan informasi lengkap. |
+| UI ke dens-ui bertahap per halaman (P13.7) | Tulis ulang semua halaman sekaligus | Aplikasi tetap bisa di-build dan dipakai di setiap commit. |
+| Form daftar tetap ada | Matikan pendaftaran di Supabase Auth | Staf bergabung lewat undangan email (migrasi 0008): staf mendaftar dengan email yang diundang. Pendaftar tanpa undangan berhenti di wizard karena toko sudah ada. |
+| Data API (PostgREST) Supabase aktif | Data API dimatikan (rencana TRD 0.2) | supabase-js di browser membutuhkannya; pagar keamanannya RLS di setiap tabel. |
 
 ## 3. Struktur Folder
 ```
 /                         # landing page statis (index.html, style.css, script.js, assets/) - tidak disentuh
-docs/                     # 6 dokumen + _wawancara.md (tidak di-deploy, lihat .vercelignore)
-.github/workflows/        # dashboard-ci.yml, db-backup.yml
+docs/                     # PRD, TRD, AFD, DBD, BSD, IPD, _wawancara.md (tidak di-deploy)
+.github/workflows/        # dashboard-ci.yml
 dashboard/
+  AGENTS.md CLAUDE.md     # aturan agent untuk kode dashboard
   src/
-    app/
-      (auth)/masuk/               # S-01
-      (app)/                      # layout staf: sidebar + tab bawah; memeriksa sesi, profil, must_change_password
-        beranda/ tiket/ tiket/baru/ tiket/[id]/ pelanggan/ stok/ jual/
-        kas/ absensi/ laporan/ staf/ pengaturan/ notifikasi/ ganti-password/
-      cetak/                      # halaman cetak thermal (S-08, S-09)
-      lacak/[kode]/               # halaman tracking publik (S-07)
-      manifest.ts
-    components/
-      ui/                         # komponen shadcn/ui
-      ...                         # komponen fitur (ticket-form, stage-badge, dll.)
-    server/
-      db/schema/                  # skema Drizzle per domain
-      db/client.ts
-      actions/                    # Server Actions per fitur
-      services/                   # aturan bisnis: tahap, uang, stok, absensi, laporan
-      auth/                       # klien Supabase (server, admin), requireSession, requireRole
-      realtime.ts  permissions.ts
-    lib/                          # format rupiah/tanggal, nomor WA, crypto, wa-link, klien Supabase browser
-    proxy.ts                      # rewrite host, segarkan sesi (host app.), blokir rute salah host
-  drizzle/                        # file migrasi
-  scripts/                        # seed-dev.ts, seed-prod.ts, reset-owner-password.ts
-  tests/unit/  tests/e2e/
-  public/                         # ikon PWA, logo
+    app/                  # router, AuthGate, WorkspaceGate, guard peran
+    components/           # layout (Sidebar, Topbar, MobileBottomNav) dan ui/
+    features/<fitur>/     # halaman per fitur (services, pos, customers, finance, ...)
+    lib/business/         # logika domain murni + tes
+    data/                 # repository, adapter Supabase/IndexedDB, tipe entity
+    stores/ hooks/ i18n/ config/ styles/
+    dev/                  # data contoh + DevSandbox (hanya dev)
+  supabase/migrations/    # 0001 s.d. 0105
+  supabase/functions/     # auto-backup, backup-email, health
+  tests/integration/      # tes RLS/RPC ke staging Supabase Nuara
+  scripts/                # foto Playwright, probe audit-*, render-nuara-icons.sh
+  docs/obsidian-vault/    # pengetahuan teknis warisan FixMaster
+  public/                 # ikon, manifest, sw.js, font
 ```
 
 ## 4. Konvensi Kode
-- Bahasa & mode ketat: TypeScript `strict`.
-- Penamaan: file `kebab-case`, komponen `PascalCase`, fungsi/variabel `camelCase`, tabel & kolom `snake_case` (tabel jamak), rute URL Bahasa Indonesia (`/tiket/baru`).
-- Validasi input: Zod di setiap Server Action (server), skema yang sama dipakai form di client.
-- Penanganan error: Server Action mengembalikan `{ ok: true, data }` atau `{ ok: false, error: { code, message } }`; `message` berbahasa Indonesia, teksnya persis dari AFD.
-- Otorisasi: setiap Server Action memanggil `requireRole(...)` (identitas dari `getClaims()`, lalu `profiles`: peran, `is_active`) dan aturan kepemilikan dari BSD bagian 5 sebelum menyentuh data. Pemeriksaan database tidak ditaruh di `proxy.ts`.
-- Koneksi database: postgres.js dengan `prepare: false` untuk `DATABASE_URL` (pooler mode transaksi).
-- Uang: integer rupiah (`bigint`), tidak pernah float. Waktu disimpan UTC (`timestamptz`), ditampilkan Asia/Jakarta.
-- Lint/format: ESLint (konfigurasi Next.js) + Prettier.
-- Dilarang: `any`; SQL mentah tanpa parameter (pakai builder Drizzle atau `sql` bertemplate); secret di kode; query database dari komponen client; mengubah atau menghapus baris uang/stok (pakai pembatalan); data pribadi di payload Realtime atau di URL selain kode tracking; `getSession()` atau `user_metadata` untuk keputusan otorisasi; secret key Supabase di kode yang sampai ke browser.
+Aturan lengkap di `dashboard/AGENTS.md` bagian 4. Ringkasnya: TypeScript `strict`; warna lewat token CSS; data lewat `useCollection`/`repository`; logika domain di `src/lib/business/`; teks UI lewat `useT()`; uang integer rupiah, data uang dan stok hanya dibatalkan; breakpoint pencegah luberan memakai `@container`.
 
 ## 5. Keamanan
-- Autentikasi: Supabase Auth, email sintetis + password. Pengaturan Auth: pendaftaran baru dimatikan, panjang minimum password 8, konfirmasi email tidak dipakai (akun dibuat lewat Admin API dengan email terkonfirmasi). Login lewat Server Action `signIn` (cek kunci, lalu `signInWithPassword`).
-- Sesi: cookie `@supabase/ssr` dengan opsi `maxAge` 30 hari (default pustaka 400 hari; opsi dicek di L-04); cookie diperbarui setiap token disegarkan, jadi berlaku 30 hari sejak aktivitas terakhir. Pengaturan masa sesi Supabase (time-box, inactivity timeout) hanya tersedia di paket Pro dan tidak dipakai. Cookie sesi bisa dibaca JavaScript (diperlukan klien Realtime), jadi ada header keamanan dasar (CSP, `frame-ancestors 'none'`, `X-Content-Type-Options`) dan tidak ada HTML dari pengguna.
-- Nonaktif akun: `profiles.is_active = false` (berlaku di permintaan berikutnya) ditambah `ban_duration` di Supabase Auth (mencegah login dan penerbitan token baru; diuji di L-24). JWT yang sudah terbit tetap valid sampai kedaluwarsa (umumnya 1 jam; dicek di L-02) tetapi ditolak server karena `is_active`.
-- Wajib ganti password: `profiles.must_change_password`, dicek di layout server. Ganti password: verifikasi password lama lewat `signInWithPassword`, penggantian lewat Admin API (tidak bergantung pengaturan "secure password change" Supabase, yang butuh email nyata).
-- Lupa password: staf direset Pemilik (password sementara + `must_change_password = true`); Pemilik direset lewat `npm run owner:reset-password` dari komputer pengembang. Pemulihan lewat email tidak tersedia (email sintetis).
-- Otorisasi: per peran dan kepemilikan tiket, rujuk BSD bagian 5; dicek di server, bukan hanya disembunyikan di UI.
-- Batas & penyalahgunaan: login salah 5x per 15 menit pada pasangan (username + IP) -> pasangan itu dikunci 15 menit; satu IP dengan >= 20 kegagalan per 15 menit diblokir 15 menit (tabel `login_attempts`, IP dari `x-forwarded-for` Vercel), sehingga orang luar tidak bisa mengunci akun Pemilik. Batas bawaan Supabase: endpoint token (login dan penyegaran) 150 permintaan per 5 menit per IP; karena login dan penyegaran dilakukan dari server Vercel, semua staf berbagi IP keluar yang sama, cukup untuk 4-6 staf. Kode tracking 10 karakter base62 acak dari `crypto` (tidak bisa ditebak); tidak ada upload.
-- Data sensitif: password/pola unit dienkripsi AES-256-GCM (`UNLOCK_SECRET_KEY`), hanya bisa dibuka Teknisi yang ditugaskan, Admin, Pemilik (setiap pembukaan dicatat di `audit_logs`), dihapus saat Diambil/Dibatalkan. GPS absen hanya disimpan sebagai jarak. Semua tabel `public` `ENABLE ROW LEVEL SECURITY` tanpa policy; Data API Supabase dimatikan.
-- Secrets: hanya lewat environment variable (bagian 6). `SUPABASE_SECRET_KEY` melewati RLS dan hanya dipakai di server.
+- Akses data: RLS aktif di semua tabel organisasi; peran (owner, admin, karyawan) dibaca dari `memberships` di dalam kebijakan RLS dan RPC, bukan dari JWT. Operasi uang dan stok lewat RPC yang memeriksa peran dan mengunci baris.
+- Kunci di browser hanya kunci publik Supabase. Kunci `service_role` hanya untuk Edge Function dan runner tes integrasi; tidak pernah diberi prefix `VITE_`.
+- Satu toko: `create_organization` (0105) mengunci tabel lalu menolak toko kedua.
+- Permukaan anon: `track_service`, `track_service_by_code`, `check_rate_limit`. RPC lead demo ditutup (0105).
+- Password/pola unit disimpan terpisah lewat RPC `set_service_secret`/`get_service_secret` dan dihapus server saat unit diambil.
+- Header keamanan di `dashboard/vercel.json`: CSP, HSTS, `X-Frame-Options: DENY`, `nosniff`, `Permissions-Policy` (geolocation untuk absensi), `X-Robots-Tag: noindex, nofollow` untuk semua rute.
 
 ## 6. Environment & Deploy
 | Env | Tujuan | URL | Catatan |
 |---|---|---|---|
-| local | pengembangan & E2E | http://localhost:3000 dan http://lacak.localhost:3000 | Memakai proyek Supabase tes + data contoh |
-| preview | cek cabang di Vercel | URL preview Vercel | Memakai proyek Supabase tes |
-| production | dipakai workshop | https://app.nuaraservice.my.id, https://lacak.nuaraservice.my.id | Proyek Vercel kedua. Sampai rilis (L-36) env production menunjuk proyek Supabase tes (app. berperan sebagai staging); proyek Supabase produksi dibuat di L-36, lalu env production dialihkan. |
+| local | pengembangan | http://localhost:5173 | Tanpa env Supabase: IndexedDB. `/demo`: data contoh. |
+| staging | tes integrasi + uji manual | URL preview Vercel | Proyek Supabase tes milik Nuara (dibuat di L-44). |
+| production | dipakai workshop | https://app.nuaraservice.my.id (rencana) | Proyek Vercel kedua; proyek Supabase produksi dibuat saat rilis. |
 
-Pengaturan Supabase (dilakukan di L-02, diulang untuk proyek produksi di L-36): Data API dimatikan; pendaftaran baru di Auth dimatikan; panjang minimum password 8; Realtime "Allow public access" tetap aktif (channel tracking publik, perlindungan `staff` lewat channel privat + RLS).
+Variabel lingkungan aplikasi (`dashboard/.env.example`):
+| Nama | Untuk |
+|---|---|
+| VITE_SUPABASE_URL | URL proyek Supabase |
+| VITE_SUPABASE_ANON_KEY | Kunci publik Supabase (aman di browser; RLS menegakkan akses) |
+| VITE_SENTRY_DSN | Opsional, pelacakan error |
 
-Variabel lingkungan (nama saja; disalin ke `dashboard/.env.example` di L-01):
-| Nama | Untuk | Didapat dari |
-|---|---|---|
-| DATABASE_URL | Koneksi aplikasi (pooler, mode transaksi, `prepare: false`) | Supabase > Connect |
-| DATABASE_URL_DIRECT | Migrasi dan backup (koneksi langsung) | Supabase > Connect |
-| NEXT_PUBLIC_SUPABASE_URL | Klien Auth dan Realtime | Supabase > Project Settings > API |
-| NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY | Klien browser (Realtime) dan sesi SSR; aman di browser | Supabase > API Keys (`sb_publishable_...`) |
-| SUPABASE_SECRET_KEY | Server saja: Auth Admin API (buat staf, reset password, nonaktifkan) dan kirim Broadcast; melewati RLS | Supabase > API Keys (`sb_secret_...`) |
-| UNLOCK_SECRET_KEY | Enkripsi password/pola unit (32 byte, base64) | Dibuat acak |
-| APP_URL | Link di dashboard | `https://app.nuaraservice.my.id` |
-| TRACKING_URL | Link tracking di WA dan QR | `https://lacak.nuaraservice.my.id` |
-| SEED_SAMPLE_PASSWORD | Password akun contoh; hanya proyek tes, tidak dipakai di produksi | Dibuat sendiri |
+Secret Vault Supabase (dibaca pg_cron untuk memanggil Edge Function backup): `project_url` dan `backup_cron_secret`. Secret Edge Function: `BACKUP_CRON_SECRET` (sama dengan `backup_cron_secret`), `RESEND_API_KEY` dan `MAIL_FROM` (opsional; kosong = email backup hanya dicatat), `MAIL_REPLY_TO` (opsional), `SUPABASE_PUBLIC_URL`.
 
-Catatan: kunci Supabase memakai sistem baru (publishable dan secret); kunci lama `anon` dan `service_role` dihentikan Supabase pada akhir 2026. Tampilan dashboard Supabase dicek di L-02.
+Tes integrasi (`dashboard/.env.test.local`, tidak di-commit): `TEST_SUPABASE_URL`, `TEST_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` milik proyek staging Nuara. **Jangan pernah memakai proyek FixMaster.**
 
-Secret GitHub Actions: `PROD_DATABASE_URL_DIRECT`, `BACKUP_PASSPHRASE`.
+Migrasi diterapkan dengan Supabase CLI dari folder `dashboard/`: `supabase link --project-ref <ref proyek Nuara>` lalu `supabase db push`.
 
 CI/CD:
-- `dashboard-ci.yml`: saat push/PR yang mengubah `dashboard/**`: `npm ci`, lint, typecheck, unit test, build.
-- Vercel: `main` -> production, cabang lain -> preview. Landing page tetap di proyek Vercel lama; `.vercelignore` root mengecualikan `dashboard`, `docs`, `.github`.
-- `db-backup.yml`: setiap Minggu 23.00 WIB, `pg_dump` produksi (Postgres 17), dienkripsi `gpg --symmetric`, disimpan sebagai artifact 60 hari (8 salinan terakhir). Cara pemulihan ditulis di `dashboard/scripts/README.md` (L-32).
+- `.github/workflows/dashboard-ci.yml`: saat push ke `main` atau PR yang mengubah `dashboard/**`: `npm ci`, lint, build (type-check), tes unit.
+- Vercel: proyek kedua dengan Root Directory `dashboard/`. Landing page tetap di proyek Vercel lama; `.vercelignore` root mengecualikan `dashboard` dan `.github`.
 
 ## 7. Perintah & Testing
 <!-- Sumber tunggal perintah proyek. CLAUDE.md menyalin tabel ini; ubah keduanya bersamaan. Semua perintah dijalankan dari folder dashboard/. -->
 | Tujuan | Perintah |
 |---|---|
 | Dev | `npm run dev` |
-| Test | `npm test` (unit, Vitest) dan `npm run test:e2e` (Playwright, database tes) |
+| Test | `npm run test` (unit, Vitest, offline) dan `npm run test:integration` (RLS/RPC ke staging Supabase Nuara) |
 | Lint | `npm run lint` |
-| Typecheck | `npm run typecheck` |
+| Typecheck | `npm run type-check` |
 | Build | `npm run build` |
-| Migrasi DB | `npm run db:generate` (buat migrasi) lalu `npm run db:migrate` |
-| Seed | `npm run db:seed:dev` (data contoh, hanya database tes), `npm run db:seed:prod` (pengaturan + akun awal) |
-| Reset password Pemilik | `npm run owner:reset-password -- --username <u>` |
+| Migrasi DB | `supabase db push` (setelah `supabase link` ke proyek Nuara) |
+| Probe UI | `BASE_URL=http://localhost:5173 node scripts/audit-mobile.mjs` dan `scripts/audit-zoom.mjs` (dev server jalan) |
+| Ikon | `npm run brand:render` (butuh ImageMagick) |
 
-- Unit (Vitest): aturan di `server/services/` (transisi tahap, tagihan/dibayar/sisa/kelebihan bayar, saldo kas, harga modal rata-rata, stok tidak minus, garansi & masa aktif link, jarak GPS dan radius, terlambat, laporan bulanan), kunci login per (username, IP), format nomor WA dan rupiah, samaran nama, izin per peran.
-- E2E (Playwright, lokal): alur P0 lengkap (login Admin -> buat tiket + DP -> tandai WA terkirim -> Teknisi diagnosa + estimasi -> disetujui -> Pengerjaan -> Selesai + garansi -> lunas -> tracking menampilkan tahap -> Diambil), alur batal (Ditolak -> Dibatalkan -> Dikembalikan), ditambah satu skenario per fitur P1 saat langkahnya dikerjakan.
+- Unit (Vitest): logika domain di `src/lib/business/`, data layer, komponen, i18n, konfigurasi deploy.
+- Integrasi: RLS lintas toko, RPC uang dan stok, absensi, tracking. Toko uji dibuat lewat service_role (`createOrgAs`) karena `create_organization` menolak toko kedua.
+- UI: foto Playwright lewat `/demo` + probe `audit-*` (ukur DOM, bukan membaca gambar).
 
 ## 8. Non-Fungsional Teknis
-- Performa: tracking dirender di server, tanpa komponen interaktif berat selain klien Realtime, font Archivo di-subset; target < 2 detik di 4G. Dashboard < 3 detik di 4G. Realtime: perubahan terlihat di layar lain <= 5 detik; pemuatan ulang akibat sinyal digabung (staf paling sering sekali per 2 detik, tracking sekali per 3 detik) agar sinyal beruntun tidak membanjiri server.
-- Skala awal: 100-200 tiket/bulan (sekitar 2.400/tahun), 4-6 akun; jauh di bawah batas paket gratis Supabase (500 MB). Indeks di BSD bagian 3.
-- Observability: log fungsi Vercel; `audit_logs` untuk perubahan data penting; error Server Action dicatat dengan kode error tanpa data pribadi.
+- Performa: bundle dipecah per rute; target dashboard < 3 detik di 4G.
+- Skala: 100-200 tiket/bulan, 4-6 akun; jauh di bawah batas paket gratis Supabase (500 MB).
+- Observability: log Edge Function, `activity_logs` untuk perubahan penting, Sentry bila DSN diisi.
 
 ## 9. Risiko Teknis
-- Vercel Hobby: ketentuan Vercel membatasi Hobby untuk pemakaian pribadi non-komersial (https://vercel.com/docs/limits/fair-use-guidelines). Pemilik memutuskan tetap memakai Hobby (2026-11-04) -> akun atau proyek bisa dijeda atau ditutup Vercel sewaktu-waktu -> kode tidak memakai fitur khusus Vercel (bisa dijalankan dengan `next start` di VPS, rencana Pemilik), backup mingguan, pantau email dari Vercel.
-- Paket gratis Supabase: proyek dijeda setelah 7 hari tanpa aktivitas database dan tanpa backup harian -> proyek produksi baru dibuat di L-36 (tidak menganggur selama build); setelah rilis, libur panjang > 7 hari bisa menjeda proyek (pulihkan lewat dashboard Supabase; ada batas waktu pemulihan di dokumentasi Supabase); backup mingguan sendiri (`db-backup.yml`); Pemilik berencana pindah ke Supabase self-host di VPS setelah rilis.
-- Koneksi langsung Supabase hanya IPv6, sedangkan GitHub Actions dan sebagian jaringan hanya IPv4 -> perbaikan ditunda atas permintaan Pemilik (audit S1); bila `db:migrate` (L-03) atau backup (L-32) gagal tersambung, pakai session pooler dari dashboard Supabase. Dicatat di IPD.
-- Sinyal Realtime: "Allow public access" harus tetap aktif (channel tracking publik), jadi perlindungan `staff` bergantung pada `private: true` dan policy RLS -> diuji di L-14 (klien tanpa login tidak bisa join `staff`, sinyal palsu tidak memicu muat ulang). Staf yang dinonaktifkan masih bisa menerima sinyal berisi ID saja sampai JWT-nya habis (otorisasi Realtime dievaluasi saat join atau saat token dikirim ulang). Sinyal palsu di `track:<kode>` hanya bisa dikirim pemegang kode tracking.
-- Realtime privat dan pengiriman REST dari server belum diuji di proyek ini -> diuji di L-14; payload hanya ID sehingga mudah diganti (mis. polling) bila perilakunya berbeda.
-- Cookie sesi Supabase bisa dibaca JavaScript -> header keamanan dasar (bagian 5), tanpa HTML dari pengguna, secret key tidak pernah ke browser.
-- Email sintetis: validasi email Supabase pada jalur yang dipakai hanya memeriksa format, dan email tidak pernah dikirim -> dicek di L-04 (`createUser` di proyek tes); bila ditolak, ganti domain sintetis sebelum akun produksi dibuat (L-36).
-- Batas Supabase Auth per IP (150 permintaan per 5 menit di endpoint token) berlaku untuk IP keluar Vercel yang dibagi semua staf -> cukup untuk 4-6 staf; kunci login per (username, IP) menahan percobaan berulang sebelum sampai ke Supabase.
-- `proxy.ts` tidak melindungi Server Action (matcher yang mengecualikan jalur juga melewati Server Action di jalur itu) -> otorisasi dicek di setiap Server Action dan layout server.
-- Cetak Bluetooth Android lewat RawBT berbeda per printer -> diuji dengan printer asli di L-17; cadangan: cetak dari laptop, kirim link lewat WA.
-- GPS di dalam bangunan meleset 20-50 m -> radius 100 m; absen di luar radius ditolak, sedangkan izin lokasi ditolak atau GPS tidak terbaca tetap boleh dengan tanda "lokasi tidak terverifikasi" (celah yang disengaja, terlihat Pemilik di rekap).
-- Safari iPhone (pemasangan PWA, izin lokasi, cetak) berbeda dari Chrome -> diuji di L-34.
-- Versi library dan nama kunci Supabase cepat berubah -> versi dicek ke dokumentasi resmi di L-01 dan L-02, dan dicatat di IPD.
+- Vercel Hobby dibatasi untuk pemakaian non-komersial (https://vercel.com/docs/limits/fair-use-guidelines). Pemilik memilih tetap Hobby (2026-11-04) -> proyek bisa dijeda; aplikasi berupa SPA statis sehingga mudah dipindah ke hosting statis lain.
+- Paket gratis Supabase: proyek dijeda setelah 7 hari tanpa aktivitas, tanpa backup harian bawaan -> backup harian `auto-backup` + email mingguan; proyek produksi dibuat saat rilis.
+- Migrasi Nuara dijalankan ke proyek yang salah (mis. proyek FixMaster yang tercatat di vault) -> skrip deploy FixMaster tidak disalin; `supabase link` selalu dengan ref proyek Nuara; dicek ulang sebelum `db push`.
+- Fase 2: Tailwind dan CSS Modules hidup berdampingan -> reset dasar Tailwind (preflight) bisa mengubah tampilan halaman lama; diputuskan di L-46 dan dijaga probe `audit-*` sebelum dan sesudah.
+- Teks dan alur FixMaster berbeda dari PRD (sapaan "Anda", format nomor tiket, login email) -> dicatat di daftar selisih IPD, bukan diperbaiki diam-diam.
+- Tes integrasi belum pernah dijalankan untuk salinan ini (belum ada staging Nuara) -> dijalankan di L-44.

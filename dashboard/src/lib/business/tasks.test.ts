@@ -1,0 +1,402 @@
+import { describe, it, expect } from 'vitest';
+import {
+  isDueOn,
+  instanceKey,
+  generateInstances,
+  describeRecurrence,
+  isOverdue,
+  reorder,
+  bySortOrder,
+  taskVisibleTo,
+  visibleInstances,
+  groupTaskCounts,
+  visibleTaskCounts,
+} from './tasks';
+import type { TaskTemplate, TaskInstance } from '@/data/types';
+
+const tpl = (over: Partial<TaskTemplate>): TaskTemplate => ({
+  id: over.id ?? 't1',
+  orgId: 'o1',
+  outletId: null,
+  name: over.name ?? 'SOP Harian',
+  items: over.items ?? [
+    { id: `${over.id ?? 't1'}-i1`, title: over.title ?? 'Bersih-bersih', description: '', sortOrder: 0 },
+  ],
+  title: over.title ?? 'Bersih-bersih',
+  description: '',
+  recurrence: over.recurrence ?? 'daily',
+  weekdays: over.weekdays ?? [],
+  monthDays: over.monthDays ?? [],
+  onceDate: over.onceDate ?? null,
+  assigneeType: 'role',
+  assigneeRole: 'karyawan',
+  assigneeEmployeeId: null,
+  assigneeOutletId: null,
+  active: over.active ?? true,
+  startDate: over.startDate ?? '2026-06-01',
+  endDate: over.endDate ?? null,
+  sortOrder: over.sortOrder ?? 0,
+  createdAt: '',
+  updatedAt: '',
+  deletedAt: null,
+});
+
+describe('isDueOn', () => {
+  it('daily is always due within bounds', () => {
+    expect(isDueOn(tpl({ recurrence: 'daily' }), '2026-06-15')).toBe(true);
+  });
+  it('respects start date', () => {
+    expect(isDueOn(tpl({ recurrence: 'daily', startDate: '2026-06-10' }), '2026-06-05')).toBe(false);
+  });
+  it('respects end date', () => {
+    expect(
+      isDueOn(tpl({ recurrence: 'daily', startDate: '2026-06-01', endDate: '2026-06-10' }), '2026-06-15'),
+    ).toBe(false);
+  });
+  it('inactive templates are never due', () => {
+    expect(isDueOn(tpl({ active: false }), '2026-06-15')).toBe(false);
+  });
+
+  it('weekly matches selected weekdays', () => {
+    // 2026-06-01 is a Monday (getDay 1).
+    const weekly = tpl({ recurrence: 'weekly', weekdays: [1] }); // Mondays
+    expect(isDueOn(weekly, '2026-06-01')).toBe(true); // Monday
+    expect(isDueOn(weekly, '2026-06-02')).toBe(false); // Tuesday
+    expect(isDueOn(weekly, '2026-06-08')).toBe(true); // next Monday
+  });
+
+  it('monthly matches selected month days', () => {
+    const monthly = tpl({ recurrence: 'monthly', monthDays: [1, 15] });
+    expect(isDueOn(monthly, '2026-06-01')).toBe(true);
+    expect(isDueOn(monthly, '2026-06-15')).toBe(true);
+    expect(isDueOn(monthly, '2026-06-16')).toBe(false);
+  });
+
+  it('tanggal 29-31 jatuh ke hari terakhir di bulan yang lebih pendek', () => {
+    const monthly = tpl({ recurrence: 'monthly', monthDays: [31], startDate: '2026-01-01' });
+    expect(isDueOn(monthly, '2026-02-28')).toBe(true); // Februari 2026: 28 hari
+    expect(isDueOn(monthly, '2026-02-27')).toBe(false);
+    expect(isDueOn(monthly, '2026-03-31')).toBe(true); // bulan penuh: tanggal aslinya
+    expect(isDueOn(monthly, '2026-03-30')).toBe(false);
+  });
+
+  it('once matches only the exact date', () => {
+    const once = tpl({ recurrence: 'once', onceDate: '2026-06-20' });
+    expect(isDueOn(once, '2026-06-20')).toBe(true);
+    expect(isDueOn(once, '2026-06-21')).toBe(false);
+  });
+});
+
+describe('generateInstances', () => {
+  it('creates one instance per due day in range', () => {
+    const daily = tpl({ recurrence: 'daily' });
+    const created = generateInstances([daily], [], '2026-06-01', '2026-06-03', 'o1');
+    expect(created).toHaveLength(3);
+    expect(created.map((i) => i.dueDate)).toEqual(['2026-06-01', '2026-06-02', '2026-06-03']);
+  });
+
+  it('skips dates that already have an instance', () => {
+    const daily = tpl({ recurrence: 'daily' });
+    const existing: TaskInstance[] = [
+      {
+        id: 'x', orgId: 'o1', outletId: null, templateId: 't1', itemId: 't1-i1', title: 'Bersih-bersih',
+        description: '', dueDate: '2026-06-02', status: 'pending', completedAt: null,
+        completedById: null, completedByName: '', note: '', sortOrder: 0, createdAt: '', updatedAt: '', deletedAt: null,
+      },
+    ];
+    const created = generateInstances([daily], existing, '2026-06-01', '2026-06-03', 'o1');
+    expect(created.map((i) => i.dueDate)).toEqual(['2026-06-01', '2026-06-03']);
+  });
+
+  it('generates weekly instances only on matching days', () => {
+    const weekly = tpl({ recurrence: 'weekly', weekdays: [1] }); // Mondays
+    const created = generateInstances([weekly], [], '2026-06-01', '2026-06-14', 'o1');
+    expect(created.map((i) => i.dueDate)).toEqual(['2026-06-01', '2026-06-08']);
+  });
+
+  it('returns nothing for an inverted range', () => {
+    expect(generateInstances([tpl({})], [], '2026-06-10', '2026-06-01', 'o1')).toHaveLength(0);
+  });
+});
+
+describe('instanceKey', () => {
+  it('combines template id and due date', () => {
+    expect(instanceKey('t1', 'i1', '2026-06-01')).toBe('t1::i1::2026-06-01');
+  });
+  it('maps an ad-hoc (null) template to a stable adhoc key', () => {
+    expect(instanceKey(null, null, '2026-06-01')).toBe('adhoc::-::2026-06-01');
+  });
+  it('an ad-hoc instance does not block template generation on the same date', () => {
+    const daily = tpl({ recurrence: 'daily' });
+    const adhoc: TaskInstance = {
+      id: 'a', orgId: 'o1', outletId: null, templateId: null, itemId: null, title: 'Telepon supplier',
+      description: '', dueDate: '2026-06-02', status: 'pending', completedAt: null,
+      completedById: null, completedByName: '', note: '', sortOrder: 0, createdAt: '', updatedAt: '', deletedAt: null,
+    };
+    const created = generateInstances([daily], [adhoc], '2026-06-01', '2026-06-03', 'o1');
+    // The ad-hoc task keys to 'adhoc::2026-06-02', so the template instance
+    // 't1::2026-06-02' is still generated.
+    expect(created.map((i) => i.dueDate)).toEqual(['2026-06-01', '2026-06-02', '2026-06-03']);
+  });
+});
+
+describe('describeRecurrence', () => {
+  it('describes each pattern in Indonesian', () => {
+    expect(describeRecurrence(tpl({ recurrence: 'daily' }))).toBe('Setiap hari');
+    expect(describeRecurrence(tpl({ recurrence: 'weekly', weekdays: [1, 5] }))).toContain('Senin');
+    expect(describeRecurrence(tpl({ recurrence: 'monthly', monthDays: [1] }))).toContain('tanggal 1');
+    expect(describeRecurrence(tpl({ recurrence: 'once', onceDate: '2026-06-20' }))).toContain('2026-06-20');
+  });
+});
+
+describe('isOverdue', () => {
+  const inst = (status: 'pending' | 'done', dueDate: string): TaskInstance => ({
+    id: 'i', orgId: 'o1', outletId: null, templateId: 't1', itemId: 't1-i1', title: '', description: '',
+    dueDate, status, completedAt: null, completedById: null, completedByName: '', note: '',
+    sortOrder: 0,
+    createdAt: '', updatedAt: '', deletedAt: null,
+  });
+  it('flags pending past-due instances', () => {
+    expect(isOverdue(inst('pending', '2026-06-01'), '2026-06-05')).toBe(true);
+  });
+  it('does not flag completed instances', () => {
+    expect(isOverdue(inst('done', '2026-06-01'), '2026-06-05')).toBe(false);
+  });
+  it('does not flag today or future', () => {
+    expect(isOverdue(inst('pending', '2026-06-05'), '2026-06-05')).toBe(false);
+  });
+});
+
+// ---- Manual ordering (sortOrder) ----
+const row = (id: string, sortOrder: number, createdAt = '') => ({ id, sortOrder, createdAt });
+
+describe('reorder', () => {
+  it('swaps sortOrder with the neighbour above and returns only changed rows', () => {
+    const items = [row('a', 0), row('b', 1), row('c', 2)];
+    const changed = reorder(items, 1, -1);
+    expect(changed).toHaveLength(2);
+    expect(changed.find((r) => r.id === 'b')!.sortOrder).toBe(0);
+    expect(changed.find((r) => r.id === 'a')!.sortOrder).toBe(1);
+  });
+
+  it('swaps with the neighbour below', () => {
+    const items = [row('a', 0), row('b', 1)];
+    const changed = reorder(items, 0, 1);
+    expect(changed.find((r) => r.id === 'a')!.sortOrder).toBe(1);
+    expect(changed.find((r) => r.id === 'b')!.sortOrder).toBe(0);
+  });
+
+  it('is a no-op past either edge', () => {
+    const items = [row('a', 0), row('b', 1)];
+    expect(reorder(items, 0, -1)).toEqual([]);
+    expect(reorder(items, 1, 1)).toEqual([]);
+    expect(reorder(items, 5, 1)).toEqual([]);
+  });
+
+  it('still reorders when every sortOrder ties (un-backfilled column)', () => {
+    const items = [row('a', 0), row('b', 0), row('c', 0)];
+    const changed = reorder(items, 2, -1);
+    // Falls back to positions so the move is not silently swallowed.
+    expect(changed.find((r) => r.id === 'c')!.sortOrder).toBe(1);
+    expect(changed.find((r) => r.id === 'b')!.sortOrder).toBe(2);
+  });
+
+  it('does not mutate the input', () => {
+    const items = [row('a', 0), row('b', 1)];
+    reorder(items, 0, 1);
+    expect(items[0].sortOrder).toBe(0);
+    expect(items[1].sortOrder).toBe(1);
+  });
+});
+
+describe('bySortOrder', () => {
+  it('sorts ascending by sortOrder', () => {
+    const items = [row('c', 2), row('a', 0), row('b', 1)];
+    expect([...items].sort(bySortOrder).map((r) => r.id)).toEqual(['a', 'b', 'c']);
+  });
+  it('breaks ties by createdAt so equal orders never jitter', () => {
+    const items = [row('y', 0, '2026-06-02'), row('x', 0, '2026-06-01')];
+    expect([...items].sort(bySortOrder).map((r) => r.id)).toEqual(['x', 'y']);
+  });
+});
+
+describe('generateInstances — items (0041)', () => {
+  it('creates ONE instance per item, seeded from the item order', () => {
+    const multi = tpl({
+      id: 't1',
+      items: [
+        { id: 'a', title: 'Sapu lantai', description: '', sortOrder: 0 },
+        { id: 'b', title: 'Cek stok', description: '', sortOrder: 1 },
+      ],
+    });
+    const out = generateInstances([multi], [], '2026-06-15', '2026-06-15', 'o1');
+    expect(out).toHaveLength(2);
+    expect(out.map((i) => i.itemId)).toEqual(['a', 'b']);
+    expect(out.map((i) => i.title)).toEqual(['Sapu lantai', 'Cek stok']);
+    expect(out.map((i) => i.sortOrder)).toEqual([0, 1]);
+  });
+
+  it('skips only the item+date pairs that already exist', () => {
+    const multi = tpl({
+      id: 't1',
+      items: [
+        { id: 'a', title: 'Sapu lantai', description: '', sortOrder: 0 },
+        { id: 'b', title: 'Cek stok', description: '', sortOrder: 1 },
+      ],
+    });
+    const existing: TaskInstance[] = [
+      {
+        id: 'x', orgId: 'o1', outletId: null, templateId: 't1', itemId: 'a', title: 'Sapu lantai',
+        description: '', dueDate: '2026-06-15', status: 'pending', completedAt: null,
+        completedById: null, completedByName: '', note: '', sortOrder: 0, createdAt: '', updatedAt: '', deletedAt: null,
+      },
+    ];
+    const out = generateInstances([multi], existing, '2026-06-15', '2026-06-15', 'o1');
+    // Item "a" already exists → only "b" is created. Pre-0041 the whole
+    // template would have been skipped, losing item b entirely.
+    expect(out).toHaveLength(1);
+    expect(out[0].itemId).toBe('b');
+  });
+
+  it('orders items by sortOrder regardless of array order', () => {
+    const multi = tpl({
+      id: 't1',
+      items: [
+        { id: 'b', title: 'Kedua', description: '', sortOrder: 1 },
+        { id: 'a', title: 'Pertama', description: '', sortOrder: 0 },
+      ],
+    });
+    const out = generateInstances([multi], [], '2026-06-15', '2026-06-15', 'o1');
+    expect(out.map((i) => i.title)).toEqual(['Pertama', 'Kedua']);
+  });
+});
+
+describe('taskVisibleTo', () => {
+  const me = { id: 'e1', role: 'karyawan' as const };
+  const assign = (over: Partial<Parameters<typeof taskVisibleTo>[0]>) => ({
+    assigneeType: 'role' as const,
+    assigneeRole: null,
+    assigneeEmployeeId: null,
+    assigneeOutletId: null,
+    ...over,
+  });
+
+  it('manager melihat semua, dan tugas tanpa template milik bersama', () => {
+    expect(taskVisibleTo(assign({ assigneeType: 'employee', assigneeEmployeeId: 'e9' }), me, [], true)).toBe(true);
+    expect(taskVisibleTo(undefined, me, [], false)).toBe(true);
+  });
+
+  it('per karyawan: hanya yang ditunjuk', () => {
+    expect(taskVisibleTo(assign({ assigneeType: 'employee', assigneeEmployeeId: 'e1' }), me, [], false)).toBe(true);
+    expect(taskVisibleTo(assign({ assigneeType: 'employee', assigneeEmployeeId: 'e9' }), me, [], false)).toBe(false);
+  });
+
+  it('per peran: cocok dengan peran sendiri', () => {
+    expect(taskVisibleTo(assign({ assigneeRole: 'karyawan' }), me, [], false)).toBe(true);
+    expect(taskVisibleTo(assign({ assigneeRole: 'admin' }), me, [], false)).toBe(false);
+  });
+
+  it('per outlet: hanya cabang yang boleh diakses; tanpa batasan tetap terlihat', () => {
+    const o = assign({ assigneeType: 'outlet' as const, assigneeOutletId: 'o2' });
+    expect(taskVisibleTo(o, me, ['o1'], false)).toBe(false);
+    expect(taskVisibleTo(o, me, ['o1', 'o2'], false)).toBe(true);
+    expect(taskVisibleTo(o, me, [], false)).toBe(true);
+  });
+
+  // Halaman Tugas dan lampu rel navigasi harus menyaring dari fungsi yang sama;
+  // kalau tidak, karyawan melihat badge berisi tugas yang tak pernah ia temukan.
+  it('visibleInstances menyaring daftar dengan aturan yang sama', () => {
+    const templates = new Map([
+      ['mine', assign({ assigneeType: 'employee' as const, assigneeEmployeeId: 'e1' })],
+      ['theirs', assign({ assigneeType: 'employee' as const, assigneeEmployeeId: 'e9' })],
+    ]);
+    const rows = [
+      { templateId: 'mine' },
+      { templateId: 'theirs' },
+      { templateId: null },
+    ];
+    expect(visibleInstances(rows, templates, me, [], false)).toEqual([
+      { templateId: 'mine' },
+      { templateId: null },
+    ]);
+    expect(visibleInstances(rows, templates, me, [], true)).toHaveLength(3);
+  });
+});
+
+/**
+ * 0083 memindahkan hitungan tugas rel nav ke server, DIKELOMPOKKAN PER TEMPLATE,
+ * lalu klien menerapkan `taskVisibleTo` per kelompok. Itu hanya sah bila hasilnya
+ * SETARA PERSIS dengan cara lama: saring per baris dengan `visibleInstances`,
+ * lalu hitung. Kalau tidak, karyawan melihat badge yang berbeda dari halaman
+ * Tugas — persis kegagalan yang diperingatkan komentar `visibleInstances`.
+ */
+describe('groupTaskCounts + visibleTaskCounts ≡ visibleInstances lalu hitung (0083)', () => {
+  const today = '2026-09-23';
+  const templates = [
+    { ...tpl({ id: 'role-k' }), assigneeType: 'role' as const, assigneeRole: 'karyawan' as const },
+    { ...tpl({ id: 'role-a' }), assigneeType: 'role' as const, assigneeRole: 'admin' as const },
+    { ...tpl({ id: 'emp-e1' }), assigneeType: 'employee' as const, assigneeEmployeeId: 'e1' },
+    { ...tpl({ id: 'emp-e9' }), assigneeType: 'employee' as const, assigneeEmployeeId: 'e9' },
+    { ...tpl({ id: 'out-o1' }), assigneeType: 'outlet' as const, assigneeOutletId: 'o1' },
+    { ...tpl({ id: 'out-o2' }), assigneeType: 'outlet' as const, assigneeOutletId: 'o2' },
+    { ...tpl({ id: 'out-any' }), assigneeType: 'outlet' as const, assigneeOutletId: null },
+  ];
+  const templateById = new Map(templates.map((t) => [t.id, t]));
+
+  // Setiap template, plus tugas tanpa template dan template yang sudah dihapus,
+  // dikalikan campuran status dan tanggal — termasuk yang TIDAK boleh terhitung.
+  const templateIds: (string | null)[] = [...templates.map((t) => t.id), null, 'terhapus'];
+  const cases: [TaskInstance['status'], string][] = [
+    ['pending', '2026-09-01'], ['pending', '2026-09-22'], ['pending', today],
+    ['pending', today], ['pending', '2026-09-30'], ['done', '2026-09-10'], ['done', today],
+  ];
+  let n = 0;
+  const instances: TaskInstance[] = templateIds.flatMap((templateId) =>
+    cases.map(([status, dueDate]) => ({
+      id: `i${n++}`, orgId: 'o1', outletId: null, templateId, itemId: null, title: '',
+      description: '', dueDate, status, completedAt: null, completedById: null,
+      completedByName: '', note: '', sortOrder: 0, createdAt: '', updatedAt: '', deletedAt: null,
+    })),
+  );
+
+  const users = [
+    { label: 'karyawan e1, cabang o1', me: { id: 'e1', role: 'karyawan' as const }, outlets: ['o1'], seesAll: false },
+    { label: 'karyawan e1, tanpa batasan cabang', me: { id: 'e1', role: 'karyawan' as const }, outlets: [], seesAll: false },
+    { label: 'karyawan e9, cabang o2', me: { id: 'e9', role: 'karyawan' as const }, outlets: ['o2'], seesAll: false },
+    { label: 'admin, tidak melihat semua', me: { id: 'a1', role: 'admin' as const }, outlets: ['o1', 'o2'], seesAll: false },
+    { label: 'manager, melihat semua', me: { id: 'm1', role: 'owner' as const }, outlets: [], seesAll: true },
+  ];
+
+  for (const u of users) {
+    it(u.label, () => {
+      const lama = visibleInstances(instances, templateById, u.me, u.outlets, u.seesAll);
+      const expected = {
+        overdue: lama.filter((t) => isOverdue(t, today)).length,
+        dueToday: lama.filter((t) => t.status === 'pending' && t.dueDate === today).length,
+      };
+      const baru = visibleTaskCounts(groupTaskCounts(instances, today), templateById, u.me, u.outlets, u.seesAll);
+      expect(baru).toEqual(expected);
+    });
+  }
+
+  it('matriksnya benar-benar menguji sesuatu (bukan nol lawan nol)', () => {
+    const semua = visibleTaskCounts(groupTaskCounts(instances, today), templateById, users[4].me, [], true);
+    // 9 template-id × (2 lewat tenggat + 2 hari ini) pada data di atas.
+    expect(semua).toEqual({ overdue: 18, dueToday: 18 });
+    // Dan pengguna berbeda memang melihat angka berbeda.
+    const e9 = visibleTaskCounts(groupTaskCounts(instances, today), templateById, users[2].me, ['o2'], false);
+    expect(e9.overdue).toBeLessThan(semua.overdue);
+  });
+
+  it('mengabaikan yang selesai dan yang jatuh tempo di masa depan', () => {
+    const g = groupTaskCounts(
+      [
+        { templateId: 't', status: 'done', dueDate: '2026-09-01' },
+        { templateId: 't', status: 'pending', dueDate: '2026-12-01' },
+      ],
+      today,
+    );
+    expect(g).toEqual([]);
+  });
+});
+

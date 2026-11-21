@@ -1,0 +1,983 @@
+/* ============================================================
+   Service Detail — "Repair Ticket / Job Traveler"
+   Uses GLOBAL tokens so it inherits the app identity.
+   ============================================================ */
+
+.page {
+  padding-bottom: 96px;
+  animation: fm-fade-in var(--dur-normal) var(--ease-out);
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-4);
+  transition: color var(--dur-fast) var(--ease-out);
+}
+.back:hover {
+  color: var(--brand-text);
+}
+
+.sheet {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* ---------- Ticket Head ---------- */
+.head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-5);
+  padding: var(--space-6);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  position: relative;
+  overflow: hidden;
+}
+.head::before {
+  content: '';
+  position: absolute;
+  inset: 10px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  pointer-events: none;
+  opacity: 0.5;
+}
+.headMain {
+  position: relative;
+  z-index: 1;
+}
+.codeRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+.code {
+  font-family: var(--font-mono);
+  font-size: var(--text-xl);
+  font-weight: var(--fw-bold);
+  color: var(--text-primary);
+  letter-spacing: 0.02em;
+}
+.codeMeta {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.22em;
+  color: var(--text-muted);
+  border: 1px solid var(--border-strong);
+  padding: 3px 8px;
+  border-radius: var(--radius-xs);
+}
+.device {
+  font-size: var(--text-2xl);
+  font-weight: var(--fw-semibold);
+  letter-spacing: -0.01em;
+  margin-bottom: var(--space-2);
+}
+.deviceMeta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+.deviceMeta strong {
+  color: var(--text-primary);
+}
+.cat {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent-text);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  padding: 2px 8px;
+  border-radius: var(--radius-xs);
+}
+.dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--text-muted);
+}
+
+/* pickup status indicators */
+.pickedUp,
+.notPicked {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: var(--fw-semibold);
+}
+.pickedUp {
+  color: var(--success-text);
+}
+/* Unit masih di meja kerja: redup. Cyan hanya bila sudah siap diambil
+   (Selesai/Lunas/Batal belum diambil), sama dengan nada status Selesai. */
+.notPicked {
+  color: var(--text-muted);
+}
+.notPicked[data-ready] {
+  color: var(--accent-text);
+}
+
+/* Status stamp */
+/* Readout penerimaan: nomor seri & kunci layar (mono, tersamar). */
+.serial,
+.lockValue {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  overflow-wrap: anywhere;
+}
+.lockRow {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+.lockBtn {
+  min-height: 32px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  font-size: var(--text-xs);
+  font-weight: var(--fw-semibold);
+  color: var(--text-secondary);
+}
+.lockBtn:hover {
+  border-color: var(--brand);
+  color: var(--brand-text);
+}
+.lockGone {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+.lockError {
+  flex-basis: 100%;
+  text-align: right;
+  font-size: var(--text-xs);
+  color: var(--danger-text);
+}
+
+/* Biaya final belum mencakup part yang baru ditambah (LED amber, satu baris).
+   Pelat berbingkai 1px di keempat sisi; sinyalnya LED + teks, BUKAN tepi kiri
+   yang ditebalkan: itu spine, dan spine membawa status tiket (DESIGN.md "The
+   Spine, Not the Fill Rule"), sedangkan pelat ini bukan kartu atau baris. */
+.costNotice {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  margin-top: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--warning);
+  border-radius: var(--radius-sm);
+  background: var(--warning-soft);
+}
+.costNotice p {
+  flex: 1 1 220px;
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--warning-text);
+}
+.costNoticeLed {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  margin-top: 6px;
+  border-radius: var(--radius-full);
+  background: var(--warning);
+  box-shadow: 0 0 7px var(--warning);
+}
+
+/* Stempel memakai nada status yang sama dengan badge (STATUS_TONE). Dulu
+   selalu amber, sehingga stempel DITERIMA berwarna sama dengan tombol utama. */
+.stamp {
+  --st: var(--text-muted);
+  --st-soft: var(--bg-surface-2);
+  --st-text: var(--text-primary);
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+  transform: rotate(-4deg);
+}
+.stamp[data-tone='info'] { --st: var(--info); --st-soft: var(--info-soft); --st-text: var(--info-text); }
+.stamp[data-tone='warning'] { --st: var(--warning); --st-soft: var(--warning-soft); --st-text: var(--warning-text); }
+.stamp[data-tone='accent'] { --st: var(--accent); --st-soft: var(--accent-soft); --st-text: var(--accent-text); }
+.stamp[data-tone='success'] { --st: var(--success); --st-soft: var(--success-soft); --st-text: var(--success-text); }
+.stamp[data-tone='danger'] { --st: var(--danger); --st-soft: var(--danger-soft); --st-text: var(--danger-text); }
+.stampInner {
+  display: inline-block;
+  font-family: var(--font-display);
+  font-weight: var(--fw-bold);
+  font-size: var(--text-md);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 10px 18px;
+  border-radius: var(--radius-sm);
+  color: var(--st-text);
+  border: 2.5px solid var(--st);
+  background: var(--st-soft);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--st) 30%, transparent);
+}
+
+/* ---------- Traveler Strip ---------- */
+.traveler {
+  display: flex;
+  align-items: flex-start;
+  padding: var(--space-5) var(--space-6);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow-x: auto;
+}
+/* Lebar minimum tahap = min-content labelnya (bawaan flex), bukan 92px tetap:
+   di 1025px tujuh tahap x 92 membuat strip menggulir 27px. */
+.stage {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  text-align: center;
+}
+.stageNode {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border-strong);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: var(--fw-semibold);
+  z-index: 2;
+  transition: all var(--dur-normal) var(--ease-out);
+}
+.connector {
+  position: absolute;
+  top: 17px;
+  left: 50%;
+  width: 100%;
+  height: 2px;
+  background: var(--border-strong);
+  z-index: 1;
+}
+.stageInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.stageLabel {
+  font-size: var(--text-xs);
+  font-weight: var(--fw-semibold);
+  color: var(--text-secondary);
+}
+.stageAt {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+.stageDone .stageNode {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+.stageDone .connector {
+  background: var(--accent);
+}
+.stageDone .stageLabel {
+  color: var(--text-primary);
+}
+/* Tahap yang dilompati (Selesai langsung dari Diterima, 0089): tidak dicentang,
+   simpul putus-putus — jalur yang benar-benar ditempuh tiket ini. */
+.stageSkipped .stageNode {
+  border-style: dashed;
+  background: transparent;
+  color: var(--text-muted);
+}
+.stageSkipped .stageAt {
+  font-style: italic;
+}
+.stageCurrent .stageNode {
+  background: var(--brand-fill);
+  border-color: var(--brand-fill-edge);
+  color: var(--on-brand);
+  box-shadow: 0 0 0 4px var(--brand-soft);
+}
+.stageCurrent .stageLabel {
+  color: var(--brand-text);
+  font-weight: var(--fw-bold);
+}
+
+/* ---------- Columns + Panels ---------- */
+.cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+.panel {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-5);
+}
+.panelLabel {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.18em;
+  color: var(--text-muted);
+  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border);
+}
+
+/* Customer stub */
+.stub {
+  position: relative;
+}
+.stub::after {
+  content: '';
+  position: absolute;
+  top: 12px;
+  bottom: 12px;
+  right: -1px;
+  border-right: 2px dashed var(--border-strong);
+}
+.stubName {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: var(--fw-semibold);
+  margin-bottom: 2px;
+}
+.stubPhone {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-4);
+}
+.stubActions {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+  flex-wrap: wrap;
+}
+.waBtn,
+.ghostBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: var(--text-sm);
+  font-weight: var(--fw-semibold);
+  padding: 8px 13px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--dur-fast) var(--ease-out);
+}
+/* Dulu hijau WhatsApp padat: bidang berwarna terbesar di halaman, bersaing
+   dengan Ubah Status (critique). Kini sekunder dengan ikon hijau, sama dengan
+   tombol WhatsApp di kartu Pelanggan. */
+.waBtn {
+  background: transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--border-strong);
+}
+.waBtn svg {
+  color: var(--success-text);
+}
+.waBtn:hover {
+  border-color: var(--success);
+  background: var(--success-soft);
+}
+.ghostBtn {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-strong);
+}
+.ghostBtn:hover {
+  border-color: var(--border-brand);
+  color: var(--text-primary);
+}
+.qrRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+/* QR selalu gelap di atas kertas putih — pemindai tak andal membaca QR terbalik
+   di tema gelap. */
+.qr {
+  flex-shrink: 0;
+  width: 72px;
+  height: 72px;
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.qr svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.qrText {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  max-width: 160px;
+  line-height: 1.4;
+}
+
+.complaint {
+  font-size: var(--text-base);
+  line-height: 1.6;
+  color: var(--text-primary);
+  margin-bottom: var(--space-4);
+}
+.specList,
+.costList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.specList > div,
+.costList > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+}
+.specList dt,
+.costList dt {
+  color: var(--text-secondary);
+}
+.specList dd,
+.costList dd {
+  color: var(--text-primary);
+  font-weight: var(--fw-medium);
+  text-align: right;
+}
+
+/* ---------- Sparepart BOM ---------- */
+.bomHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+.bomActions {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+.bomAddBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--text-xs);
+  font-weight: var(--fw-semibold);
+  padding: 5px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+.bomAddBtn:hover {
+  border-color: var(--border-brand);
+  color: var(--text-primary);
+}
+.costActions {
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px dotted var(--border-subtle);
+}
+.costActionBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  justify-content: center;
+  font-size: var(--text-xs);
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.02em;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px dashed var(--border-strong);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+.costActionBtn:hover {
+  border-color: var(--border-brand);
+  color: var(--text-primary);
+}
+.emptyParts {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  padding: var(--space-2) 0;
+}
+.bom {
+  display: flex;
+  flex-direction: column;
+  container: bom / inline-size;
+}
+.bomActions {
+  display: inline-flex;
+  gap: 2px;
+  justify-content: flex-end;
+}
+.bomRow {
+  display: grid;
+  grid-template-columns: 28px 1fr auto auto auto auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 11px 0;
+  border-bottom: 1px solid var(--border);
+}
+.bomRow:last-child {
+  border-bottom: none;
+}
+.bomIcon {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-xs);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border);
+  color: var(--accent-text);
+  font-size: var(--text-sm);
+}
+.bomName {
+  font-size: var(--text-sm);
+  font-weight: var(--fw-medium);
+}
+/* Garansi part di bawah namanya; tampil setelah tiket Selesai. */
+.bomWarranty {
+  display: block;
+  margin-top: 2px;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: var(--fw-normal);
+  color: var(--text-muted);
+}
+.bomQty {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+.bomCost {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  min-width: 96px;
+  text-align: right;
+}
+.bomState {
+  font-size: var(--text-xs);
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 3px 9px;
+  border-radius: var(--radius-xs);
+}
+.stateOk {
+  color: var(--success-text);
+  background: var(--success-soft);
+}
+.stateWait {
+  color: var(--warning-text);
+  background: var(--warning-soft);
+}
+.stateModal {
+  color: var(--accent-text);
+  background: var(--accent-soft);
+}
+.bomDel {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-xs);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+}
+.bomDel:hover {
+  color: var(--danger-text);
+  border-color: color-mix(in srgb, var(--danger) 40%, transparent);
+}
+.bomEdit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-xs);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+}
+.bomEdit:hover {
+  color: var(--brand-text);
+  border-color: var(--border-brand);
+}
+
+/* Inline "modal dadakan" entry form */
+.modalForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  margin-bottom: var(--space-4);
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.modalFormRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+.modalHint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+.modalFormBtns {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+@media (max-width: 520px) {
+  .modalFormRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---------- Cost totals ---------- */
+.costList dd {
+  font-family: var(--font-mono);
+}
+.dp {
+  color: var(--warning) !important;
+}
+.costTotal {
+  padding-top: var(--space-3) !important;
+  margin-top: var(--space-1);
+  border-top: 1px dashed var(--border-strong);
+}
+.costTotal dt {
+  color: var(--text-primary) !important;
+  font-weight: var(--fw-bold);
+}
+.costTotal dd {
+  font-size: var(--text-lg) !important;
+  font-weight: var(--fw-bold) !important;
+  color: var(--text-primary) !important;
+}
+.costProfit dd {
+  color: var(--success-text) !important;
+}
+.costProfit[data-loss='true'] dd {
+  color: var(--danger-text) !important;
+}
+
+/* ---------- Log ---------- */
+.log {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  position: relative;
+  padding-left: 18px;
+}
+.log::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 4px;
+  bottom: 4px;
+  width: 2px;
+  background: var(--border-strong);
+}
+.logItem {
+  position: relative;
+  display: flex;
+  gap: var(--space-3);
+}
+.logDot {
+  position: absolute;
+  left: -18px;
+  top: 4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--bg-surface);
+}
+.logInternal .logDot {
+  background: var(--text-muted);
+}
+.logHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.logHead strong {
+  font-size: var(--text-sm);
+  font-weight: var(--fw-semibold);
+}
+.internalTag {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  border: 1px solid var(--border-strong);
+  padding: 1px 6px;
+  border-radius: var(--radius-xs);
+}
+.logAt {
+  display: block;
+  font-family: var(--font-mono);
+  /* 12px: cap waktu adalah informasi, bukan hiasan (12px Floor Rule). */
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  margin: 2px 0 4px;
+}
+.logNote {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+/* ---------- Sticky action bar ---------- */
+.actionBar {
+  position: fixed;
+  bottom: 0;
+  left: var(--sidebar-width);
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-8);
+  background: var(--surface-glass-strong);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-top: 1px solid var(--border-strong);
+  z-index: var(--z-sticky);
+  transition: left var(--dur-normal) var(--ease-out);
+}
+:global(.collapsed) .actionBar {
+  left: var(--sidebar-collapsed);
+}
+.actionInfo {
+  display: flex;
+  flex-direction: column;
+}
+.actionLabel {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.actionValue {
+  font-family: var(--font-mono);
+  font-size: var(--text-lg);
+  font-weight: var(--fw-bold);
+  color: var(--text-primary);
+}
+.actionBtns {
+  display: flex;
+  gap: var(--space-3);
+}
+.secondaryBtn,
+.primaryBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-base);
+  font-weight: var(--fw-semibold);
+  padding: 11px 18px;
+  min-height: var(--control-h);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--dur-fast) var(--ease-out);
+}
+.secondaryBtn {
+  background: transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--border-strong);
+}
+.secondaryBtn:hover {
+  border-color: var(--border-brand);
+}
+.pickedActive {
+  color: var(--success-text);
+  border-color: color-mix(in srgb, var(--success) 45%, transparent);
+  background: var(--success-soft);
+}
+.primaryBtn {
+  background: var(--gradient-brand);
+  color: var(--on-brand);
+  border: none;
+  box-shadow: var(--shadow-brand);
+}
+.primaryBtn:hover {
+  transform: translateY(-1px);
+}
+
+/* ---------- Not found ---------- */
+.notFound {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-16) var(--space-6);
+  text-align: center;
+}
+.nfCode {
+  font-family: var(--font-mono);
+  font-size: var(--text-3xl);
+  font-weight: var(--fw-bold);
+  color: var(--text-primary);
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 1024px) {
+  .actionBar {
+    left: 0;
+  }
+}
+@media (max-width: 760px) {
+  .cols {
+    grid-template-columns: 1fr;
+  }
+  .head {
+    flex-direction: column;
+  }
+  .stamp {
+    align-self: flex-start;
+  }
+  .traveler {
+    flex-direction: column;
+    gap: var(--space-1);
+    align-items: stretch;
+  }
+  .stage {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-3);
+    min-width: 0;
+    text-align: left;
+    padding: 6px 0;
+  }
+  .connector {
+    display: none;
+  }
+  .stageInfo {
+    flex-direction: row;
+    align-items: baseline;
+    gap: var(--space-2);
+  }
+  .actionBar {
+    padding: var(--space-3) var(--space-4);
+  }
+  .secondaryBtn {
+    display: none;
+  }
+  .stub::after {
+    display: none;
+  }
+}
+
+/* ---------- Ponsel: aksi sekunder lewat "Lainnya" ----------
+   Di ≤760px aksi sekunder disembunyikan demi ruang bilah; tombol ini membuka
+   panel bawah berisi aksi yang sama. Di layar lebar ia tidak perlu. */
+.secondaryBtn.moreBtn {
+  display: none;
+}
+@media (max-width: 760px) {
+  .secondaryBtn.moreBtn {
+    display: inline-flex;
+  }
+}
+.sheetList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.sheetAction {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: var(--control-h);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font: inherit;
+  font-weight: var(--fw-semibold);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+.sheetAction:hover {
+  border-color: var(--border-brand);
+}
+.sheetAction > svg {
+  flex-shrink: 0;
+  color: var(--accent-text);
+}
+
+/* ---------- BOM sempit: dua baris ----------
+   Enam trek grid butuh ±470px (ikon 28 + qty + biaya + status + dua tombol 40
+   + celah 12, terukur); di bawah itu badge status terdorong keluar tepi (8px
+   di ponsel 375). Nama mengambil baris pertama, sisanya baris kedua. */
+@container bom (max-width: 470px) {
+  .bomRow {
+    display: flex;
+    flex-wrap: wrap;
+    column-gap: var(--space-3);
+    row-gap: 6px;
+  }
+  .bomName {
+    flex: 1 1 calc(100% - 40px);
+    min-width: 0;
+  }
+  .bomQty {
+    margin-left: 40px;
+  }
+  .bomState {
+    margin-right: auto;
+  }
+}

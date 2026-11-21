@@ -1,0 +1,66 @@
+---
+title: Domain & Scope
+aliases: [Domain, Scope, Konteks Bisnis, About FixMaster]
+tags: [fixmaster, domain, scope, important]
+created: 2026-06-04
+---
+
+# 🎯 Domain & Scope
+
+Bagian dari [[00 - FixMaster MOC]].
+
+> [!important] Aturan anti salah-konteks
+> **FixMaster adalah aplikasi manajemen usaha REPARASI GADGET & ELEKTRONIK.**
+> Bukan bengkel kendaraan, bukan otomotif, bukan servis motor/mobil.
+> Kata "servis" di seluruh produk = **perbaikan perangkat elektronik**.
+
+## Apa itu FixMaster
+
+Aplikasi web untuk mengelola **toko/usaha reparasi gadget & elektronik** — misalnya konter HP, jasa servis laptop, atau toko reparasi elektronik konsumen. Membantu pemilik mengelola tiket servis, kasir, stok sparepart, pelanggan, supplier, keuangan, tugas internal, dan absensi karyawan.
+
+## Yang DIREPARASI (contoh)
+- Smartphone / HP, tablet
+- Laptop / PC / komponen
+- Perangkat elektronik konsumen (sesuai konteks toko)
+
+## Yang BUKAN domain ini
+- ❌ Bengkel kendaraan (motor, mobil, otomotif)
+- ❌ Servis mesin berat / industri
+- ❌ Reparasi properti/bangunan
+
+> [!warning] Kenapa catatan ini ada
+> Kata Indonesia "bengkel" sering diartikan sebagai bengkel **kendaraan**. Pada sesi sebelumnya konteks pernah keliru menjadi bengkel otomotif. Catatan ini memaku domain agar tidak terulang. Lihat juga [[Decisions & Bug Fixes]].
+
+## Istilah baku (glossary)
+
+| Istilah | Arti di FixMaster |
+|---|---|
+| Servis / Service | Tiket perbaikan satu perangkat elektronik |
+| Unit | Satu perangkat yang masuk untuk diperbaiki. Dalam harga (sejak 14 Nov 2026): satu tiket servis yang dibuat = satu unit = Rp 1.000 |
+| Saldo unit | Unit yang sudah dibayar di muka dan belum terpakai (`organizations.unit_balance`). Toko baru mendapat 50 unit gratis; boleh minus sampai −20, lalu tiket baru tertahan. Lihat [[Data Layer]] |
+| Sparepart | Komponen pengganti elektronik (LCD, baterai, IC, dst) |
+| Teknisi | Orang yang mengerjakan reparasi |
+| POS / Kasir | Penjualan langsung (sparepart/aksesori) |
+| Outlet | Cabang/lokasi toko |
+| Pembelian Luar | Part/jasa yang dibeli di luar stok untuk satu tiket, dibayar dari wallet (dulu "Modal Dadakan"; nama kode tetap `modalDadakan*`) |
+| Arsip (tiket) | Tiket Lunas/Batal yang unitnya sudah diambil (`isClosedOut`). Tampil di posisi Semua pada sakelar lingkup Daftar Servis |
+| Belum tuntas | Semua tiket kecuali arsip: masih dikerjakan, ditagih, atau menunggu diambil. Posisi tengah sakelar lingkup; Tertahan adalah bagian darinya |
+| Anda | Sapaan baku di semua teks layar dan pesan; jangan "kamu/-mu" |
+| S&K | Syarat & Ketentuan servis untuk pelanggan: template bawaan enam pasal, disalin ke tiket saat unit diterima |
+| Ubah / Diperbarui | Tombol & judul aksi = "Ubah" (bukan "Edit"); entri riwayat atas perubahan itu = "Diperbarui" |
+
+Teks layar memakai istilah aplikasi, bukan campuran Inggris (tautan lacak, Ekspor, Riwayat,
+bawaan, Kasir). Istilah akuntansi baku tetap; lihat [[Conventions]] dan
+[[Decisions & Bug Fixes#Audit kata UI: nada & panjang (7 Nov 2026)]].
+
+## Pengguna & peran
+- **Owner** (pemilik) — akses penuh
+- **Admin** — operasional
+- **Karyawan** (staff/teknisi) — akses terbatas (lihat aturan status di logika servis)
+
+## Terkait
+- [[Signature Pages]] — bagaimana tiap fungsi bisnis ditampilkan
+- [[Data Layer]] — entitas (services, inventory, dst)
+- [[Conventions]] — istilah & gaya penulisan
+
+#domain #scope #important

@@ -1,0 +1,433 @@
+/* ============================================================
+   FixMaster — Design Tokens
+   Sumber kebenaran tunggal untuk warna, spasi, tipografi, dll.
+   Identitas: "Precision Electronics Bench" — graphite steel +
+   safety amber + diagnostic cyan. Tema: dark (default) + light.
+
+   Material palet diambil dari VOLT Probe (logo & maskot, 6 Nov 2026):
+   cangkang grafit `--volt-shell` (OKLCH rona 257deg, kroma 0.013), logam
+   `--volt-metal`, grip amber `--brand-500` -> `--brand-700`, LCD cyan
+   `--accent-500`. Netral kedua tema memakai rona 257deg yang sama dengan
+   kroma serendah cangkang/logamnya, sehingga maskot duduk di bahannya sendiri.
+   ============================================================ */
+
+:root {
+  /* ---------- Brand (Safety Amber / Tungsten) ---------- */
+  --brand-50: #fff8ec;
+  --brand-100: #feefce;
+  --brand-200: #fcdf9d;
+  --brand-300: #f9c95f;
+  --brand-400: #f7b733;
+  --brand-500: #f5a623; /* primary — amber grip logo */
+  --brand-600: #e8920c;
+  --brand-700: #c0750a; /* amber tua logo (kerah probe); tepi & isian bentuk di tema terang */
+  --brand-800: #985c0f;
+  --brand-900: #7c4d12;
+
+  /* ---------- Accent (Diagnostic Cyan) ---------- */
+  --accent-400: #68e3e0;
+  --accent-500: #3dd9c4; /* waveform LCD logo */
+  --accent-600: #17a396;
+  /* Teks cyan tema terang, rona logo (184deg). Dulu teks itu #055f72 (218deg,
+     biru minyak) karena cyan yang lebih dekat logo bertabrakan dengan teks hijau;
+     kini dipisah lewat terang: teks hijau tema terang dibuat lebih pekat. */
+  --accent-700: #006e63;
+
+  /* ---------- Semantic ----------
+     Setiap rona dijaga berjarak dari rona di sebelahnya, karena `STATUS_TONE`
+     (lib/business/services.ts) memetakan 8 status servis ke hanya 5 rona —
+     jadi rona yang berdekatan langsung menjadi status yang tak terbedakan. */
+  /* Kalibrasi nyaman (24 Sep 2026): terang OKLCH (L) & rona tiap sinyal
+     DIPERTAHANKAN — kontras nyaris tak bergeser — tapi kejenuhan (C) diturunkan
+     ±10–15%. Merah/oranye/biru lama (C 0.19–0.22) adalah warna paling menyala di
+     layar dan membuat panel status terasa berteriak. */
+  /* Hijau sinyal — terverifikasi, lunas, selesai. */
+  /* Rona digeser 162→148deg: setelah kejenuhan teks sukses & aksen sama-sama
+     turun, keduanya hanya berjarak dE 0.088 (gerbang 0.1). */
+  --green-400: #77d787;
+  --green-500: #31b882;
+  --green-600: #077a52;
+  /* Oranye peringatan. SENGAJA digeser jauh dari emas brand: sebelumnya
+     #f59e0b vs brand #f5a623 praktis warna yang sama, sehingga "Konfirmasi
+     Biaya" dan "Tunggu Sparepart" tak bisa dibedakan dari "Diterima". */
+  --amber-400: #f88f4e;
+  --amber-500: #ef7634;
+  --amber-600: #c14d00;
+  /* Merah alarm. */
+  --red-400: #f8869a;
+  --red-500: #db4059;
+  --red-600: #b32744;
+  --red-700: #9a0b34;
+  /* Biru sinyal condong periwinkle, dijauhkan dari cyan aksen. */
+  --blue-400: #89abf9;
+  --blue-500: #527fe9;
+  --blue-600: #325eca;
+  --on-solid: #ffffff;
+  --paper: #ffffff;
+  --readout-base: #090b0e;
+  --readout-surface: #12161d;
+  --readout-text: #f1f4f8;
+  --readout-muted: #8b97a6;
+  --readout-muted-2: #7a8494;
+  --readout-soft: #cfd6e0;
+  /* VOLT Probe keeps the same physical materials in both app themes. */
+  --volt-shell: #15191f;
+  --volt-shell-high: #303741;
+  --volt-edge: #606a76;
+  --volt-display: #070a0d;
+  --volt-metal: #aab2bd;
+  --whatsapp: #25d366;
+  --whatsapp-ink: #06351a;
+
+  /* ---------- Radius (engineered, sharper) ---------- */
+  --radius-xs: 5px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 999px;
+
+  /* ---------- Spacing scale (4px base) ---------- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* ---------- Typography ---------- */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-display: 'Space Grotesk', 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
+
+  /* 12px is the hard floor for operational readouts at the default 16px root. */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 0.9375rem;
+  --text-md: 1rem;
+  --text-lg: 1.15rem;
+  --text-xl: 1.4rem;
+  --text-2xl: 1.75rem;
+  --text-3xl: 2.2rem;
+
+  --fw-normal: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+  --fw-extra: 800;
+
+  /* ---------- Density (hybrid) ---------- */
+  --control-h: 44px;
+  --row-h-compact: 44px;
+  --row-h: 54px;
+  /* Bantalan vertikal yang dulu px mati di komponen. Jadi token supaya mode
+     Padat bisa merapatkannya; nilai Lapang = nilai lama, tampilan tak berubah. */
+  --card-head-py: 18px;
+  --row-py: 12px;
+  --nav-item-h: 48px;
+
+  /* ---------- Motion (mechanical, crisp) ---------- */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-emphasized: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast: 0.13s;
+  --dur-normal: 0.22s;
+  --dur-slow: 0.36s;
+  /* Denyut LED status menarik perhatian SEKALI lalu menyala tetap. Dua siklus
+     (paling lama 4 detik) menjaga gerak otomatis di bawah 5 detik (WCAG 2.2.2),
+     jadi tidak butuh tombol jeda. Indikator proses (spinner, "menyambung")
+     tetap berulang karena berhenti sendiri saat prosesnya selesai. */
+  --pulse-cycles: 2;
+
+  /* ---------- Layout ---------- */
+  --sidebar-width: 278px;
+  --sidebar-collapsed: 78px;
+  --topbar-height: 76px;
+  --mobile-nav-height: 68px;
+  --content-max: 1380px;
+  /* Jarak bingkai app dari tepi atas viewport. Shell yang menyisipkan chrome
+     sendiri di atas app (mis. /demo) menimpanya supaya elemen `fixed` seperti
+     sidebar berhenti menutupi chrome itu. */
+  --app-inset-top: 14px;
+  /* Tinggi viewport yang sudah mengompensasi `zoom` di :root (lihat
+     stores/zoom.ts). `100dvh` ikut terskala zoom, jadi shell setinggi layar
+     akan menyisakan ruang kosong di zoom <100% dan terpotong di >100%. */
+  --zoom: 1;
+  --app-vh: calc(100dvh / var(--zoom));
+
+  /* ---------- Z-index scale ---------- */
+  --z-base: 1;
+  --z-sticky: 50;
+  --z-sidebar: 100;
+  --z-overlay: 150;
+  --z-modal: 5000;
+  --z-toast: 9000;
+  --z-tooltip: 9500;
+}
+
+/* ============================================================
+   KERAPATAN PADAT — Pengaturan › Sistem › Tampilan (stores/zoom.ts)
+   ============================================================
+   Hanya jarak dan tinggi; ukuran teks TIDAK disentuh, sehingga Padat tidak
+   pernah menembus Lantai 12px (beda dengan zoom 80% lama yang menggantikannya).
+   Hanya pointer presisi: di layar sentuh target 44px adalah kontrak, jadi
+   atribut yang tersimpan diabaikan di sana. */
+@media (pointer: fine) {
+  :root[data-density='padat'] {
+    --space-3: 10px;
+    --space-4: 12px;
+    --space-5: 16px;
+    --space-6: 18px;
+    --space-8: 24px;
+    --space-10: 32px;
+    --control-h: 36px;
+    --row-h-compact: 36px;
+    --row-h: 44px;
+    --card-head-py: 12px;
+    --row-py: 8px;
+    --nav-item-h: 40px;
+    --sidebar-width: 248px;
+    --topbar-height: 60px;
+  }
+}
+
+/* ============================================================
+   DARK THEME (default) — "Graphite Workshop"
+   ============================================================ */
+:root,
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  /* Cangkang VOLT, bukan navy. Tangga terang (L) hasil kalibrasi nyaman
+     24 Sep 2026 dipertahankan: 0.168 / 0.209 / 0.252 / 0.288 / 0.324, sehingga
+     tiap permukaan tetap terbaca sebagai benda. Yang berubah (6 Nov 2026) rona
+     264 -> 257deg dan kroma 0.018–0.029 -> 0.010–0.018: dulu latar dua kali
+     lebih biru dari cangkang maskot, jadi logo tampak ditempel di atas bahan
+     lain. Kini --bg-app praktis sama dengan --volt-shell. */
+  --bg-base: #0c0f13;
+  --bg-app: #15181e;
+  --bg-surface: #1e2229;
+  --bg-surface-2: #262b33;
+  /* Benda di atas kartu (kartu tiket ponsel, sel Total saldo) dan tuts yang
+     bisa ditekan (tombol ikon topbar, kanal status). Di gelap keduanya sama
+     dengan yang dipakai selama ini; yang berubah tema terang, di mana
+     --bg-surface-2 terbenam dan membuat benda itu terbaca nonaktif. */
+  --bg-raised: var(--bg-surface-2);
+  --bg-key: var(--rail-control);
+  --bg-elevated: #2e343d;
+  --bg-input: #191d23;
+  --bg-hover: rgba(255, 255, 255, 0.055);
+
+  --surface-glass: rgba(30, 34, 41, 0.8);
+  --surface-glass-strong: rgba(21, 24, 30, 0.93);
+
+  /* Tinta utama dulu 15–17:1 (putih nyaris murni di atas nyaris hitam) — jauh di
+     atas kebutuhan, dan berpendar di sesi panjang. Kini ±12.8:1 di kartu.
+     Sekunder sejalan dengan logam VOLT (--volt-metal), tidak lagi kebiruan. */
+  --text-primary: #e4e6ea;
+  --text-secondary: #b1b8c2;
+  --text-muted: #949ca8;
+  --text-inverse: #14171c;
+  /* Text rendered on top of the amber brand color (always dark). */
+  --on-brand: #1a1205;
+  /* Tinta di atas isian sinyal. Nilainya berbalik antar tema karena isiannya
+     ikut berbalik: di sini success terang (#0fba7f) sehingga butuh tinta gelap
+     (putih cuma 2.5:1), sedangkan di tema terang success justru gelap. */
+  --on-signal: #07160f;
+
+  /* Sedikit lebih tegas dari 0.075/0.145: tepi kartu yang nyaris tak terlihat
+     adalah separuh dari keluhan "gelap tidak jelas". */
+  --border: rgba(255, 255, 255, 0.09);
+  --border-strong: rgba(255, 255, 255, 0.165);
+  --border-brand: rgba(245, 166, 35, 0.45);
+  /* Tepi kolom isian dan kontrol: wajib 3:1 terhadap latar di sekitarnya
+     (WCAG 1.4.11). --border-strong hanya 1.7:1, jadi kolom tampak sebagai
+     teks melayang. Padat, bukan alfa, supaya rasionya tidak bergantung pada
+     lapisan di bawahnya: 3.2:1 di modal (--bg-elevated), 3.6:1 di kartu
+     sekunder, 4.1:1 di kartu. Rona logam VOLT 257deg. */
+  --border-control: #7b8189;
+
+  --brand: var(--brand-500);
+  --brand-hover: var(--brand-400);
+  --brand-text: var(--brand-400);
+  --brand-soft: rgba(245, 166, 35, 0.15);
+  /* Bidang amber yang membawa teks/ikon (--on-brand): selalu amber logo penuh,
+     ditepi amber yang lebih tua seperti grip & kerah VOLT. */
+  --brand-fill: var(--brand-500);
+  --brand-fill-edge: var(--brand-600);
+  --accent: var(--accent-500);
+  --accent-text: var(--accent-400);
+  --accent-soft: rgba(61, 217, 196, 0.17);
+  --success: var(--green-500);
+  --success-text: var(--green-400);
+  --success-soft: rgba(49, 184, 130, 0.18);
+  --warning: var(--amber-500);
+  --warning-text: var(--amber-400);
+  --warning-soft: rgba(239, 118, 52, 0.18);
+  --danger: var(--red-500);
+  --danger-text: var(--red-400);
+  --danger-soft: rgba(219, 64, 89, 0.18);
+  --info: var(--blue-500);
+  --info-text: #94b3fa; /* blue-400 hanya 4,42:1 di atas badge di jendela (bg-elevated), 27 Sep 2026 */
+  --info-soft: rgba(82, 127, 233, 0.18);
+
+  /* Garis grid PCB tipis dalam warna logam VOLT. Dulu biru cetak-biru, yang
+     ikut menarik layar ke navy. */
+  --grid-line: rgba(170, 178, 189, 0.04);
+
+  /* App-shell chassis: sidebar/control-deck surfaces. Naik bersama tangga latar. */
+  --rail-bg: #191e24;
+  --rail-well: #101319;
+  --rail-panel: #22272e;
+  --rail-control: #14171d;
+  --rail-divider: rgba(255, 255, 255, 0.12);
+  --rail-active: rgba(245, 166, 35, 0.18);
+  --rail-shadow: 0 6px 8px rgba(0, 0, 0, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+
+  --gradient-brand: linear-gradient(135deg, var(--brand-500), var(--brand-600));
+  /* Bingkai instrumen/modal: amber+cyan penuh berdampingan adalah garis paling
+     menyala di layar gelap; dicampur 28% warna kartu, identitasnya tetap. */
+  --gradient-brand-accent: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--brand-500) 72%, var(--bg-surface)),
+    color-mix(in srgb, var(--accent-500) 72%, var(--bg-surface))
+  );
+  --gradient-sheen: linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0));
+
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.24);
+  --shadow-md: 0 10px 30px rgba(0, 0, 0, 0.34);
+  --shadow-lg: 0 24px 70px rgba(0, 0, 0, 0.52);
+  /* Glow amber dilunakkan (0.32/0.26): di latar gelap ia sumber silau terbesar
+     setelah tombol itu sendiri. "Bertenaga" tetap terbaca. */
+  --shadow-brand: 0 6px 22px rgba(245, 166, 35, 0.22);
+  --shadow-bench-tight: 0 6px 8px rgba(0, 0, 0, 0.34);
+  --shadow-brand-tight: 0 4px 8px rgba(245, 166, 35, 0.18);
+
+  --focus-ring: var(--brand-400);
+  --ring: 0 0 0 3px var(--focus-ring);
+}
+
+/* ============================================================
+   LIGHT THEME — "Bright Workshop Steel"
+   ============================================================ */
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  /* Baja aluminium: logam VOLT (--volt-metal, rona 257deg) dengan kroma
+     0.0025–0.009, jadi terbaca sebagai logam, bukan biru. Keputusan pemilik
+     6 Nov 2026: latar terang mengikuti badan maskot. Sebelumnya netral hangat
+     (~85deg, gading) — logo grafit dingin tampak ditempel di atas kertas krem.
+     Dua percobaan yang perlu diingat: 205deg (23 Sep) terbaca klinis karena
+     rona condong cyan dan kromanya cukup tinggi; 257deg berkroma rendah tidak. */
+  --bg-base: #d9dde2;
+  --bg-app: #ebeef2;
+  /* Kalibrasi nyaman (24 Sep 2026): kartu bukan putih murni, supaya yang
+     mengambang (--bg-elevated, putih) tetap terpisah dari kartu di bawahnya. */
+  --bg-surface: #fbfcfe;
+  --bg-surface-2: #e2e5eb;
+  /* Terang: benda dan tuts naik ke putih (plus --border-strong di
+     komponennya), bukan abu yang lebih gelap dari kartunya. */
+  --bg-raised: #ffffff;
+  /* Diulang dari blok gelap supaya audit-tokens bisa membacanya per tema. */
+  --bg-key: var(--rail-control);
+  --bg-elevated: #ffffff;
+  --bg-input: #f0f3f6;
+  --bg-hover: rgba(24, 32, 44, 0.065);
+
+  --surface-glass: rgba(255, 255, 255, 0.89);
+  --surface-glass-strong: rgba(255, 255, 255, 0.96);
+
+  /* Tinta utama dulu 17.6:1 di atas putih — terlalu keras; kini ±15.3:1.
+     Muted sedikit dijauhkan dari secondary agar tiga tingkat tinta terbedakan. */
+  --text-primary: #1f2329;
+  --text-secondary: #42474e;
+  --text-muted: #5c6169;
+  --text-inverse: #ffffff;
+  --on-brand: #1a1205;
+  --on-signal: #ffffff;
+
+  --border: rgba(24, 32, 44, 0.16);
+  --border-strong: rgba(24, 32, 44, 0.27);
+  --border-brand: rgba(192, 117, 10, 0.6);
+  /* 3.4:1 di kartu sekunder (terburuk), 4.2:1 di kartu, 3.8:1 di isian. */
+  --border-control: #757b83;
+
+  /* Isian brand sebagai bentuk (LED, sel ikon aktif) wajib 3:1 di atas kartu;
+     amber logo #f5a623 di atas baja hanya 2:1. Maka bentuk memakai amber logo
+     yang digelapkan dengan rona yang sama persis (73deg, L 0.64). Amber tua
+     logo sendiri (--brand-700, 66deg) cuma dE 0.089 dari --warning sehingga
+     "Diterima" menyatu dengan "Konfirmasi Biaya"; versi 73deg ini dE 0.107 dan
+     di mata tetap amber tua logo (dE 0.018 darinya). Tombol utama tetap amber
+     logo penuh lewat --gradient-brand, ditepi --brand-700 lewat --shadow-brand. */
+  --brand: #bf7c00;
+  --brand-hover: #8a5200;
+  /* Teks merek, peringatan, dan bahaya terang dulu tiga cokelat yang nyaris
+     sama (#7c4d12 / #661f0e / #99202f). Kini dipisah rona, bukan gelap-terang:
+     emas tua 80deg, jingga bata 36deg, raspberry 2deg; dE OKLab >= 0.109
+     antarpasangan, dan >= 4.6:1 di kartu, latar app, serta badge soft di atas
+     kartu maupun kartu sekunder (7 Nov 2026). */
+  --brand-text: #755411;
+  --brand-soft: rgba(245, 166, 35, 0.2);
+  /* --brand padat di bidang berteks terbaca mustard di samping tombol utama.
+     Bidang berteks tidak butuh 3:1 terhadap kartu (teksnya sudah 9:1 di atas
+     amber); yang butuh batas adalah tepinya, jadi --brand-700 (3.5:1). */
+  --brand-fill: var(--brand-500);
+  --brand-fill-edge: var(--brand-700);
+  --accent: var(--accent-600);
+  --accent-text: var(--accent-700);
+  --accent-soft: rgba(61, 217, 196, 0.2);
+  --success: var(--green-600);
+  /* L 0.38: dipekatkan dari #0c5a28 supaya teks cyan bisa kembali ke rona logo
+     tanpa jatuh di bawah dE 0.1 dari hijau (pil Selesai vs label instrumen). */
+  --success-text: #08511f;
+  --success-soft: rgba(49, 184, 130, 0.18);
+  --warning: var(--amber-600);
+  --warning-text: #a42e07;
+  --warning-soft: rgba(239, 118, 52, 0.18);
+  --danger: var(--red-600);
+  /* L 0.42 raspberry: menjauh dari jingga bata --warning-text. Badge di atas
+     --danger-soft 6.2:1 (dulu L 0.478 hanya 4.39:1). */
+  --danger-text: #8c0e46;
+  --danger-soft: rgba(219, 64, 89, 0.15);
+  --info: var(--blue-600);
+  --info-text: #2b54b8;
+  --info-soft: rgba(82, 127, 233, 0.15);
+
+  --grid-line: rgba(40, 52, 70, 0.06);
+
+  /* Bright-workshop chassis: baja anodized di bawah lampu kerja. */
+  --rail-bg: #f2f4f7;
+  --rail-well: #e1e4e9;
+  --rail-panel: #fafbfd;
+  --rail-control: #ffffff;
+  --rail-divider: rgba(24, 32, 44, 0.2);
+  --rail-active: #ffedcf;
+  --rail-shadow: 0 6px 8px rgba(20, 28, 40, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+
+  /* Sama persis dengan grip logo, di kedua tema. Dulu tema terang memakai
+     oranye yang lebih tua (#e8920c -> #d9820a), sehingga tombol utama tidak
+     pernah seterang amber logonya. */
+  --gradient-brand: linear-gradient(135deg, var(--brand-500), var(--brand-600));
+  --gradient-brand-accent: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--brand-500) 85%, var(--bg-surface)),
+    color-mix(in srgb, var(--accent-500) 85%, var(--bg-surface))
+  );
+  --gradient-sheen: linear-gradient(135deg, rgba(245, 166, 35, 0.06), rgba(255, 255, 255, 0));
+
+  --shadow-sm: 0 2px 4px rgba(20, 28, 40, 0.1);
+  --shadow-md: 0 6px 8px rgba(20, 28, 40, 0.12);
+  --shadow-lg: 0 16px 28px rgba(20, 28, 40, 0.18);
+  /* Cincin 1px amber tua = tepi kerah probe pada logo. Amber logo di atas baja
+     terang hanya 2:1, jadi tanpa tepi ini tombol utama kehilangan bentuknya. */
+  --shadow-brand: 0 0 0 1px var(--brand-700), 0 6px 20px rgba(192, 117, 10, 0.2);
+  --shadow-bench-tight: 0 6px 8px rgba(20, 28, 40, 0.1);
+  --shadow-brand-tight: 0 0 0 1px var(--brand-700), 0 4px 8px rgba(192, 117, 10, 0.14);
+
+  --focus-ring: var(--brand-800);
+  --ring: 0 0 0 3px var(--focus-ring);
+}

@@ -1,0 +1,42 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "nuara-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
+      "port": 5173,
+      "autoPort": true
+    },
+    {
+      "name": "nuara-selfhost",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--",
+        "--mode",
+        "selfhost",
+        "--port",
+        "5190",
+        "--strictPort"
+      ],
+      "port": 5190
+    },
+    {
+      "name": "nuara-preview",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "preview",
+        "--",
+        "--port",
+        "4173"
+      ],
+      "port": 4173
+    }
+  ]
+}

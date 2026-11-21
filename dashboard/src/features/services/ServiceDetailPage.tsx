@@ -1,0 +1,1157 @@
+import { EmptyValue } from '@/components/ui/EmptyValue';
+import { useMemo, useState } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCollection, invalidateCollection } from '@/hooks/useCollection';
+import { useServiceHistory } from '@/hooks/useServiceHistory';
+import { repository } from '@/data';
+import { addServicePart, addServiceModalLine, saveServiceParts } from '@/data/serviceParts';
+import { deleteServiceTicket } from '@/data/serviceDelete';
+import { updateServiceModal, removeServiceModal } from '@/data/supabase-client';
+import { isCloudMode } from '@/stores/demo';
+import { toast } from '@/stores/toast';
+import { useSessionStore } from '@/stores/session';
+import { useFormat } from '@/lib/useFormat';
+import { useT } from '@/i18n';
+import { walletsForOutlet } from '@/lib/business/finance';
+import {
+  outstandingBalance,
+  serviceProfit,
+  cancelledProfit,
+  heldCost,
+  retainedDownPayment,
+  serviceModalTotal,
+  walletDeltasForModalEdit,
+  isTerminal,
+  nextStatuses,
+  canSetStatus,
+  canClaimWarranty,
+  isAwaitingPickup,
+  warrantyDecided,
+  openClaimFor,
+  finalCostLocked,
+  modalDadakanIssue,
+  modalExpenseDescription,
+} from '@/lib/business/services';
+import { applyBalance } from '@/lib/business/finance';
+import { localDateStr } from '@/lib/time';
+import { newId } from '@/lib/id';
+import { fmtRpInput, parseRpInput } from '@/lib/format';
+import { logActivity } from '@/lib/activity';
+import { getLastExpenseWallet, setLastExpenseWallet } from '@/config/orgConfig';
+import { Button, ConfirmDialog, Icon, Input, LoadState, Modal, Select, type IconName } from '@/components/ui';
+import { ServiceModal } from './ServiceModal';
+import { StatusModal } from './StatusModal';
+import { NotifyModal } from './NotifyModal';
+import { TicketDoneModal } from './TicketDoneModal';
+import { ScreenLockReadout } from './ScreenLockReadout';
+import { useServicePrint } from './useServicePrint';
+import { WarrantyClaimModal } from './WarrantyClaimModal';
+import { SparepartPickerModal } from './SparepartPickerModal';
+import { PartWarrantyModal } from './PartWarrantyModal';
+import type { ServiceHistoryEntry, ServiceStatus, ServiceSparepart } from '@/data/types';
+import styles from './ServiceDetailPage.module.css';
+import { interpolate } from '@/lib/business/notify';
+import { PICKUP_NOTE, UNPICK_NOTE, serviceDeleteBlocker } from '@/lib/business/services';
+import { historyKind, STATUS_TONE } from '@/lib/business/services';
+import { qrSvg } from '@/lib/qr';
+
+/** Linear "job traveler" stages (cancel handled separately). */
+interface TicketAction {
+  key: string;
+  icon: IconName;
+  label: string;
+  primary?: boolean;
+  active?: boolean;
+  iconRight?: boolean;
+  onClick?: () => void;
+  to?: string;
+}
+
+const TRAVELER: ServiceStatus[] = [
+  'diterima',
+  'diagnosa',
+  'konfirmasi',
+  'tunggu',
+  'pengerjaan',
+  'selesai',
+  'lunas',
+];
+
+export function ServiceDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const t = useT();
+  const { fmtMoney, fmtDate, fmtDateTime } = useFormat();
+
+  // Halaman ini hanya butuh SATU tiket. Daftar penuh dibaca bila KEBETULAN sudah
+  // ada di cache (mis. pengguna datang dari halaman Servis), tapi `enabled: false`
+  // membuatnya tidak pernah MEMICU pengambilan — dulu membuka satu tiket lewat
+  // tautan langsung menarik seluruh tabel servis hanya untuk mencari satu baris.
+  const { data: services } = useCollection('services', { enabled: false });
+  const { data: allWallets } = useCollection('wallets');
+  const sessionEmployees = useSessionStore((s) => s.employees);
+  const org = useSessionStore((s) => s.org);
+  const me = useSessionStore((s) => s.currentEmployee);
+  const role = me?.role ?? 'karyawan';
+  const isOwner = role === 'owner';
+  const isManager = role === 'owner' || role === 'admin';
+
+  const [editOpen, setEditOpen] = useState(false);
+  // "Serahkan unit" membuka Update Status langsung di Lunas + diambil.
+  const [statusHandover, setStatusHandover] = useState(false);
+  const [doneOpen, setDoneOpen] = useState(false);
+  // Part/modal ditambah setelah biaya final ditetapkan: biaya final TIDAK ikut
+  // naik, jadi profit turun tanpa tanda. Diingatkan di panel biaya.
+  const [costStale, setCostStale] = useState(false);
+  // Baris BOM yang akan dihapus — menghapus memindahkan kas/stok, jadi dikonfirmasi dulu.
+  const [toRemove, setToRemove] = useState<number | null>(null);
+  const [statusOpen, setStatusOpen] = useState(false);
+  const [notifyOpen, setNotifyOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [claimOpen, setClaimOpen] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [partWarrantyOpen, setPartWarrantyOpen] = useState(false);
+  const [confirmPickup, setConfirmPickup] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const queryClient = useQueryClient();
+  // Ad-hoc "modal dadakan" entry form (inline in the cost panel).
+  const [modalFormOpen, setModalFormOpen] = useState(false);
+  // Index of the manual line being edited; null = adding a new line.
+  const [editIndex, setEditIndex] = useState<number | null>(null);
+  const [modalName, setModalName] = useState('');
+  const [modalAmount, setModalAmount] = useState('');
+  const [modalWalletId, setModalWalletId] = useState('');
+  const [savingCost, setSavingCost] = useState(false);
+
+  const listed = useMemo(() => services.find((s) => s.id === id) ?? null, [services, id]);
+  // Tiket di luar 1000 terbaru (cloud) tidak ada di daftar — ambil barisnya sendiri.
+  const oneQuery = useQuery({
+    queryKey: ['collection', 'services', 'one', id],
+    queryFn: () => repository.get('services', id ?? ''),
+    // Tidak lagi menunggu daftar selesai dimuat — barisnya diambil langsung.
+    enabled: !!id && !listed,
+  });
+  const service = listed ?? oneQuery.data ?? null;
+  // Modal dadakan dibayar dari wallet cabang tiket atau wallet bersama (0095).
+  const wallets = walletsForOutlet(allWallets, service?.outletId ?? null);
+  const history = useServiceHistory(service);
+  const servicePrint = useServicePrint(service);
+
+  if (!service) {
+    // Dulu: layar kosong selama memuat, dan galat jaringan tampil sebagai 404.
+    // 404 hanya benar bila pengambilan BERHASIL tetapi tiketnya memang tidak ada.
+    if (id && (oneQuery.isPending || oneQuery.isFetching || oneQuery.isError)) {
+      return (
+        <LoadState
+          queries={[
+            {
+              loading: oneQuery.isFetching,
+              // Saat mencoba ulang, tampilkan penanda memuat, bukan galat lama.
+              error: oneQuery.isFetching ? null : oneQuery.error,
+              refetch: oneQuery.refetch,
+            },
+          ]}
+        />
+      );
+    }
+    return (
+      <div className={styles.notFound}>
+        <span className={styles.nfCode}>404</span>
+        <p>{t('serviceDetail.notFound')}</p>
+        <Button variant="secondary" onClick={() => navigate('/services')}>
+          <Icon name="arrow-left" aria-hidden /> {t('serviceDetail.backToList')}
+        </Button>
+      </div>
+    );
+  }
+
+  /**
+   * Write the sparepart list after RE-READING the service, so a rapid second
+   * cost-line mutation can't overwrite a line whose cash/stock side-effect
+   * already committed. The closure's `service.spareparts` can be stale between
+   * refetches; deriving from the fresh copy avoids the lost update.
+   * ponytail: re-read closes the realistic single-user rapid-click gap; a true
+   * concurrent interleave would still need an in-flight mutex — add if it bites.
+   */
+  const putServiceSpareparts = async (
+    mutate: (current: ServiceSparepart[]) => ServiceSparepart[],
+  ) => {
+    // One row by id, not the whole services list, per sparepart edit.
+    const fresh = (await repository.get('services', service.id)) ?? service;
+    // Stok inventori ikut disesuaikan dalam transaksi yang sama (0064).
+    await saveServiceParts(fresh, mutate(fresh.spareparts));
+  };
+
+  const cancelled = service.status === 'batal';
+  const currentIndex = TRAVELER.indexOf(service.status);
+  const outstanding = service.status === 'lunas' ? 0 : outstandingBalance(service);
+  // Tiket batal tak punya tagihan: dulu terbaca "Menunggu biaya final" (amber)
+  // seolah pelanggan masih berutang.
+  const billingReadout =
+    service.status === 'lunas'
+      ? { label: t('serviceDetail.billPayment'), value: t('serviceDetail.billPaid') }
+      : cancelled
+        ? { label: t('common.status'), value: t('serviceDetail.billCancelled') }
+        : service.finalCost <= 0
+        ? { label: t('serviceDetail.billLabel'), value: t('serviceDetail.billAwaitFinal') }
+        : { label: t('serviceDetail.billRemaining'), value: fmtMoney(outstanding) };
+  // Tiket batal: pendapatannya DP yang ditahan, biayanya hanya yang tetap
+  // ditanggung (part terpakai + modal dadakan). DP tiket lama tak diketahui → "—".
+  // Selain itu profit baru bermakna bila biaya final ada — sebelumnya negatif palsu.
+  const keptDp = retainedDownPayment(service);
+  const cancelProfit = cancelledProfit(service);
+  const profit = cancelled ? (cancelProfit ?? 0) : serviceProfit(service);
+  const profitKnown = cancelled ? cancelProfit !== null : service.finalCost > 0;
+  const modalTotal = cancelled ? heldCost(service.spareparts) : serviceModalTotal(service.spareparts);
+  const costLocked = finalCostLocked(service);
+  // Tiket Lunas sudah dibayar: menambah part hanya untuk owner/admin (0093).
+  const canAddParts = !cancelled && (service.status !== 'lunas' || isManager);
+  // Satu klaim berjalan per tiket asli (juga dijaga server, 0064).
+  const openClaim = openClaimFor(services, service.id);
+  const claimable = canClaimWarranty(service, localDateStr()) && !openClaim;
+  // When the only thing this role can do is take a DP (no allowed status
+  // transitions, but the ticket isn't terminal), label the action accordingly
+  // instead of the misleading "Update Status" — e.g. staff on a finished unit.
+  const allowedNext = nextStatuses(service.status).filter((s) => canSetStatus(role, s));
+  const onlyDp = allowedNext.length === 0 && !isTerminal(service.status);
+  const originTicket = service.warrantyClaimOf
+    ? services.find((s) => s.id === service.warrantyClaimOf) ?? null
+    : null;
+
+  /**
+   * Append an inventory sparepart line AND deduct its stock immediately
+   * (stock leaves the shelf the moment the part is committed to the ticket).
+   * The stock check runs against the live row in the same transaction
+   * (update_service_parts, 0064) — the picker's check uses cached state. The
+   * line is stored `deducted:true` so the later "pengerjaan" transition won't
+   * deduct it again, and cancelling the ticket gives the stock back.
+   */
+  const addSparepartLine = async (line: ServiceSparepart) => {
+    try {
+      await addServicePart(service, line);
+      toast.success(t('serviceDetail.partAdded'));
+      if (costLocked) setCostStale(true);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t('serviceDetail.partAddFailed'));
+    }
+  };
+
+  /** Open the ad-hoc modal form for a NEW line, wallet defaults to last-used. */
+  const openModalForm = () => {
+    const last = getLastExpenseWallet();
+    const fallback = wallets[0]?.id ?? '';
+    setEditIndex(null);
+    setModalWalletId(wallets.some((w) => w.id === last) ? last : fallback);
+    setModalName('');
+    setModalAmount('');
+    setModalFormOpen(true);
+  };
+
+  /** Open the form pre-filled to EDIT an existing manual line. */
+  const openEditModal = (index: number) => {
+    const line = service.spareparts[index];
+    if (!line || line.kind !== 'manual') return;
+    const wid = line.walletId ?? getLastExpenseWallet();
+    const fallback = wallets[0]?.id ?? '';
+    setEditIndex(index);
+    setModalName(line.name);
+    setModalAmount(fmtRpInput(String(line.costPrice)));
+    setModalWalletId(wallets.some((w) => w.id === wid) ? wid : fallback);
+    setModalFormOpen(true);
+  };
+
+  /** Close the modal form and clear edit state. */
+  const closeModalForm = () => {
+    setModalFormOpen(false);
+    setEditIndex(null);
+  };
+
+  /**
+   * Record an ad-hoc "modal dadakan": creates a manual cost line AND a linked
+   * Expense (real cash out), debiting the chosen wallet. The expense id is kept
+   * on the line so it can be reversed if the line is later removed.
+   */
+  const addManualModal = async () => {
+    const input = { name: modalName, amount: parseRpInput(modalAmount), walletId: modalWalletId };
+    const issue = modalDadakanIssue(input);
+    if (issue) return toast.warning(t(issue));
+    setSavingCost(true);
+    try {
+      await addServiceModalLine(service, input);
+      setLastExpenseWallet(modalWalletId);
+      toast.success(t('serviceDetail.modalAdded'));
+      if (costLocked) setCostStale(true);
+      closeModalForm();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t('serviceDetail.modalAddFailed'));
+    } finally {
+      setSavingCost(false);
+    }
+  };
+
+  /**
+   * Edit an existing manual "modal dadakan" line. Keeps cash consistent by
+   * reversing the old wallet debit and applying the new one (netted per wallet
+   * so editing on the same wallet doesn't double-apply), updates the linked
+   * Expense (amount/wallet/description), and rewrites the cost line. The linked
+   * Expense id is preserved so the audit trail stays continuous.
+   */
+  const updateManualModal = async () => {
+    if (editIndex == null) return;
+    const line = service.spareparts[editIndex];
+    if (!line || line.kind !== 'manual') return;
+    const amount = parseRpInput(modalAmount);
+    const issue = modalDadakanIssue({ name: modalName, amount, walletId: modalWalletId });
+    if (issue) return toast.warning(t(issue));
+
+    setSavingCost(true);
+    const now = new Date().toISOString();
+    try {
+      const oldAmount = line.costPrice;
+      if (isCloudMode() && line.expenseId) {
+        await updateServiceModal({
+          orgId: service.orgId,
+          serviceId: service.id,
+          expenseId: line.expenseId,
+          name: modalName.trim(),
+          amount,
+          walletId: modalWalletId,
+        });
+        setLastExpenseWallet(modalWalletId);
+        logActivity({
+          action: 'expense.update',
+          entityType: 'expense',
+          entityId: line.expenseId,
+          entityLabel: `Modal ${service.serviceNo}`,
+          meta: { amount, prevAmount: oldAmount, serviceId: service.id },
+        });
+        toast.success(t('serviceDetail.modalUpdated'));
+        closeModalForm();
+        return;
+      }
+      const oldWalletId = line.walletId ?? null;
+      // Net the cash movement per wallet (refund old debit, apply new debit).
+      const delta = walletDeltasForModalEdit(oldWalletId, oldAmount, modalWalletId, amount);
+      for (const [wid, d] of delta) {
+        const wallet = wallets.find((w) => w.id === wid);
+        if (wallet) await repository.put('wallets', applyBalance(wallet, d));
+      }
+
+      // Sync the linked Expense (or create one if an older line lacked it).
+      const expenseId = line.expenseId ?? newId();
+      const expenses = await repository.list('expenses');
+      const existing = expenses.find((e) => e.id === expenseId);
+      await repository.put('expenses', {
+        id: expenseId,
+        orgId: service.orgId,
+        outletId: service.outletId,
+        date: existing?.date ?? localDateStr(),
+        category: 'Sparepart',
+        amount,
+        walletId: modalWalletId,
+        description: modalExpenseDescription(service.serviceNo, modalName),
+        createdAt: existing?.createdAt ?? now,
+        updatedAt: now,
+        deletedAt: null,
+      });
+
+      const updatedLine: ServiceSparepart = {
+        ...line,
+        name: modalName.trim(),
+        costPrice: amount,
+        expenseId,
+        walletId: modalWalletId,
+      };
+      await putServiceSpareparts((list) =>
+        list.map((sp, i) => (i === editIndex ? updatedLine : sp)),
+      );
+      setLastExpenseWallet(modalWalletId);
+      logActivity({
+        action: 'expense.update',
+        entityType: 'expense',
+        entityId: expenseId,
+        entityLabel: `Modal ${service.serviceNo}`,
+        meta: { amount, prevAmount: oldAmount, serviceId: service.id },
+      });
+      toast.success(t('serviceDetail.modalUpdated'));
+      closeModalForm();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t('serviceDetail.modalUpdateFailed'));
+    } finally {
+      setSavingCost(false);
+    }
+  };
+
+  /**
+   * Remove a cost line. For manual lines this also reverses the linked Expense
+   * and refunds the wallet (atomic), so cash & profit stay consistent. For
+   * inventory lines already deducted, stock is returned to the item.
+   */
+  const removeCostLine = async (index: number) => {
+    const line = service.spareparts[index];
+    if (!line) return;
+    try {
+      if (isCloudMode() && line.kind === 'manual' && line.expenseId) {
+        await removeServiceModal({ orgId: service.orgId, serviceId: service.id, expenseId: line.expenseId });
+        toast.success(t('serviceDetail.lineRemoved'));
+        return;
+      }
+      if (line.kind === 'manual') {
+        if (line.expenseId) {
+          const expenses = await repository.list('expenses');
+          const exp = expenses.find((e) => e.id === line.expenseId);
+          await repository.remove('expenses', line.expenseId);
+          if (exp) {
+            const wallet = wallets.find((w) => w.id === exp.walletId);
+            if (wallet) await repository.put('wallets', applyBalance(wallet, exp.amount));
+          }
+        }
+      }
+      // Stok baris inventori yang sudah dipotong kembali lewat selisih di sini.
+      await putServiceSpareparts((sp) => sp.filter((_, i) => i !== index));
+      toast.success(t('serviceDetail.lineRemoved'));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t('serviceDetail.lineRemoveFailed'));
+    }
+  };
+
+  /** Latest history timestamp for a given stage. */
+  const stageAt = (stage: ServiceStatus): string | null => {
+    const entry = [...history].reverse().find((h) => h.status === stage);
+    return entry ? fmtDateTime(entry.at) : null;
+  };
+
+  const log = [...history].reverse();
+  // Alamat yang sama dengan QR di nota dan tautan di pesan WhatsApp: `/t/<kode>`
+  // bila kode lacaknya sudah dimuat, selain itu alamat lama `?org=&no=`.
+  const trackingLink = servicePrint.trackLink;
+
+  /**
+   * Copy the public tracking link with explicit feedback. Uses the async
+   * Clipboard API when available, falling back to a hidden-textarea +
+   * execCommand for non-secure contexts (e.g. plain HTTP on a LAN device).
+   */
+  const copyTrackingLink = async () => {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(trackingLink);
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = trackingLink;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        const ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+        if (!ok) throw new Error('execCommand failed');
+      }
+      toast.success(t('serviceDetail.linkCopied'));
+    } catch {
+      toast.error(t('serviceDetail.linkCopyFailed'));
+    }
+  };
+
+  // Toggle physical collection of the device — independent of payment.
+  const togglePickup = async (confirmed = false) => {
+    // Unit keluar sebelum lunas boleh, tapi harus disengaja.
+    if (!service.pickedUp && !confirmed && service.status === 'selesai' && outstandingBalance(service) > 0) {
+      setConfirmPickup(true);
+      return;
+    }
+    const now = new Date().toISOString();
+    const nowPicked = !service.pickedUp;
+    try {
+      await repository.patch('services', service.id, {
+        pickedUp: nowPicked,
+        pickedUpAt: nowPicked ? now : null,
+        updatedAt: now,
+        history: [
+          ...(service.history ?? []),
+          {
+            at: now,
+            status: 'edit',
+            by: me?.id ?? '',
+            byName: me?.name ?? '',
+            note: nowPicked ? PICKUP_NOTE : UNPICK_NOTE,
+            internal: false,
+          },
+        ],
+      });
+      toast.success(t(nowPicked ? 'services.pickedToast' : 'services.unpickedToast'));
+      if (nowPicked && service.status === 'lunas') setDoneOpen(true);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t('services.pickupFailed'));
+    }
+  };
+  const historyLabel = (h: ServiceHistoryEntry) => {
+    const k = historyKind(h);
+    return k === 'pickup'
+      ? t('services.pickedUp')
+      : k === 'unpickup'
+        ? t('serviceDetail.unpicked')
+        : k === 'edit'
+          ? t('serviceDetail.historyEdited')
+          : t(`statusLabel.${k}`);
+  };
+  const openStatus = (handover = false) => {
+    setStatusHandover(handover);
+    setStatusOpen(true);
+  };
+  const canHandover = isManager && service.status === 'selesai' && !service.pickedUp;
+
+  const hasWarrantyClaims = services.some((s) => s.warrantyClaimOf === service.id);
+  function requestDelete() {
+    const blocker = serviceDeleteBlocker(service!, hasWarrantyClaims);
+    if (blocker) {
+      toast.error(t(blocker));
+      return;
+    }
+    setConfirmDelete(true);
+  }
+  const runDelete = async () => {
+    if (!service) return;
+    setDeleting(true);
+    try {
+      const { refunded } = await deleteServiceTicket(service, hasWarrantyClaims);
+      invalidateCollection(queryClient, 'services');
+      toast.success(
+        interpolate(t(refunded ? 'serviceDelete.doneRefunded' : 'serviceDelete.done'), { no: service.serviceNo }),
+      );
+      navigate('/services');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t('serviceDelete.failed'));
+    } finally {
+      setDeleting(false);
+      setConfirmDelete(false);
+    }
+  };
+
+  // Satu daftar aksi untuk bilah bawah DAN panel "Lainnya" di ponsel, supaya
+  // syarat tampil tiap aksi tidak ditulis dua kali.
+  const actions: TicketAction[] = [
+    { key: 'edit', icon: 'pen', label: t('serviceDetail.edit'), onClick: () => setEditOpen(true) },
+    ...(org
+      ? [{ key: 'print', icon: 'print' as const, label: t('serviceDetail.printReceipt'), onClick: servicePrint.print }]
+      : []),
+    ...(isManager && (isAwaitingPickup(service) || service.pickedUp)
+      ? [
+          {
+            key: 'pickup',
+            icon: (service.pickedUp ? 'circle-check' : 'box') as IconName,
+            label: service.pickedUp
+              ? t('serviceDetail.pickedUp')
+              : service.status === 'lunas'
+                ? t('serviceDetail.handover')
+                : t('serviceDetail.markPickedUp'),
+            primary: service.status === 'lunas' && !service.pickedUp,
+            active: service.pickedUp,
+            onClick: () => void togglePickup(),
+          },
+        ]
+      : []),
+    ...(claimable
+      ? [{ key: 'claim', icon: 'shield-halved' as const, label: t('serviceDetail.claimWarranty'), primary: service.pickedUp, onClick: () => setClaimOpen(true) }]
+      : []),
+    ...(openClaim
+      ? [{ key: 'open-claim', icon: 'shield-halved' as const, label: interpolate(t('serviceDetail.claimRunning'), { no: openClaim.serviceNo }), to: `/services/${openClaim.id}` }]
+      : []),
+    ...(!isTerminal(service.status)
+      ? [
+          onlyDp
+            ? { key: 'status', icon: 'money-bill-wave' as const, label: t('serviceDetail.receiveDp'), primary: true, onClick: () => openStatus() }
+            : { key: 'status', icon: 'arrow-right' as const, iconRight: true, label: t('serviceDetail.updateStatus'), primary: !canHandover, onClick: () => openStatus() },
+        ]
+      : []),
+    // Selesai → pelanggan datang: lunasi + tandai diambil dalam satu alur, lalu
+    // panel serah unit (nota, WA). Dulu empat langkah dan berakhir di toast.
+    ...(canHandover
+      ? [{ key: 'handover', icon: 'box-open' as const, label: t('serviceDetail.handover'), primary: true, onClick: () => openStatus(true) }]
+      : []),
+    ...(service.status === 'lunas' && isManager
+      ? [{ key: 'correct', icon: 'pen' as const, label: t('serviceDetail.correctCost'), onClick: () => openStatus() }]
+      : []),
+    // Hapus permanen: owner saja, dan hanya tiket bersih (0101). Tombolnya
+    // tetap tampil untuk tiket yang belum bersih; ketukan menjelaskan alasannya.
+    ...(isOwner && service.status !== 'lunas'
+      ? [{ key: 'delete', icon: 'trash' as const, label: t('serviceDelete.button'), onClick: requestDelete }]
+      : []),
+  ];
+  const secondaryActions = actions.filter((a) => !a.primary);
+  const renderAction = (a: TicketAction, className: string, after?: () => void) => {
+    const cls = [className, a.active ? styles.pickedActive : ''].join(' ');
+    const content = a.iconRight ? (
+      <>
+        {a.label} <Icon name={a.icon} aria-hidden />
+      </>
+    ) : (
+      <>
+        <Icon name={a.icon} aria-hidden /> {a.label}
+      </>
+    );
+    return a.to ? (
+      <Link key={a.key} className={cls} to={a.to} onClick={after}>
+        {content}
+      </Link>
+    ) : (
+      <button
+        key={a.key}
+        className={cls}
+        onClick={() => {
+          after?.();
+          a.onClick?.();
+        }}
+      >
+        {content}
+      </button>
+    );
+  };
+
+  return (
+    <div className={styles.page}>
+      {/* Back link */}
+      <Link to="/services" className={styles.back}>
+        <Icon name="arrow-left" aria-hidden /> {t('nav.services')}
+      </Link>
+
+      {service.warrantyClaimOf && (
+        <div className={styles.claimBanner}>
+          <Icon name="shield-halved" aria-hidden />
+          <span>
+            {t('serviceDetail.claimBanner')} <strong>{t('serviceDetail.claimBannerStrong')}</strong>
+            {originTicket ? (
+              <>
+                {' '}{t('serviceDetail.claimFrom')}{' '}
+                <Link to={`/services/${originTicket.id}`}>{originTicket.serviceNo}</Link>
+              </>
+            ) : (
+              t('serviceDetail.claimOriginMissing')
+            )}
+            .
+            {service.claimedItems && service.claimedItems.length > 0 && (
+              <>
+                {' '}{t('serviceDetail.claimedItems')}
+                {service.claimedItems.some((item) => item.inferred) ? t('serviceDetail.claimedInferred') : ''}:{' '}
+                <strong>
+                  {service.claimedItems
+                    .map((item) => interpolate(t('serviceDetail.until'), { name: item.name, date: fmtDate(item.until) }))
+                    .join(', ')}
+                </strong>
+                .
+              </>
+            )}
+          </span>
+        </div>
+      )}
+
+      <div className={styles.sheet}>
+        {/* ---------- Ticket Head ---------- */}
+        <header className={styles.head}>
+          <div className={styles.headMain}>
+            <div className={styles.codeRow}>
+              <span className={styles.code}>{service.serviceNo}</span>
+              <span className={styles.codeMeta}>REPAIR TICKET</span>
+            </div>
+            {/* h2: judul halaman (h1) ada di Topbar. */}
+            <h2 className={styles.device}>{service.device}</h2>
+            <p className={styles.deviceMeta}>
+              <span className={styles.cat}>{service.category}</span>
+              <span className={styles.dot} />
+              {fmtDate(service.createdAt)}
+              {service.technicianName && (
+                <>
+                  <span className={styles.dot} />
+                  {t('serviceDetail.technician')} <strong>{service.technicianName}</strong>
+                </>
+              )}
+              {service.warrantyServiceUntil ? (
+                <>
+                  <span className={styles.dot} />
+                  {interpolate(t('serviceDetail.serviceWarranty'), { date: fmtDate(service.warrantyServiceUntil) })}
+                </>
+              ) : (
+                warrantyDecided(service) && (
+                  <>
+                    <span className={styles.dot} />
+                    {t('serviceDetail.noServiceWarranty')}
+                  </>
+                )
+              )}
+              {service.warrantyPartsUntil && (
+                <>
+                  <span className={styles.dot} />
+                  {interpolate(t('serviceDetail.partWarranty'), { date: fmtDate(service.warrantyPartsUntil) })}
+                </>
+              )}
+              <span className={styles.dot} />
+              {service.pickedUp ? (
+                <span className={styles.pickedUp}>
+                  <Icon name="circle-check" aria-hidden /> {t('serviceDetail.pickedUp')}
+                  {service.pickedUpAt ? ` · ${fmtDate(service.pickedUpAt)}` : ''}
+                </span>
+              ) : (
+                <span className={styles.notPicked} data-ready={isAwaitingPickup(service) || undefined}>
+                  <Icon name="box" aria-hidden /> {t('serviceDetail.notPickedUp')}
+                </span>
+              )}
+            </p>
+          </div>
+          <div className={styles.stamp} data-tone={STATUS_TONE[service.status]}>
+            <span className={styles.stampInner}>{t(`statusLabel.${service.status}`)}</span>
+          </div>
+        </header>
+
+        {/* ---------- Traveler Strip ---------- */}
+        {!cancelled && (
+          <section className={styles.traveler}>
+            {TRAVELER.map((stage, i) => {
+              const at = stageAt(stage);
+              // Hanya tahap yang benar-benar tercatat di riwayat yang dicentang.
+              // Sejak Selesai bisa dicapai langsung (0089), tahap yang dilompati
+              // dulu ikut bercentang dengan tanggal "—" — riwayat tampak lebih
+              // lengkap dari kenyataannya.
+              const passed = i < currentIndex;
+              const done = passed && !!at;
+              const skipped = passed && !at;
+              const current = i === currentIndex;
+              return (
+                <div
+                  key={stage}
+                  className={[
+                    styles.stage,
+                    done ? styles.stageDone : '',
+                    skipped ? styles.stageSkipped : '',
+                    current ? styles.stageCurrent : '',
+                  ].join(' ')}
+                >
+                  <div className={styles.stageNode}>
+                    {done ? <Icon name="check" aria-hidden /> : <span>{i + 1}</span>}
+                  </div>
+                  <div className={styles.stageInfo}>
+                    <span className={styles.stageLabel}>{t(`status.${stage}`)}</span>
+                    <span className={styles.stageAt}>{at ?? (skipped ? t('serviceDetail.skipped') : <EmptyValue />)}</span>
+                  </div>
+                  {i < TRAVELER.length - 1 && <span className={styles.connector} />}
+                </div>
+              );
+            })}
+          </section>
+        )}
+
+        {/* ---------- Customer stub + Intake ---------- */}
+        <section className={styles.cols}>
+          <div className={[styles.panel, styles.stub].join(' ')}>
+            <div className={styles.panelLabel}>{t('serviceDetail.customerLabel')}</div>
+            <div className={styles.stubName}>{service.customerName}</div>
+            <div className={styles.stubPhone}>{service.customerPhone || <EmptyValue />}</div>
+            <div className={styles.stubActions}>
+              <button className={styles.waBtn} onClick={() => setNotifyOpen(true)}>
+                <Icon name="whatsapp" aria-hidden /> WhatsApp
+              </button>
+              <button
+                className={styles.ghostBtn}
+                onClick={() => void copyTrackingLink()}
+              >
+                <Icon name="link" aria-hidden /> {t('serviceDetail.copyTracking')}
+              </button>
+            </div>
+            <div className={styles.qrRow}>
+              {/* QR sungguhan (dulu ikon yang tampak bisa dipindai tapi bukan kode):
+                  pelanggan memindainya dari layar untuk membuka halaman lacak. */}
+              <div
+                className={styles.qr}
+                role="img"
+                aria-label={t('serviceDetail.qrAria')}
+                dangerouslySetInnerHTML={{ __html: qrSvg(trackingLink, { size: 72, margin: 2 }) }}
+              />
+              <span className={styles.qrText}>{t('serviceDetail.qrText')}</span>
+            </div>
+          </div>
+
+          <div className={styles.panel}>
+            <div className={styles.panelLabel}>{t('serviceDetail.intakeLabel')}</div>
+            <p className={styles.complaint}>{service.complaint || <EmptyValue />}</p>
+            <dl className={styles.specList}>
+              <div>
+                <dt>{t('serviceDetail.accessories')}</dt>
+                <dd>{service.accessories || <EmptyValue />}</dd>
+              </div>
+              <div>
+                <dt>{t('serviceDetail.category')}</dt>
+                <dd>{service.category}</dd>
+              </div>
+              {service.deviceSerial && (
+                <div>
+                  <dt>{t('serviceDetail.serial')}</dt>
+                  <dd className={styles.serial}>{service.deviceSerial}</dd>
+                </div>
+              )}
+              {service.deviceCondition && (
+                <div>
+                  <dt>{t('serviceDetail.condition')}</dt>
+                  <dd>{service.deviceCondition}</dd>
+                </div>
+              )}
+              {service.secretKind && (
+                <div>
+                  <dt>{t('serviceDetail.screenLock')}</dt>
+                  <dd>
+                    <ScreenLockReadout
+                      service={service}
+                      canView={isManager || (!!me && service.technicianId === me.id)}
+                    />
+                  </dd>
+                </div>
+              )}
+            </dl>
+          </div>
+        </section>
+
+        {/* ---------- Sparepart BOM ---------- */}
+        <section className={styles.panel}>
+          <div className={styles.bomHead}>
+            <div className={styles.panelLabel}>{t('serviceDetail.partsLabel')}</div>
+            {canAddParts && (
+              <div className={styles.bomActions}>
+                {/* Garansi per part ditetapkan saat Selesai; tombol ini untuk part
+                    yang ditambahkan belakangan atau koreksi. */}
+                {warrantyDecided(service) && service.spareparts.length > 0 && (
+                  <button className={styles.bomAddBtn} onClick={() => setPartWarrantyOpen(true)}>
+                    <Icon name="shield-halved" aria-hidden /> {t('serviceDetail.partWarrantyBtn')}
+                  </button>
+                )}
+                <button className={styles.bomAddBtn} onClick={() => setPickerOpen(true)}>
+                  <Icon name="plus" aria-hidden /> {t('serviceDetail.sparepart')}
+                </button>
+                {/* Modal Dadakan = pengeluaran kas: owner/admin saja (RLS & RPC 0087). */}
+                {isManager && (
+                  <button className={styles.bomAddBtn} onClick={openModalForm}>
+                    <Icon name="plus" aria-hidden /> {t('serviceDetail.extraCost')}
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
+          {modalFormOpen && (
+            <div className={styles.modalForm}>
+              <Input
+                label={t('serviceDetail.modalName')}
+                value={modalName}
+                onChange={(e) => setModalName(e.target.value)}
+                placeholder={t('serviceDetail.modalNamePh')}
+                autoFocus
+              />
+              <div className={styles.modalFormRow}>
+                <Input
+                  label={t('serviceDetail.modalAmount')}
+                  value={modalAmount}
+                  onChange={(e) => setModalAmount(fmtRpInput(e.target.value))}
+                  placeholder="250.000"
+                />
+                <Select
+                  label={t('serviceDetail.fromWallet')}
+                  value={modalWalletId}
+                  onChange={(e) => setModalWalletId(e.target.value)}
+                  options={wallets.map((w) => ({ value: w.id, label: w.name }))}
+                />
+              </div>
+              <p className={styles.modalHint}>
+                <Icon name="circle-info" aria-hidden />{' '}
+                {editIndex == null
+                  ? t('serviceDetail.modalAddHint')
+                  : t('serviceDetail.modalEditHint')}
+              </p>
+              <div className={styles.modalFormBtns}>
+                <Button variant="secondary" size="sm" onClick={closeModalForm}>
+                  {t('common.cancel')}
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={editIndex == null ? addManualModal : updateManualModal}
+                  loading={savingCost}
+                >
+                  {t(editIndex == null ? 'serviceDetail.saveModal' : 'serviceDetail.updateModal')}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {service.spareparts.length === 0 ? (
+            <p className={styles.emptyParts}>{t('serviceDetail.noParts')}</p>
+          ) : (
+            <div className={styles.bom}>
+              {service.spareparts.map((p, i) => {
+                const manual = p.kind === 'manual';
+                return (
+                  <div key={`${p.itemId ?? 'm'}-${i}`} className={styles.bomRow}>
+                    <span className={styles.bomIcon}>
+                      <Icon name={manual ? 'money-bill-wave' : 'microchip'} aria-hidden />
+                    </span>
+                    <span className={styles.bomName}>
+                      {p.name}
+                      {warrantyDecided(service) && (
+                        <small className={styles.bomWarranty}>
+                          {p.warrantyDays == null
+                            ? t('serviceDetail.warrantyUnset')
+                            : p.warrantyUntil
+                              ? interpolate(t('serviceDetail.warrantyUntil'), { date: fmtDate(p.warrantyUntil) })
+                              : t('serviceDetail.noWarranty')}
+                        </small>
+                      )}
+                    </span>
+                    <span className={styles.bomQty}>{manual ? '' : `×${p.qty}`}</span>
+                    <span className={styles.bomCost}>
+                      {manual ? fmtMoney(p.costPrice) : fmtMoney(p.sellPrice * p.qty)}
+                    </span>
+                    <span
+                      className={[
+                        styles.bomState,
+                        manual ? styles.stateModal : p.deducted ? styles.stateOk : styles.stateWait,
+                      ].join(' ')}
+                    >
+                      {manual
+                        ? t('serviceDetail.stateCash')
+                        : cancelled
+                          ? p.deducted
+                            ? t('serviceDetail.stateUsed')
+                            : t('serviceDetail.stateReturned')
+                          : p.deducted
+                            ? t('serviceDetail.stateFitted')
+                            : t('serviceDetail.stateWaiting')}
+                    </span>
+                    {/* Satu sel untuk semua tombol baris: 7 anak di grid 6 trek dulu
+                        menurunkan tombol hapus ke baris baru. */}
+                    <span className={styles.bomActions}>
+                    {!cancelled && manual && isManager && (
+                      <button
+                        className={styles.bomEdit}
+                        onClick={() => openEditModal(i)}
+                        title={t('serviceDetail.editModal')}
+                        aria-label={t('serviceDetail.editModal')}
+                      >
+                        <Icon name="pen" aria-hidden />
+                      </button>
+                    )}
+                    {/* Part terpasang di tiket Lunas sudah dibayar: stoknya tak bisa kembali (0088). */}
+                    {!cancelled && !(manual && !isManager) && !(service.status === 'lunas' && !manual && p.deducted) && (
+                      <button
+                        className={styles.bomDel}
+                        onClick={() => setToRemove(i)}
+                        title={t('serviceDetail.removeLine')}
+                        aria-label={interpolate(t('serviceDetail.removeAria'), { name: p.name })}
+                      >
+                        <Icon name="trash" aria-hidden />
+                      </button>
+                    )}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
+        {/* ---------- Cost + Log ---------- */}
+        <section className={styles.cols}>
+          <div className={styles.panel}>
+            <div className={styles.panelLabel}>{t('serviceDetail.costLabel')}</div>
+            <dl className={styles.costList}>
+              <div>
+                <dt>{t('serviceDetail.estimate')}</dt>
+                <dd>{fmtMoney(service.estimateCost)}</dd>
+              </div>
+              <div>
+                <dt>{t('serviceDetail.finalCost')}</dt>
+                <dd>{service.finalCost > 0 ? fmtMoney(service.finalCost) : t('serviceDetail.notSet')}</dd>
+              </div>
+              {service.downPayment > 0 && (
+                <div>
+                  <dt>{t('serviceDetail.dpReceived')}</dt>
+                  <dd className={styles.dp}>− {fmtMoney(service.downPayment)}</dd>
+                </div>
+              )}
+              {cancelled && keptDp !== null && keptDp > 0 && (
+                <div>
+                  <dt>{t('serviceDetail.dpKept')}</dt>
+                  <dd>{fmtMoney(keptDp)}</dd>
+                </div>
+              )}
+              <div className={styles.costTotal}>
+                <dt>{billingReadout.label}</dt>
+                <dd>{billingReadout.value}</dd>
+              </div>
+              {isOwner && (
+                <>
+                  <div>
+                    <dt>{t('serviceDetail.modalTotal')}</dt>
+                    <dd className={styles.dp}>− {fmtMoney(modalTotal)}</dd>
+                  </div>
+                  <div className={styles.costProfit} data-loss={profitKnown && profit < 0}>
+                    <dt>{t('serviceDetail.unitProfit')}</dt>
+                    <dd>{profitKnown ? fmtMoney(profit) : <EmptyValue />}</dd>
+                  </div>
+                </>
+              )}
+            </dl>
+            {costStale && costLocked && (
+              <div className={styles.costNotice} role="status">
+                <span className={styles.costNoticeLed} aria-hidden />
+                <p>
+                  {interpolate(t(service.status === 'lunas' ? 'serviceDetail.costStalePaid' : 'serviceDetail.costStale'), {
+                    amount: fmtMoney(service.finalCost),
+                  })}
+                </p>
+                {isManager && (
+                  <button type="button" className={styles.bomAddBtn} onClick={() => openStatus()}>
+                    {t(service.status === 'lunas' ? 'serviceDetail.correctCost' : 'serviceDetail.reviseAtSettle')}
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className={styles.panel}>
+            <div className={styles.panelLabel}>{t('serviceDetail.logLabel')}</div>
+            <ul className={styles.log}>
+              {log.map((l, i) => (
+                <li key={i} className={[styles.logItem, l.internal ? styles.logInternal : ''].join(' ')}>
+                  <span className={styles.logDot} />
+                  <div>
+                    <div className={styles.logHead}>
+                      <strong>{historyLabel(l)}</strong>
+                      {l.internal && <span className={styles.internalTag}>{t('serviceDetail.internal')}</span>}
+                    </div>
+                    <span className={styles.logAt}>
+                      {fmtDateTime(l.at)} · {l.byName}
+                    </span>
+                    {l.note && <p className={styles.logNote}>{l.note}</p>}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+      </div>
+
+      {/* ---------- Sticky action bar ---------- */}
+      <div className={styles.actionBar}>
+        <div className={styles.actionInfo}>
+          <span className={styles.actionLabel}>{billingReadout.label}</span>
+          <span className={styles.actionValue}>{billingReadout.value}</span>
+        </div>
+        <div className={styles.actionBtns}>
+          {actions.map((a) => renderAction(a, a.primary ? styles.primaryBtn : styles.secondaryBtn))}
+          {/* Di ≤760px aksi sekunder disembunyikan demi ruang; dulu tanpa pengganti,
+              sehingga Edit, Cetak Nota, Koreksi Biaya lenyap di ponsel pemilik. */}
+          {secondaryActions.length > 0 && (
+            <button
+              className={[styles.secondaryBtn, styles.moreBtn].join(' ')}
+              onClick={() => setMoreOpen(true)}
+              aria-haspopup="dialog"
+            >
+              <Icon name="dots-three" aria-hidden /> {t('serviceDetail.more')}
+            </button>
+          )}
+        </div>
+      </div>
+      <Modal
+        open={moreOpen}
+        onClose={() => setMoreOpen(false)}
+        title={`${t('serviceDetail.moreTitle')} · ${service.serviceNo}`}
+        size="sm"
+      >
+        <div className={styles.sheetList}>
+          {secondaryActions.map((a) => renderAction(a, styles.sheetAction, () => setMoreOpen(false)))}
+        </div>
+      </Modal>
+
+      {/* ---------- Modals ---------- */}
+      <ServiceModal
+        open={editOpen}
+        onClose={() => setEditOpen(false)}
+        editing={service}
+        services={services}
+        employees={sessionEmployees}
+        onSaved={() => {}}
+      />
+      <StatusModal
+        open={statusOpen}
+        onClose={() => setStatusOpen(false)}
+        service={service}
+        onSaved={() => setCostStale(false)}
+        handover={statusHandover}
+        onHandedOver={() => setDoneOpen(true)}
+      />
+      <TicketDoneModal open={doneOpen} onClose={() => setDoneOpen(false)} service={service} variant="handover" />
+      <NotifyModal open={notifyOpen} onClose={() => setNotifyOpen(false)} service={service} />
+      <WarrantyClaimModal
+        open={claimOpen}
+        onClose={() => setClaimOpen(false)}
+        origin={service}
+        services={services}
+        onSaved={() => {}}
+      />
+      <PartWarrantyModal
+        open={partWarrantyOpen}
+        onClose={() => setPartWarrantyOpen(false)}
+        service={service}
+        history={history}
+      />
+      <SparepartPickerModal
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        existingItemIds={service.spareparts.map((p) => p.itemId).filter((x): x is string => !!x)}
+        onPick={addSparepartLine}
+      />
+      <ConfirmDialog
+        open={confirmPickup}
+        title={t('services.unpaidTitle')}
+        message={interpolate(t('serviceDetail.unpaidMsg'), { amount: fmtMoney(outstanding) })}
+        confirmLabel={t('services.unpaidConfirm')}
+        onCancel={() => setConfirmPickup(false)}
+        onConfirm={() => {
+          setConfirmPickup(false);
+          void togglePickup(true);
+        }}
+      />
+      <ConfirmDialog
+        open={confirmDelete}
+        title={interpolate(t('serviceDelete.title'), { no: service.serviceNo })}
+        message={t('serviceDelete.message')}
+        confirmLabel={t('serviceDelete.confirm')}
+        danger
+        loading={deleting}
+        onCancel={() => setConfirmDelete(false)}
+        onConfirm={() => void runDelete()}
+      />
+      {/* Hapus baris BOM memindahkan uang (modal dadakan → saldo kembali) atau
+          stok (part → rak). Dulu terjadi seketika tanpa konfirmasi. */}
+      <ConfirmDialog
+        open={toRemove !== null}
+        title={t('serviceDetail.removeTitle')}
+        message={(() => {
+          const line = toRemove !== null ? service.spareparts[toRemove] : null;
+          if (!line) return '';
+          return line.kind === 'manual'
+            ? interpolate(t('serviceDetail.removeManualMsg'), { name: line.name, amount: fmtMoney(line.costPrice) })
+            : interpolate(t('serviceDetail.removePartMsg'), {
+                name: line.name,
+                qty: String(line.qty),
+                effect: t(line.deducted ? 'serviceDetail.stockRestored' : 'serviceDetail.stockNotDeducted'),
+              });
+        })()}
+        confirmLabel={t('common.delete')}
+        danger
+        onCancel={() => setToRemove(null)}
+        onConfirm={() => {
+          const i = toRemove;
+          setToRemove(null);
+          if (i !== null) void removeCostLine(i);
+        }}
+      />
+    </div>
+  );
+}

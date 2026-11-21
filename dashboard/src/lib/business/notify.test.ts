@@ -1,0 +1,274 @@
+import { describe, it, expect } from 'vitest';
+import {
+  toWaNumber,
+  waLink,
+  interpolate,
+  trackingUrl,
+  trackingUrlLabel,
+  serviceReceiptLines,
+  serviceVars,
+  DEFAULT_WA_TEMPLATES,
+  WA_TEMPLATE_VARS,
+} from './notify';
+import type { Service, Organization } from '@/data/types';
+
+/** Minimal Service builder — hanya field yang diuji yang perlu di-override. */
+const svc = (over: Partial<Service>): Service => ({
+  id: 's1', orgId: 'o1', outletId: null, serviceNo: 'FM-1', customerId: 'c1',
+  customerName: 'Andi', customerPhone: '08', category: 'Laptop', device: 'X',
+  complaint: '', accessories: '', status: 'selesai', technicianId: null, technicianName: '',
+  estimateCost: 0, finalCost: 0, downPayment: 0,
+  spareparts: [], warrantyServiceUntil: null, warrantyPartsUntil: null, pickedUp: false,
+  pickedUpAt: null, warrantyClaimOf: null, history: [], archived: false,
+  createdAt: '', updatedAt: '', deletedAt: null,
+  ...over,
+});
+
+describe('toWaNumber', () => {
+  it('converts leading 0 to 62', () => {
+    expect(toWaNumber('081234567890')).toBe('6281234567890');
+  });
+  it('keeps existing 62 prefix', () => {
+    expect(toWaNumber('6281234567890')).toBe('6281234567890');
+  });
+  it('strips formatting', () => {
+    expect(toWaNumber('+62 812-3456-7890')).toBe('6281234567890');
+  });
+  it('prefixes 62 when no recognizable prefix', () => {
+    expect(toWaNumber('81234')).toBe('6281234');
+  });
+});
+
+describe('waLink', () => {
+  it('builds an encoded wa.me link', () => {
+    const link = waLink('08123', 'Halo dunia');
+    expect(link).toBe('https://wa.me/628123?text=Halo%20dunia');
+  });
+});
+
+describe('interpolate', () => {
+  it('replaces known placeholders', () => {
+    expect(interpolate('Halo {nama}, no {no}', { nama: 'Andi', no: 'FM-1' })).toBe('Halo Andi, no FM-1');
+  });
+  it('leaves unknown placeholders intact', () => {
+    expect(interpolate('Hi {x}', { y: '1' })).toBe('Hi {x}');
+  });
+});
+
+describe('trackingUrl', () => {
+  it('builds an encoded tracking URL', () => {
+    const url = trackingUrl('https://app.test', 'org 1', 'FM-1');
+    expect(url).toBe('https://app.test/track?org=org%201&no=FM-1');
+  });
+
+  // Sejak 0100 QR nota menunjuk kode acak; nomor tiket berikutnya tak bisa
+  // ditebak dari nota yang sedang dipegang.
+  it('memakai alamat pendek /t/<kode> bila kode lacak ada', () => {
+    expect(trackingUrl('https://app.test', 'org 1', 'FM-1', '7K3M9QXR2D')).toBe(
+      'https://app.test/t/7K3M9QXR2D',
+    );
+  });
+
+  it('kode kosong atau null jatuh ke alamat lama', () => {
+    expect(trackingUrl('https://app.test', 'o', 'FM-1', null)).toBe(
+      'https://app.test/track?org=o&no=FM-1',
+    );
+    expect(trackingUrl('https://app.test', 'o', 'FM-1', '')).toBe(
+      'https://app.test/track?org=o&no=FM-1',
+    );
+  });
+});
+
+describe('trackingUrlLabel', () => {
+  it('membuang skema supaya teks di kertas lebih pendek', () => {
+    expect(trackingUrlLabel('https://fixmaster.app/t/7K3M9QXR2D')).toBe('fixmaster.app/t/7K3M9QXR2D');
+    expect(trackingUrlLabel('http://localhost:5173/t/X')).toBe('localhost:5173/t/X');
+  });
+});
+
+describe('DEFAULT_WA_TEMPLATES', () => {
+  // Placeholder salah ketik = pesan ke pelanggan bocor "{no_service}" mentah.
+  it('only uses known placeholders', () => {
+    for (const [key, tpl] of Object.entries(DEFAULT_WA_TEMPLATES)) {
+      const used = [...tpl.matchAll(/\{(\w+)\}/g)].map((m) => m[1]);
+      const unknown = used.filter((v) => !(WA_TEMPLATE_VARS as readonly string[]).includes(v));
+      expect(unknown, `template "${key}"`).toEqual([]);
+    }
+  });
+});
+
+describe('serviceReceiptLines', () => {
+  it('prints serial & condition as proof of the unit left, never the screen lock', () => {
+    const lines = serviceReceiptLines(svc({ deviceSerial: '356789104512345', deviceCondition: 'Lecet', secretKind: 'pin' }));
+    expect(lines.find((l) => l.label === 'IMEI/SN')?.value).toBe('356789104512345');
+    expect(lines.find((l) => l.label === 'Kondisi')?.value).toBe('Lecet');
+    expect(JSON.stringify(lines)).not.toMatch(/pin|kunci/i);
+  });
+  it('includes core fields', () => {
+    const lines = serviceReceiptLines(svc({}));
+    const labels = lines.map((l) => l.label);
+    expect(labels).toContain('No. Servis');
+    expect(labels).toContain('Perangkat');
+  });
+  // Regresi: nota pernah mencetak timestamp ISO mentah ke tangan pelanggan.
+  it('memformat tanggal masuk, bukan mencetak timestamp mentah', () => {
+    const lines = serviceReceiptLines(svc({ createdAt: '2026-09-02T09:12:00.000Z' }));
+    const tanggal = lines.find((l) => l.label === 'Tanggal');
+    expect(tanggal?.value).not.toMatch(/Tdd:/);
+    expect(tanggal?.value).toMatch(/Sep 2026$/);
+  });
+
+  it('adds DP + remaining when DP present', () => {
+    const lines = serviceReceiptLines(svc({ finalCost: 500000, downPayment: 200000 }));
+    const remaining = lines.find((l) => l.label === 'Sisa');
+    expect(remaining?.value).toContain('300.000');
+  });
+
+  // Perender memilih label dari `key`, bukan dari teks Indonesia di `label`.
+  it('setiap baris punya kunci stabil, tanpa kunci ganda selain garansi per-part', () => {
+    const lines = serviceReceiptLines(svc({ createdAt: '2026-09-02T09:12:00.000Z', deviceSerial: '1', finalCost: 500000, downPayment: 200000 }));
+    expect(lines.every((l) => typeof l.key === 'string' && l.key.length > 0)).toBe(true);
+    const keys = lines.map((l) => l.key);
+    expect(new Set(keys).size).toBe(keys.length);
+    expect(keys).toEqual(expect.arrayContaining(['date', 'serviceNo', 'imei', 'cost', 'dp', 'remaining']));
+  });
+
+  // "Status: Diterima" di kertas yang dibawa pulang basi begitu tiketnya maju.
+  // Tahapnya dicetak lewat judul + pita (serviceDocPlan), bukan baris yang bohong.
+  it('tidak mencetak baris Status pada tahap mana pun', () => {
+    for (const status of ['diterima', 'diagnosa', 'konfirmasi', 'tunggu', 'pengerjaan', 'selesai', 'lunas', 'batal'] as const) {
+      const lines = serviceReceiptLines(svc({ status }));
+      expect(lines.some((l) => (l.key as string) === 'status' || l.label === 'Status'), status).toBe(false);
+    }
+  });
+
+  it('unit sudah diambil: baris "Diambil" membawa tanggal ambil, bukan timestamp mentah', () => {
+    const lines = serviceReceiptLines(svc({ pickedUp: true, pickedUpAt: '2026-09-09T10:30:00.000Z' }));
+    const taken = lines.find((l) => l.key === 'pickedUp');
+    expect(taken?.label).toBe('Diambil');
+    expect(taken?.group).toBe('unit');
+    expect(taken?.value).toMatch(/Sep 2026$/);
+    expect(taken?.value).not.toMatch(/T\d\d:/);
+  });
+
+  it('belum diambil, atau diambil tanpa tanggal, atau batal: tak ada baris "Diambil"', () => {
+    const has = (s: Service) => serviceReceiptLines(s).some((l) => l.key === 'pickedUp');
+    expect(has(svc({ pickedUp: false, pickedUpAt: '2026-09-09T10:30:00.000Z' }))).toBe(false);
+    expect(has(svc({ pickedUp: true, pickedUpAt: null }))).toBe(false);
+    expect(has(svc({ status: 'batal', pickedUp: true, pickedUpAt: '2026-09-09T10:30:00.000Z' }))).toBe(false);
+  });
+
+  it('biaya akhir 0 + DP: baris "Sudah dibayar (DP)", tanpa baris Sisa', () => {
+    const lines = serviceReceiptLines(svc({ status: 'pengerjaan', finalCost: 0, downPayment: 200000 }));
+    expect(lines.find((l) => l.key === 'paidDp')?.value).toContain('200.000');
+    expect(lines.some((l) => l.key === 'remaining')).toBe(false);
+  });
+
+  it('tiket batal tidak memuat garansi walau datanya masih ada', () => {
+    const lines = serviceReceiptLines(
+      svc({ status: 'batal', downPayment: 100000, warrantyServiceUntil: '2099-01-01', warrantyPartsUntil: '2099-01-01' }),
+    );
+    expect(lines.some((l) => l.group === 'garansi')).toBe(false);
+    expect(lines.find((l) => l.key === 'dpReceived')?.value).toContain('100.000');
+  });
+
+  it('garansi membawa tanggal mentah di `until` (null = tanpa garansi) untuk dirakit perender', () => {
+    const lines = serviceReceiptLines(svc({ status: 'selesai', warrantyServiceUntil: '2026-12-10T00:00:00.000Z' }));
+    expect(lines.find((l) => l.key === 'warrantyService')?.until).toBe('2026-12-10');
+  });
+});
+
+describe('serviceVars', () => {
+  const org = { name: 'Toko Servis' } as Organization;
+
+  it('{biaya} maps to finalCost, {estimasi} to estimateCost (not swapped)', () => {
+    const vars = serviceVars(svc({ finalCost: 500000, estimateCost: 300000 }), org);
+    expect(vars.biaya).toContain('500.000');
+    expect(vars.estimasi).toContain('300.000');
+  });
+});
+describe('serviceVars — baris opsional', () => {
+  const org = { name: 'Toko Servis', address: 'Jl. Merdeka 12' } as Organization;
+
+  it('tanpa DP hanya menulis satu baris total', () => {
+    const v = serviceVars(svc({ finalCost: 1500000 }), org);
+    expect(v.rincian_bayar).toBe('Total biaya: *Rp 1.500.000*');
+  });
+
+  // Cacat aslinya: pesan "selesai" menyebut TOTAL, jadi pelanggan yang sudah
+  // bayar DP datang membawa uang yang salah.
+  it('dengan DP menebalkan sisa, bukan total', () => {
+    const v = serviceVars(svc({ finalCost: 1500000, downPayment: 500000 }), org);
+    expect(v.rincian_bayar).toContain('Sudah dibayar (DP): Rp 500.000');
+    expect(v.rincian_bayar).toContain('*Sisa dibayar saat pengambilan: Rp 1.000.000*');
+  });
+
+  // Tiket belum ditutup: biaya akhir masih 0, tapi DP sudah masuk.
+  it('tanpa biaya akhir hanya menyebut DP yang sudah masuk', () => {
+    const v = serviceVars(svc({ finalCost: 0, downPayment: 200000 }), org);
+    expect(v.rincian_bayar).toBe('Sudah dibayar (DP): *Rp 200.000*');
+  });
+
+  it('sisa tidak pernah negatif walau DP melebihi total', () => {
+    const v = serviceVars(svc({ finalCost: 100000, downPayment: 300000 }), org);
+    expect(v.rincian_bayar).toContain('Rp 0');
+    expect(v.rincian_bayar).not.toContain('-');
+  });
+
+  it('baris opsional kosong total ketika datanya tidak ada', () => {
+    // Belum Selesai: garansi belum ditetapkan, jadi bloknya kosong total.
+    const v = serviceVars(svc({ status: 'pengerjaan' }), { name: 'Toko Servis' } as Organization);
+    expect(v.keluhan).toBe('');
+    expect(v.kelengkapan).toBe('');
+    expect(v.alamat).toBe('');
+    expect(v.garansi).toBe('');
+  });
+
+  it('baris opsional membawa newline sendiri ketika terisi', () => {
+    const v = serviceVars(svc({ complaint: 'Layar mati', accessories: 'Charger' }), org);
+    expect(v.keluhan).toBe('\nKeluhan: Layar mati');
+    expect(v.kelengkapan).toBe('\nKelengkapan: Charger');
+    expect(v.alamat).toBe('\nAlamat: Jl. Merdeka 12');
+  });
+
+  it('garansi memformat kedua tanggal, termasuk saat cloud mengirim timestamp', () => {
+    const v = serviceVars(
+      svc({ warrantyServiceUntil: '2026-10-02', warrantyPartsUntil: '2026-12-02T00:00:00Z' }),
+      org,
+    );
+    expect(v.garansi).toContain('Garansi jasa s/d *2 Okt 2026*');
+    expect(v.garansi).toContain('Garansi sparepart s/d *2 Des 2026*');
+  });
+
+  it('garansi per sparepart, dan 0 hari tertulis "tanpa garansi" di pesan & nota', () => {
+    const s = svc({
+      warrantyServiceUntil: null,
+      warrantyPartsUntil: '2026-12-02',
+      spareparts: [
+        { itemId: 'i1', name: 'Baterai', qty: 1, costPrice: 1, sellPrice: 2, deducted: true, warrantyDays: 90, warrantyUntil: '2026-12-02' },
+        { itemId: null, name: 'Lem', qty: 1, costPrice: 1, sellPrice: 0, deducted: false, kind: 'manual', warrantyDays: 0, warrantyUntil: null },
+      ],
+    });
+    const v = serviceVars(s, org);
+    expect(v.garansi).toContain('Garansi jasa: tanpa garansi');
+    expect(v.garansi).toContain('Garansi Baterai s/d *2 Des 2026*');
+    expect(v.garansi).toContain('Garansi Lem: tanpa garansi');
+    expect(v.garansi).not.toContain('Garansi sparepart');
+
+    const garansi = serviceReceiptLines(s).filter((l) => l.group === 'garansi');
+    expect(garansi.map((l) => [l.label, l.value])).toEqual([
+      ['Jasa', 'Tanpa garansi'],
+      ['Baterai', 's/d 2 Des 2026'],
+      ['Lem', 'Tanpa garansi'],
+    ]);
+  });
+
+  // Rendering nyata: tidak boleh ada baris kosong beruntun dari variabel
+  // yang menghilang, dan tidak boleh ada placeholder tersisa.
+  it('template selesai merender rapi tanpa data opsional', () => {
+    const v = { ...serviceVars(svc({ finalCost: 90000 }), { name: 'Toko' } as Organization), tautan: 'x' };
+    const out = interpolate(DEFAULT_WA_TEMPLATES.selesai, v);
+    expect(out).not.toMatch(/\{\w+\}/);
+    expect(out).not.toMatch(/\n\n\n/);
+  });
+});

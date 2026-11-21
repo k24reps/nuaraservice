@@ -1,0 +1,1141 @@
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { Card, Input, Button, Icon, Modal } from '@/components/ui';
+import { useCollection } from '@/hooks/useCollection';
+import { repository } from '@/data';
+import { processSale } from '@/data/supabase-client';
+import { isCloudMode } from '@/stores/demo';
+import { isManager } from '@/config/plans';
+import { logActivity } from '@/lib/activity';
+import { newId, nextDocNumber } from '@/lib/id';
+import { fmtRp, fmtRpInput, parseRpInput } from '@/lib/format';
+import { localDateStr, monthRange } from '@/lib/time';
+import {
+  cartSubtotal,
+  resolveDiscount,
+  discountLimit,
+  STAFF_MAX_DISCOUNT_PCT,
+  cartTotal,
+  validateCart,
+  settleTender,
+  changeRowIndex,
+  cashSuggestions,
+  payBarState,
+  payBarReady,
+  toSaleLines,
+  type CartItem,
+  type DiscountType,
+} from '@/lib/business/pos';
+import { searchCustomers } from '@/lib/business/customers';
+import { interpolate, waLink } from '@/lib/business/notify';
+import { useT } from '@/i18n';
+import { walletsForOutlet } from '@/lib/business/finance';
+import { useCustomerSearch } from '@/hooks/useCustomerSearch';
+import { printSaleReceipt } from './printSaleReceipt';
+import { saleWaMessage } from './saleWaMessage';
+import { PosCatalog } from './PosCatalog';
+import { PosHistory } from './PosHistory';
+import { CustomerModal } from '@/features/customers/CustomerModal';
+import { toast } from '@/stores/toast';
+import { useSessionStore, resolveCreateOutlet, mustPickOutlet } from '@/stores/session';
+import type { Customer, InventoryItem, Sale, PaymentAllocation } from '@/data/types';
+import styles from './PosPage.module.css';
+import { useListNav } from '@/hooks/useListNav';
+
+export function PosPage() {
+  const { data: inventory, ...inventoryLoad } = useCollection('inventory');
+  const { data: allWallets } = useCollection('wallets');
+  const { data: sales, ...salesLoad } = useCollection('sales');
+  const { data: outlets } = useCollection('outlets');
+  // Pelanggan dicari di server; daftar lokal hanya untuk adapter lokal/demo.
+  const serverSearch = !!repository.queryCustomers;
+  const { data: customers } = useCollection('customers', { enabled: !serverSearch });
+  const t = useT();
+  const me = useSessionStore((s) => s.currentEmployee);
+  const org = useSessionStore((s) => s.org);
+  const activeOutletId = useSessionStore((s) => s.activeOutletId);
+  // Cara bayar = wallet bersama + wallet cabang ini (0095). "Tunai Pusat" tidak
+  // ditawarkan di meja Dago; server menolaknya juga.
+  const wallets = walletsForOutlet(allWallets, activeOutletId);
+  const cashIds = new Set(wallets.filter((w) => w.isCash).map((w) => w.id));
+  const allowedOutletIds = useSessionStore((s) => s.allowedOutletIds);
+  const setActiveOutlet = useSessionStore((s) => s.setActiveOutlet);
+  const reachableOutlets = allowedOutletIds.length
+    ? outlets.filter((o) => allowedOutletIds.includes(o.id))
+    : outlets;
+  // Mesin kasir milik satu meja: di "Semua Outlet" katalognya campuran stok
+  // beberapa cabang. Katalog boleh dijelajah (owner memeriksa stok semua
+  // cabang di sini), tapi cabang dipilih SEBELUM barang pertama masuk
+  // keranjang — bukan ditolak setelah keranjang dan pembayaran terisi
+  // (critique 27 Sep 2026). activeOutletId dibaca di atas supaya komponen
+  // ini ikut render ulang.
+  const needOutlet = mustPickOutlet(outlets.length);
+  const activeOutlet = outlets.find((o) => o.id === activeOutletId) ?? null;
+  const orgId = org?.id ?? '';
+  const isMgr = me ? isManager(me.role) : false;
+  // Penjualan bulan lalu tidak bisa dibatalkan (0069): laporan bulan itu sudah berjalan.
+  const monthStart = monthRange().from;
+
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [discount, setDiscount] = useState('');
+  const [discountType, setDiscountType] = useState<DiscountType>('amount');
+  // Uang yang DITERIMA per wallet, urut sesuai ketukan; kembalian dipotong dari
+  // baris terakhir (settleTender).
+  const [tender, setTender] = useState<PaymentAllocation[]>([]);
+  const [busy, setBusy] = useState(false);
+  // Keadaan LUNAS setelah transaksi: register menahan total & kembalian, dan
+  // struk tersedia tepat saat pelanggan masih di depan meja.
+  const [done, setDone] = useState<{ sale: Sale; change: number; phone: string } | null>(null);
+  const [outletModal, setOutletModal] = useState(false);
+  // Barang yang diketuk di "Semua Outlet": masuk keranjang setelah cabang dipilih.
+  const [pendingItem, setPendingItem] = useState<InventoryItem | null>(null);
+  // Isi keranjang terakhir yang dikosongkan — "Kosongkan" dulu tanpa jalan kembali.
+  const [cleared, setCleared] = useState<{
+    cart: CartItem[];
+    discount: string;
+    discountType: DiscountType;
+    tender: PaymentAllocation[];
+    customer: Customer | null;
+  } | null>(null);
+  const [outletNotice, setOutletNotice] = useState(false);
+  const [cartOutlet, setCartOutlet] = useState(activeOutletId);
+  const [cartInView, setCartInView] = useState(false);
+  const searchRef = useRef<HTMLInputElement>(null);
+  // Fokus otomatis hanya untuk mouse: di ponsel ia memunculkan keyboard.
+  const [finePointer] = useState(() => !!window.matchMedia?.('(pointer: fine)').matches);
+  const [tab, setTab] = useState<'pos' | 'history'>('pos');
+  // Pelanggan transaksi (opsional): belanja sparepart pun jadi bagian riwayat
+  // orangnya, bukan penjualan anonim yang tak bisa ditelusuri lagi.
+  const [customer, setCustomer] = useState<Customer | null>(null);
+  const [custQuery, setCustQuery] = useState('');
+  // Pelanggan & diskon dilipat jadi dua tombol: keduanya opsional dan dulu
+  // memakan 104px yang mendorong Proses keluar layar di laptop 768px.
+  const [custOpen, setCustOpen] = useState(false);
+  const [discOpen, setDiscOpen] = useState(false);
+  const custInputRef = useRef<HTMLInputElement>(null);
+  const discInputRef = useRef<HTMLInputElement>(null);
+  const showCust = custOpen || !!customer || custQuery !== '';
+  const showDisc = discOpen || discount !== '';
+  // Tombolnya hilang saat diklik, jadi fokus harus pindah ke kolom yang baru
+  // muncul. Dipakai juga saat pelanggan dilepas: kolom cari langsung siap.
+  const openCust = () => {
+    setCustomer(null);
+    setCustOpen(true);
+    requestAnimationFrame(() => custInputRef.current?.focus());
+  };
+  const openDisc = () => {
+    setDiscOpen(true);
+    requestAnimationFrame(() => discInputRef.current?.focus());
+  };
+
+  // Transaksi terbaru (terbaru dulu): untuk cetak ulang struk & pembatalan.
+  // Delapan baris tidak cukup bahkan untuk satu hari kasir yang ramai.
+  const recentSales = useMemo(
+    () => [...sales].sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? '')).slice(0, 30),
+    [sales],
+  );
+
+  const { results: remoteCustomers, pending: custPending } = useCustomerSearch({ enabled: true, term: custQuery });
+  const [custModal, setCustModal] = useState(false);
+  // `searchCustomers` tetap yang memutuskan — server hanya mempersempit kandidat.
+  const custMatches = useMemo(
+    () => searchCustomers(serverSearch ? remoteCustomers : customers, custQuery),
+    [serverSearch, remoteCustomers, customers, custQuery],
+  );
+  // Panah + Enter di kolom pelanggan: baris cocok, lalu "Tambah pelanggan baru".
+  const showCustMatches = !!custQuery.trim() && !(serverSearch && custQuery.trim().length < 3);
+  const custOptions = showCustMatches ? custMatches.length : 0;
+  // Daftar saran menutupi diskon dan tuts bayar di ponsel. Escape atau
+  // ketukan di luar menutupnya; teksnya tetap, mengetik atau fokus lagi
+  // membukanya kembali.
+  const [suggestOpen, setSuggestOpen] = useState(true);
+  const custBoxRef = useRef<HTMLDivElement>(null);
+  const custListOpen = suggestOpen && !!custQuery.trim();
+  useEffect(() => {
+    if (!custListOpen) return;
+    const onDown = (e: PointerEvent) => {
+      if (!custBoxRef.current?.contains(e.target as Node)) setSuggestOpen(false);
+    };
+    document.addEventListener('pointerdown', onDown);
+    return () => document.removeEventListener('pointerdown', onDown);
+  }, [custListOpen]);
+  const custNav = useListNav(custListOpen ? custOptions + 1 : 0, (i) => {
+    if (i < custOptions) {
+      setCustomer(custMatches[i]);
+      setCustQuery('');
+    } else setCustModal(true);
+  });
+
+  const subtotal = cartSubtotal(cart);
+  const discountValue = resolveDiscount(subtotal, parseRpInput(discount), discountType);
+  const total = cartTotal(cart, parseRpInput(discount), discountType);
+  const settle = settleTender(tender, total, cashIds);
+  // Riwayat bisa memuat wallet cabang lain / yang sudah dipindah — cari di semua.
+  const walletName = (id: string | null) => allWallets.find((w) => w.id === id)?.name ?? '';
+  // Baris yang menyerahkan kembalian: tunai terakhir, atau baris terakhir.
+  const changeTender = tender[changeRowIndex(tender, cashIds)];
+  const quickCash = changeTender
+    ? cashSuggestions(total - (settle.paid - Math.max(0, changeTender.amount)))
+    : [];
+  // Diskon besar = uang toko keluar tanpa persetujuan. Karyawan dibatasi;
+  // server menolaknya juga (0070), ini hanya supaya batasnya terbaca lebih awal.
+  const maxDiscount = discountLimit(subtotal, isMgr);
+  const discountOver = discountValue > maxDiscount;
+  const totalQty = cart.reduce((n, c) => n + c.qty, 0);
+  const nextNo = useMemo(() => nextDocNumber('INV', sales.map((s) => s.saleNo)), [sales]);
+  const totalText = fmtRp(done ? done.sale.total : total);
+  const totalGhost = totalText.replace(/[0-9]/g, '8');
+
+  // Cabang berganti dari mana pun (register, sidebar, menu ponsel): stok di
+  // keranjang milik cabang lama, jadi keranjang dikosongkan dan diberi tahu —
+  // dulu keranjang tetap, lalu checkout gagal dengan "Stok … berubah" palsu.
+  if (cartOutlet !== activeOutletId) {
+    setCartOutlet(activeOutletId);
+    if (cart.length) {
+      setCart([]);
+      setTender([]);
+      setDiscount('');
+      setOutletNotice(true);
+    }
+  }
+
+  // Dock ponsel hanya berguna selama register belum terlihat. Ia menyerahkan
+  // tempatnya ke bar Proses yang menempel di atas menu bawah: garis serah
+  // terimanya = tepi atas dock, supaya keduanya tak pernah tampil bertumpuk
+  // atau sama-sama hilang di tengah guliran.
+  //
+  // Tepi itu DIUKUR, bukan dihitung dari CSS: aturan min-height global membuat
+  // dock tergambar 44px, bukan 56px, dan zoom aplikasi memperbesar menu + dock
+  // tanpa mengubah token. Tebakan "menu + 72" meleset di keduanya. Dock yang
+  // display:none (>720px) tak punya tinggi; angka itu diabaikan.
+  const [dockReach, setDockReach] = useState(0);
+  const measureDock = useCallback((dock: HTMLButtonElement | null) => {
+    const r = dock?.getBoundingClientRect();
+    if (r && r.height > 0) setDockReach(Math.round(window.innerHeight - r.top));
+  }, []);
+  useEffect(() => {
+    const el = document.getElementById('pos-cart');
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    const nav = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--mobile-nav-height')) || 0;
+    const reach = dockReach || Math.round(nav + 72);
+    // Entri TERAKHIR yang berlaku. Sesudah cabang dipilih, satu panggilan bisa
+    // membawa dua entri untuk panel yang sama ([false, true]); membaca yang
+    // pertama membuat dock bertahan di atas Proses (terukur di 320px: ketukan
+    // ke Proses mengenai dock dan halaman malah menggulir).
+    const io = new IntersectionObserver((entries) => {
+      const latest = entries[entries.length - 1];
+      if (latest) setCartInView(latest.isIntersecting);
+    }, { rootMargin: `0px 0px -${reach}px 0px` });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [tab, needOutlet, dockReach]);
+
+  // "/" memfokuskan pencarian dari mana saja di halaman (kecuali saat mengetik).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey) return;
+      const el = e.target as HTMLElement | null;
+      if (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) return;
+      if (!searchRef.current) return;
+      e.preventDefault();
+      searchRef.current.focus();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  const addToCart = (item: InventoryItem) => {
+    if (item.stock <= 0) {
+      toast.warning(t('pos.outOfStockToast').replace('{name}', item.name));
+      return;
+    }
+    // Dicek di luar updater: updater setState dijalankan dua kali di StrictMode,
+    // dan toast di dalamnya dulu muncul kembar.
+    const inCart = cart.find((c) => c.itemId === item.id);
+    if (inCart && inCart.qty >= item.stock) {
+      toast.warning(interpolate(t('pos.stockLimit'), { name: item.name, n: String(item.stock) }));
+      return;
+    }
+    setDone(null);
+    setOutletNotice(false);
+    setCleared(null);
+    setCart((prev) => {
+      const existing = prev.find((c) => c.itemId === item.id);
+      if (existing) {
+        return prev.map((c) =>
+          c.itemId === item.id ? { ...c, qty: Math.min(c.qty + 1, item.stock) } : c,
+        );
+      }
+      return [
+        ...prev,
+        {
+          itemId: item.id,
+          name: item.name,
+          qty: 1,
+          sellPrice: item.sellPrice,
+          costPrice: item.costPrice,
+          stock: item.stock,
+        },
+      ];
+    });
+  };
+
+  const requestAdd = (item: InventoryItem) => {
+    if (needOutlet && item.stock > 0) {
+      setPendingItem(item);
+      setOutletModal(true);
+      return;
+    }
+    addToCart(item);
+  };
+
+  const setQty = (itemId: string, qty: number) => {
+    const item = cart.find((c) => c.itemId === itemId);
+    if (item && qty > item.stock) {
+      toast.warning(interpolate(t('pos.stockLimit'), { name: item.name, n: String(item.stock) }));
+    }
+    setCart((prev) =>
+      prev
+        .map((c) => (c.itemId === itemId ? { ...c, qty: Math.max(0, Math.min(qty, c.stock)) } : c))
+        .filter((c) => c.qty > 0),
+    );
+  };
+
+  const reveal = (el: HTMLElement | null, block: ScrollLogicalPosition) => {
+    if (!el) return null;
+    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block });
+    return el;
+  };
+
+  // Tombol wallet: yang belum dipakai ditambahkan dengan SISA tagihan, jadi
+  // pembayaran pas cukup satu ketukan; yang sudah dipakai difokuskan saja.
+  const pickWallet = (walletId: string) => {
+    if (tender.some((p) => p.walletId === walletId)) {
+      document.getElementById(`tender-${walletId}`)?.focus();
+      return;
+    }
+    setTender((prev) => [...prev, { walletId, amount: Math.max(0, settle.due) }]);
+    // Di layar sentuh kolom nominal, nominal cepat, dan status muncul di
+    // bawah tuts, tepat di balik bar Proses yang menempel. Geser secukupnya
+    // supaya terlihat (scroll-margin di CSS memberi ruang bar).
+    if (!finePointer) requestAnimationFrame(() => reveal(document.getElementById('pos-pay-status'), 'nearest'));
+  };
+  // Nominal diubah DI TEMPAT — urutan baris tetap, karena baris terakhir yang
+  // menyerahkan kembalian.
+  const setTenderAmount = (walletId: string, amount: number) =>
+    setTender((prev) => prev.map((p) => (p.walletId === walletId ? { ...p, amount } : p)));
+  const removeTender = (walletId: string) =>
+    setTender((prev) => prev.filter((p) => p.walletId !== walletId));
+
+  const reset = () => {
+    setCart([]);
+    setDiscount('');
+    setTender([]);
+    setCustomer(null);
+    setCustQuery('');
+    setCustOpen(false);
+    setDiscOpen(false);
+  };
+
+  const clearCart = () => {
+    setCleared({ cart, discount, discountType, tender, customer });
+    reset();
+    searchRef.current?.focus();
+  };
+  const restoreCart = () => {
+    if (!cleared) return;
+    setCart(cleared.cart);
+    setDiscount(cleared.discount);
+    setDiscountType(cleared.discountType);
+    setTender(cleared.tender);
+    setCustomer(cleared.customer);
+    setCleared(null);
+  };
+
+  const newSale = () => {
+    setDone(null);
+    searchRef.current?.focus();
+  };
+
+  const chooseOutlet = (id: string) => {
+    setOutletModal(false);
+    setOutletNotice(false);
+    setDone(null);
+    const item = pendingItem;
+    setPendingItem(null);
+    if (item && cart.length === 0) {
+      // Keranjang dimulai di cabang ini. Tanpa ini, cek pergantian cabang di
+      // render berikutnya mengosongkannya lagi.
+      setCartOutlet(id);
+      if (item.outletId && item.outletId !== id) {
+        toast.warning(t('pos.notInOutlet').replace('{name}', item.name));
+      } else {
+        addToCart(item);
+      }
+    }
+    setActiveOutlet(id);
+  };
+
+  const statusText = settle.ok
+    ? settle.change > 0
+      ? interpolate(t('pos.statusChange'), {
+          amount: fmtRp(settle.change),
+          wallet: walletName(settle.changeWalletId),
+        })
+      : t('pos.statusExact')
+    : settle.excess
+      ? interpolate(t('pos.statusExcess'), { wallet: walletName(changeTender?.walletId ?? null) })
+      : settle.paid === 0
+        ? interpolate(t('pos.statusEmpty'), { amount: fmtRp(total) })
+        : interpolate(t('pos.statusDue'), { amount: fmtRp(settle.due) });
+
+  // Bar Proses menyebut keadaan uang. Selama belum siap, ia tetap bisa
+  // diketuk (aria-disabled, bukan disabled) dan menuntun ke kolom yang kurang.
+  const bar = payBarState(settle, tender.length, discountOver);
+  const barReady = payBarReady(bar);
+  const guidePay = () => {
+    const target =
+      bar.kind === 'discount'
+        ? discInputRef.current
+        : bar.kind === 'pick'
+          ? document.querySelector<HTMLElement>('#pos-tender-keys button')
+          : document.getElementById(`tender-${changeTender?.walletId ?? ''}`);
+    reveal(target, 'center')?.focus({ preventScroll: true });
+  };
+  const payReadout: { caption: string; value: string } | null =
+    bar.kind === 'pick'
+      ? { caption: t('common.total'), value: fmtRp(total) }
+      : bar.kind === 'due'
+        ? { caption: t('pos.lcdDue'), value: fmtRp(bar.amount) }
+        : bar.kind === 'change'
+          ? { caption: t('pos.lcdChange'), value: fmtRp(bar.amount) }
+          : bar.kind === 'exact'
+            ? { caption: t('pos.lcdChange'), value: t('pos.lcdExact') }
+            : null;
+  const payAction = {
+    discount: t('pos.payDiscount'),
+    pick: t('pos.payPick'),
+    excess: t('pos.payExcess'),
+    due: t('pos.payDue'),
+    change: t('pos.payProcess'),
+    exact: t('pos.payProcess'),
+  }[bar.kind];
+
+  const checkout = async () => {
+    const cartCheck = validateCart(cart);
+    if (!cartCheck.ok) {
+      toast.error(cartCheck.errors[0]);
+      return;
+    }
+    if (!settle.ok) {
+      toast.error(statusText);
+      return;
+    }
+    const payments = settle.allocations;
+    if (discountOver) {
+      toast.error(
+        interpolate(t('pos.staffDiscountToast'), { pct: String(STAFF_MAX_DISCOUNT_PCT), amount: fmtRp(maxDiscount) }),
+      );
+      return;
+    }
+    // OQ-C: a user who can reach multiple outlets must pick a specific branch
+    // first, so the sale is tagged to the right outlet (not guessed).
+    if (needOutlet) {
+      setOutletModal(true);
+      return;
+    }
+    const txOutletId = resolveCreateOutlet(outlets);
+    setBusy(true);
+    const now = new Date().toISOString();
+    try {
+      const saleNo = nextDocNumber('INV', sales.map((s) => s.saleNo));
+      const draft: Sale = {
+        id: newId(),
+        orgId,
+        outletId: txOutletId,
+        saleNo,
+        date: localDateStr(),
+        lines: toSaleLines(cart),
+        subtotal,
+        discount: discountValue,
+        discountType,
+        total,
+        payments,
+        cashierId: me?.id ?? '',
+        cashierName: me?.name ?? '',
+        customerId: customer?.id ?? null,
+        customerName: customer?.name ?? '',
+        voided: false,
+        voidedReason: '',
+        createdAt: now,
+        updatedAt: now,
+        deletedAt: null,
+      };
+      let saleId = draft.id;
+      let savedNo = saleNo;
+
+      if (isCloudMode()) {
+        // Cloud: atomic, server-side RPC. This is the ONLY path that lets a
+        // staff cashier complete a sale, since wallet/inventory writes are
+        // manager-only under RLS. Stock re-validation + deduction, wallet
+        // credit, and income insert all happen in one transaction.
+        // Harga, HPP, total & pembayaran divalidasi ulang di server (0069);
+        // nomornya juga ditetapkan server — tampilkan yang tersimpan.
+        ({ id: saleId, saleNo: savedNo } = await processSale({
+          orgId,
+          saleNo,
+          lines: toSaleLines(cart),
+          payments,
+          subtotal,
+          discount: discountValue,
+          discountType,
+          total,
+          outletId: txOutletId,
+          customerId: customer?.id ?? null,
+        }));
+      } else {
+        // Local: re-validate stock against latest inventory (multi-device safety).
+        const fresh = await repository.list('inventory');
+        for (const c of cart) {
+          const item = fresh.find((i) => i.id === c.itemId);
+          if (!item || item.stock < c.qty) {
+            toast.error(
+              item
+                ? interpolate(t('pos.stockChanged'), { name: c.name })
+                : t('pos.notInOutlet').replace('{name}', c.name),
+            );
+            setBusy(false);
+            return;
+          }
+        }
+        await repository.put('sales', draft);
+
+        // Deduct stock.
+        const updatedInv = fresh
+          .filter((i) => cart.some((c) => c.itemId === i.id))
+          .map((i) => {
+            const c = cart.find((x) => x.itemId === i.id)!;
+            return { ...i, stock: i.stock - c.qty };
+          });
+        await repository.putMany('inventory', updatedInv);
+
+        // Record income + credit wallets per allocation. Description must stay
+        // 'Penjualan <no>' so void_sale's fallback match still works.
+        for (const p of payments) {
+          const wallet = wallets.find((w) => w.id === p.walletId);
+          if (!wallet) continue;
+          await repository.put('incomes', {
+            id: newId(),
+            orgId,
+            outletId: txOutletId,
+            date: localDateStr(),
+            category: 'Penjualan',
+            amount: p.amount,
+            walletId: p.walletId,
+            description: `Penjualan ${saleNo}`,
+            serviceId: null,
+            saleId,
+            createdAt: now,
+            updatedAt: now,
+            deletedAt: null,
+          });
+          await repository.put('wallets', { ...wallet, balance: wallet.balance + p.amount });
+        }
+      }
+
+      // Salinan untuk struk segera — server sudah menyimpan yang asli, tapi
+      // pelanggan menunggu sekarang, bukan setelah realtime tiba.
+      setDone({
+        sale: { ...draft, id: saleId, saleNo: savedNo },
+        change: settle.change,
+        phone: customer?.phone ?? '',
+      });
+      if (finePointer) searchRef.current?.focus();
+      logActivity({
+        action: 'sale.create',
+        entityType: 'sale',
+        entityId: saleId,
+        entityLabel: savedNo,
+        meta: { total, items: cart.length },
+        outletId: txOutletId,
+      });
+      reset();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t('pos.processFailed'));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const outletButtons = (
+    <div className={styles.outletList}>
+      {reachableOutlets.map((o) => (
+        <button
+          key={o.id}
+          type="button"
+          className={styles.outletOpt}
+          aria-pressed={o.id === activeOutletId}
+          onClick={() => chooseOutlet(o.id)}
+        >
+          <span className={styles.outletLed} aria-hidden />
+          <span className={styles.outletOptName}>{o.name}</span>
+          {o.isPrimary && <span className={styles.outletOptTag}>{t('pos.outletMain')}</span>}
+        </button>
+      ))}
+    </div>
+  );
+
+  // Baris kedua LCD: yang harus dilihat kasir berikutnya — sisa, kembalian, pas.
+  const lcdSub: { label: string; value: string; tone: 'due' | 'change' | 'exact' } | null = done
+    ? done.change > 0
+      ? { label: t('pos.lcdChange'), value: fmtRp(done.change), tone: 'change' }
+      : { label: t('pos.lcdExact'), value: done.sale.saleNo, tone: 'exact' }
+    : cart.length === 0 || settle.paid === 0
+      ? null
+      : settle.excess
+        ? { label: t('pos.lcdExcess'), value: fmtRp(settle.change), tone: 'due' }
+        : settle.change > 0
+          ? { label: t('pos.lcdChange'), value: fmtRp(settle.change), tone: 'change' }
+        : settle.due > 0
+          ? { label: t('pos.lcdDue'), value: fmtRp(settle.due), tone: 'due' }
+          : { label: t('pos.lcdExact'), value: '', tone: 'exact' };
+
+  return (
+    <div className={[styles.page, tab === 'pos' ? styles.pagePos : ''].join(' ')}>
+      <div className={styles.tabs} role="tablist">
+        <button
+          type="button"
+          role="tab"
+          id="pos-tab-register"
+          aria-selected={tab === 'pos'}
+          aria-controls={tab === 'pos' ? 'pos-panel' : undefined}
+          className={[styles.tab, tab === 'pos' ? styles.tabActive : ''].join(' ')}
+          onClick={() => setTab('pos')}
+        >
+          <Icon name="cart-shopping" aria-hidden /> {t('pos.tabRegister')}
+        </button>
+        {/* Kasir juga perlu tab ini — di situlah struk dicetak ulang. Pembatalan
+            tetap milik manager (tombolnya di bawah). */}
+        <button
+          type="button"
+          role="tab"
+          id="pos-tab-history"
+          aria-selected={tab === 'history'}
+          aria-controls={tab === 'history' ? 'pos-panel' : undefined}
+          className={[styles.tab, tab === 'history' ? styles.tabActive : ''].join(' ')}
+          onClick={() => setTab('history')}
+        >
+          <Icon name="clock-rotate-left" aria-hidden /> {t('pos.tabHistory')}
+          {recentSales.length > 0 && <span className={styles.tabCount}>{recentSales.length}</span>}
+        </button>
+      </div>
+
+      {tab === 'pos' && (
+      <div className={styles.layout} id="pos-panel" role="tabpanel" aria-labelledby="pos-tab-register">
+        <div className={styles.products}>
+          <PosCatalog
+            inventory={inventory}
+            inventoryLoad={inventoryLoad}
+            searchRef={searchRef}
+            finePointer={finePointer}
+            onAdd={requestAdd}
+            onEmptyEnter={done ? newSale : undefined}
+            branchOf={needOutlet ? (i) => outlets.find((o) => o.id === i.outletId)?.name ?? null : undefined}
+          />
+        </div>
+
+      <Card id="pos-cart" className={styles.cartPanel}>
+        {/* Pembaca layar hanya mendengar angka uangnya. Dulu aria-live
+            membungkus seluruh register, jadi tiap ubah qty membacakan ulang
+            cabang, nomor faktur, dan jumlah baris. */}
+        <p className="fm-visually-hidden" aria-live="polite" aria-atomic="true">
+          {done ? `${t('pos.lcdPaid')}. ` : ''}
+          {t('common.total')} {totalText}
+          {lcdSub ? `. ${lcdSub.label} ${lcdSub.value}` : ''}
+        </p>
+        <div className={styles.register}>
+          <div className={styles.registerTop}>
+            {done ? (
+              <span className={styles.paidTag}>{t('pos.lcdPaid')}</span>
+            ) : (
+              <span className={styles.live}>{t('pos.lcdLive')}</span>
+            )}
+            <span>{t('common.total')}</span>
+          </div>
+          {/* Ukuran angka mengikuti jumlah karakter supaya total 9 digit tetap
+              sebaris di 320px (lihat .lcd). */}
+          <div className={styles.lcd} style={{ '--lcd-chars': totalText.length } as CSSProperties}>
+            <span className={styles.lcdGhost} aria-hidden>{totalGhost}</span>
+            {totalText}
+          </div>
+          {lcdSub && (
+            <div className={[styles.lcdSub, styles[lcdSub.tone]].join(' ')}>
+              <span>{lcdSub.label}</span>
+              <span>{lcdSub.value}</span>
+            </div>
+          )}
+          <div className={styles.registerMeta}>
+            {reachableOutlets.length > 1 ? (
+              <button
+                type="button"
+                className={styles.outletChip}
+                onClick={() => setOutletModal(true)}
+                aria-label={t('pos.outletChip').replace('{name}', activeOutlet?.name ?? t('pos.pickBranch'))}
+              >
+                <span className={activeOutlet ? styles.outletLedOn : styles.outletLed} aria-hidden />
+                {activeOutlet?.name ?? t('pos.pickBranch')}
+                <Icon name="chevron-down" aria-hidden />
+              </button>
+            ) : (
+              <span>{done ? done.sale.saleNo : nextNo}</span>
+            )}
+            <span>
+              {done
+                ? interpolate(t('pos.lcdLinesDone'), { n: String(done.sale.lines.length) })
+                : interpolate(t('pos.lcdLines'), { qty: String(totalQty), n: String(cart.length) })}
+            </span>
+          </div>
+        </div>
+
+        {done ? (
+          <div className={styles.donePanel}>
+            <p className={styles.doneTitle}>
+              <span className={styles.doneLed} aria-hidden /> {t('pos.doneTitle')}
+              <span className={styles.doneNo}>{done.sale.saleNo}</span>
+            </p>
+            <p className={styles.doneChange}>
+              {done.change > 0
+                ? t('pos.doneChange')
+                    .split('{amount}')
+                    .flatMap((part, i) => (i ? [<strong key={i}>{fmtRp(done.change)}</strong>, part] : [part]))
+                : t('pos.doneExact')}
+            </p>
+            <div className={styles.doneActions}>
+              {org && (
+                <Button
+                  variant="secondary"
+                  iconLeft={<Icon name="print" aria-hidden />}
+                  onClick={() => printSaleReceipt(done.sale, org, { change: done.change, walletName, outlets })}
+                >
+                  {t('pos.printReceipt')}
+                </Button>
+              )}
+              {done.phone && (
+                <a
+                  className={styles.waBtn}
+                  href={waLink(done.phone, saleWaMessage(t('pos.waMessage'), org?.name ?? '', done.sale))}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <Icon name="whatsapp" aria-hidden /> {t('pos.sendWa')}
+                </a>
+              )}
+            </div>
+            {/* Tanpa autoFocus: Enter yang menyelesaikan transaksi dulu ikut
+                "menekan" tombol ini, sehingga LUNAS & kembalian hilang sebelum
+                terbaca. Fokus pindah ke kolom cari; Enter kosong di sana (atau
+                pindaian berikutnya) memulai transaksi baru. */}
+            <Button
+              fullWidth
+              onClick={newSale}
+            >
+              {t('pos.newSale')}
+            </Button>
+          </div>
+        ) : (
+        <>
+        <div className={styles.cartHeader}>
+          <h2>
+            <Icon name="cart-shopping" aria-hidden /> {t('pos.cart')}
+          </h2>
+          {cart.length > 0 && (
+            <button type="button" className={styles.clearBtn} onClick={clearCart}>
+              {t('pos.clearCart')}
+            </button>
+          )}
+        </div>
+
+        <div className={styles.cartItems}>
+          {cart.length === 0 ? (
+            <>
+            <p className={styles.emptyCart}>
+              {outletNotice ? t('pos.outletChanged') : cleared ? t('pos.cleared') : t('pos.cartEmpty')}
+            </p>
+            {cleared && !outletNotice && (
+              <button type="button" className={styles.restoreBtn} onClick={restoreCart}>
+                <Icon name="repeat" aria-hidden />{' '}
+                {t('pos.restoreCart').replace('{n}', String(cleared.cart.reduce((n, c) => n + c.qty, 0)))}
+              </button>
+            )}
+            </>
+          ) : (
+            cart.map((c) => (
+              <div key={c.itemId} className={styles.cartItem}>
+                <strong className={styles.cartItemName}>{c.name}</strong>
+                <small className={styles.cartItemUnit}>{fmtRp(c.sellPrice)} ×{'\u00a0'}{c.qty}</small>
+                <div className={styles.qtyControl}>
+                  <button type="button" onClick={() => setQty(c.itemId, c.qty - 1)} aria-label={interpolate(t('pos.qtyMinus'), { name: c.name })}>
+                    <Icon name="minus" aria-hidden />
+                  </button>
+                  {/* Qty bisa diketik — 12 kabel data bukan 11 ketukan "+". */}
+                  <input
+                    className={styles.qtyInput}
+                    inputMode="numeric"
+                    aria-label={t('pos.qtyLabel').replace('{name}', c.name)}
+                    value={c.qty}
+                    onFocus={(e) => e.currentTarget.select()}
+                    onChange={(e) => {
+                      const n = parseInt(e.target.value.replace(/\D/g, ''), 10);
+                      if (!Number.isNaN(n) && n > 0) setQty(c.itemId, n);
+                    }}
+                  />
+                  <button type="button" onClick={() => setQty(c.itemId, c.qty + 1)} aria-label={interpolate(t('pos.qtyPlus'), { name: c.name })}>
+                    <Icon name="plus" aria-hidden />
+                  </button>
+                </div>
+                <span className={styles.lineTotal}>{fmtRp(c.sellPrice * c.qty)}</span>
+              </div>
+            ))
+          )}
+        </div>
+
+        {cart.length > 0 && (
+          <>
+            <div className={styles.tearLine} aria-hidden />
+            <div className={styles.checkout}>
+            {showCust && (
+            <div className={styles.customerBox} ref={custBoxRef}>
+              {customer ? (
+                <div className={styles.customerChip}>
+                  <Icon name="users" aria-hidden />
+                  <span>{customer.name}</span>
+                  <button type="button" onClick={() => openCust()} aria-label={t('pos.custRemove')}>
+                    <Icon name="xmark" aria-hidden />
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <Input
+                    ref={custInputRef}
+                    placeholder={t('pos.custOptional')}
+                    aria-label={t('pos.custOptional')}
+                    value={custQuery}
+                    onChange={(e) => {
+                      setCustQuery(e.target.value);
+                      setSuggestOpen(true);
+                    }}
+                    onFocus={() => setSuggestOpen(true)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Escape' && custListOpen) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setSuggestOpen(false);
+                        return;
+                      }
+                      custNav.onKeyDown(e);
+                    }}
+                    role="combobox"
+                    aria-expanded={custListOpen}
+                    aria-autocomplete="list"
+                    aria-controls="pos-customer-suggest"
+                    aria-activedescendant={custNav.active >= 0 ? `pos-cust-${custNav.active}` : undefined}
+                    iconLeft={<Icon name="magnifying-glass" aria-hidden />}
+                  />
+                  {/* Saran selalu menjelaskan dirinya: kurang huruf, masih mencari,
+                      tidak ditemukan — dan selalu menawarkan pelanggan baru. Dulu
+                      kolom ini diam saja bila tak ada yang cocok, dan Kasir tak bisa
+                      membuat pelanggan. */}
+                  {custListOpen && (
+                    <ul className={styles.custSuggest} id="pos-customer-suggest" role="listbox">
+                      {serverSearch && custQuery.trim().length < 3 ? (
+                        <li className={styles.custHint}>{t('pos.custMinChars')}</li>
+                      ) : custMatches.length === 0 ? (
+                        <li className={styles.custHint}>
+                          {serverSearch && custPending
+                            ? t('pos.custSearching')
+                            : t('pos.custNotFound').replace('{q}', custQuery.trim())}
+                        </li>
+                      ) : (
+                        custMatches.map((c, i) => (
+                          <li key={c.id}>
+                            <button
+                              type="button"
+                              id={`pos-cust-${i}`}
+                              role="option"
+                              aria-selected={i === custNav.active}
+                              tabIndex={-1}
+                              onClick={() => {
+                                setCustomer(c);
+                                setCustQuery('');
+                              }}
+                            >
+                              <strong>{c.name}</strong>
+                              <small>{c.phone || t('pos.custNoPhone')}</small>
+                            </button>
+                          </li>
+                        ))
+                      )}
+                      <li>
+                        <button
+                          type="button"
+                          id={`pos-cust-${custOptions}`}
+                          role="option"
+                          aria-selected={custNav.active === custOptions}
+                          className={styles.custAdd}
+                          onClick={() => setCustModal(true)}
+                        >
+                          <Icon name="plus" aria-hidden /> {t('pos.custAdd')}
+                        </button>
+                      </li>
+                    </ul>
+                  )}
+                </>
+              )}
+            </div>
+            )}
+
+            {showDisc && (
+            <div className={styles.discountRow}>
+              <Input
+                ref={discInputRef}
+                placeholder={t('pos.discount')}
+                aria-label={t('pos.discount')}
+                inputMode="numeric"
+                value={discount}
+                onChange={(e) => setDiscount(fmtRpInput(e.target.value))}
+              />
+              <div className={styles.discountToggle}>
+                <button
+                  type="button"
+                  aria-pressed={discountType === 'amount'}
+                  aria-label={t('pos.discountAmount')}
+                  className={discountType === 'amount' ? styles.activeToggle : ''}
+                  onClick={() => setDiscountType('amount')}
+                >
+                  Rp
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={discountType === 'percent'}
+                  aria-label={t('pos.discountPercent')}
+                  className={discountType === 'percent' ? styles.activeToggle : ''}
+                  onClick={() => setDiscountType('percent')}
+                >
+                  %
+                </button>
+              </div>
+            </div>
+            )}
+
+            {(!showCust || !showDisc) && (
+              <div className={styles.extras}>
+                {!showCust && (
+                  <button type="button" className={styles.extraKey} onClick={openCust} aria-label={t('pos.custAddAria')}>
+                    <Icon name="user-plus" aria-hidden /> {t('pos.custShort')}
+                  </button>
+                )}
+                {!showDisc && (
+                  <button type="button" className={styles.extraKey} onClick={openDisc} aria-label={t('pos.discountAddAria')}>
+                    <Icon name="tag" aria-hidden /> {t('pos.discount')}
+                  </button>
+                )}
+              </div>
+            )}
+
+            {discountOver && (
+              <p className={styles.discountWarn}>
+                {interpolate(t('pos.staffDiscountNote'), { pct: String(STAFF_MAX_DISCOUNT_PCT), amount: fmtRp(maxDiscount) })}
+              </p>
+            )}
+
+            {/* Tanpa diskon, subtotal = total = angka LCD; rincian ini hanya
+                mengulang angka yang sama dua kali lagi. */}
+            {discountValue > 0 && (
+              <div className={styles.summary}>
+                <div><span>{t('pos.subtotal')}</span><span>{fmtRp(subtotal)}</span></div>
+                <div className={styles.discountLine}>
+                  <span>{t('pos.discount')}</span><span>−{fmtRp(discountValue)}</span>
+                </div>
+                <div className={styles.totalLine}><span>{t('common.total')}</span><span>{fmtRp(total)}</span></div>
+              </div>
+            )}
+
+            <div className={styles.payments}>
+              <div className={styles.paymentsHeader}>
+                <span>{t('pos.tender')}</span>
+                {tender.length === 0 && (
+                  <span id="pos-tender-hint" className={styles.tenderHint}>{t('pos.tenderHint')}</span>
+                )}
+              </div>
+              <div id="pos-tender-keys" className={styles.tenderKeys} role="group" aria-label={t('pos.tenderKeys')}>
+                {wallets.map((w) => (
+                  <button
+                    key={w.id}
+                    type="button"
+                    className={styles.tenderKey}
+                    aria-pressed={tender.some((p) => p.walletId === w.id)}
+                    onClick={() => pickWallet(w.id)}
+                  >
+                    <span className={styles.tenderLed} aria-hidden />
+                    {w.name}
+                  </button>
+                ))}
+              </div>
+              {tender.map((p) => {
+                const name = walletName(p.walletId);
+                return (
+                  <div key={p.walletId} className={styles.paymentRow}>
+                    <label htmlFor={`tender-${p.walletId}`}>{name}</label>
+                    <Input
+                      id={`tender-${p.walletId}`}
+                      aria-label={t('pos.tenderAmount').replace('{wallet}', name)}
+                      inputMode="numeric"
+                      autoFocus={finePointer}
+                      onFocus={(e) => e.currentTarget.select()}
+                      value={p.amount ? fmtRpInput(String(p.amount)) : ''}
+                      onChange={(e) => setTenderAmount(p.walletId, parseRpInput(e.target.value))}
+                      onKeyDown={(e) => {
+                        if (e.key !== 'Enter') return;
+                        e.preventDefault();
+                        if (!e.repeat && settle.ok && !discountOver) void checkout();
+                      }}
+                      placeholder="0"
+                    />
+                    <button
+                      type="button"
+                      className={styles.tenderRemove}
+                      onClick={() => removeTender(p.walletId)}
+                      aria-label={t('pos.tenderRemove').replace('{wallet}', name)}
+                    >
+                      <Icon name="xmark" aria-hidden />
+                    </button>
+                  </div>
+                );
+              })}
+              {tender.length > 1 && changeTender && (
+                <p className={styles.tenderRule}>
+                  {t(cashIds.has(changeTender.walletId) ? 'pos.changeRuleCash' : 'pos.changeRule').replace(
+                    '{wallet}',
+                    walletName(changeTender.walletId),
+                  )}
+                </p>
+              )}
+              {quickCash.length > 1 && changeTender && (
+                <div className={styles.quickCash} role="group" aria-label={t('pos.cashQuick')}>
+                  {quickCash.map((v, i) => (
+                    <button key={v} type="button" onClick={() => setTenderAmount(changeTender.walletId, v)}>
+                      {i === 0 ? t('pos.exact') : fmtRp(v)}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {/* Sebelum ada tuts yang ditekan, petunjuk di kepala bagian sudah
+                  bilang apa yang harus dilakukan. Di desktop LCD selalu
+                  terlihat dan baris keduanya sudah menyebut sisa/kembalian/pas,
+                  jadi status hanya tampil bila membawa info lebih (statusExtra):
+                  dompet kembalian saat bayar campur, lebih bayar, nominal 0. */}
+              {tender.length > 0 && (
+                <div
+                  id="pos-pay-status"
+                  className={[
+                    styles.paymentStatus,
+                    settle.ok ? styles.ok : settle.paid === 0 ? styles.idle : styles.bad,
+                    tender.length > 1 || settle.excess || settle.paid === 0 ? styles.statusExtra : '',
+                  ].join(' ')}
+                >
+                  <span className={styles.statusLed} aria-hidden />
+                  {statusText}
+                </div>
+              )}
+            </div>
+            </div>
+
+            {/* Di luar .checkout supaya bisa menempel ke tepi bawah seluruh
+                register, bukan hanya ke bagian bayar. */}
+            <div className={styles.payBar}>
+              <Button
+                fullWidth
+                className={styles.payBtn}
+                data-state={bar.kind}
+                onClick={barReady ? checkout : guidePay}
+                loading={busy}
+                aria-disabled={!barReady || undefined}
+                aria-describedby={tender.length ? 'pos-pay-status' : 'pos-tender-hint'}
+                iconLeft={busy ? undefined : <Icon name={barReady ? 'circle-check' : 'arrow-up'} aria-hidden />}
+              >
+                <span className={styles.payAction}>{payAction}</span>
+                {payReadout && (
+                  <span className={styles.payReadout}>
+                    <small>{payReadout.caption}</small>
+                    <strong>{payReadout.value}</strong>
+                  </span>
+                )}
+              </Button>
+            </div>
+          </>
+        )}
+        </>
+        )}
+      </Card>
+      </div>
+      )}
+
+      {tab === 'pos' && cart.length > 0 && !done && !cartInView && (
+        <button
+          ref={measureDock}
+          type="button"
+          className={styles.mobileCartDock}
+          onClick={() => document.getElementById('pos-cart')?.scrollIntoView({ behavior: 'smooth' })}
+          aria-label={interpolate(t('pos.dockAria'), { qty: String(totalQty), total: totalText })}
+        >
+          <span>
+            <Icon name="cart-shopping" aria-hidden /> {interpolate(t('pos.units'), { n: String(totalQty) })}
+          </span>
+          <strong>{totalText}</strong>
+          <Icon name="arrow-right" aria-hidden />
+        </button>
+      )}
+
+      {tab === 'history' && (
+        <PosHistory
+          recentSales={recentSales}
+          salesLoad={salesLoad}
+          walletName={walletName}
+          org={org}
+          isMgr={isMgr}
+          monthStart={monthStart}
+          branchName={activeOutlet && reachableOutlets.length > 1 ? activeOutlet.name : null}
+        />
+      )}
+
+      <CustomerModal
+        open={custModal}
+        onClose={() => setCustModal(false)}
+        editing={null}
+        customers={serverSearch ? remoteCustomers : customers}
+        initialQuery={custQuery}
+        onSaved={(c) => {
+          setCustomer(c);
+          setCustQuery('');
+        }}
+      />
+
+      <Modal
+        open={outletModal}
+        onClose={() => {
+          setOutletModal(false);
+          setPendingItem(null);
+        }}
+        title={t(pendingItem ? 'pos.outletPickTitle' : 'pos.outletSwitchTitle')}
+        size="sm"
+      >
+        {pendingItem ? (
+          <p className={styles.outletPickBody}>{t('pos.outletPickBody')}</p>
+        ) : (
+          cart.length > 0 && <p className={styles.outletPickBody}>{t('pos.outletSwitchCartNote')}</p>
+        )}
+        {outletButtons}
+      </Modal>
+    </div>
+  );
+}

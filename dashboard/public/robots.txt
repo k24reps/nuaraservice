@@ -1,0 +1,3 @@
+# Nuara Dashboard: aplikasi internal workshop. Tidak ada yang boleh dirayapi.
+User-agent: *
+Disallow: /

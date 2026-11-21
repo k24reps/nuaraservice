@@ -1,0 +1,166 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: color-mix(in srgb, var(--bg-base) 76%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  z-index: var(--z-modal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-5);
+  animation: fm-fade-in var(--dur-fast) var(--ease-out);
+}
+
+.modal {
+  width: 100%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  animation: fm-scale-in var(--dur-normal) var(--ease-emphasized);
+  position: relative;
+  overflow: hidden;
+}
+/* Jendela menerima fokus saat dibuka (pembaca layar mulai dari judulnya);
+   bingkainya sendiri tidak perlu cincin fokus. */
+.modal:focus {
+  outline: none;
+}
+/* Tanpa strip aksen di tepi atas: jendela dialog tak memetakan status apa pun
+   (semuanya brand), jadi 3px gradien itu hanya hiasan. Tepi dibawa bingkai 1px
+   --border-strong + bayangan; sinyal tetap di judul dan LED header. */
+
+.sm {
+  max-width: 420px;
+}
+.md {
+  max-width: 560px;
+}
+.lg {
+  max-width: 760px;
+}
+.xl {
+  max-width: 960px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-5) var(--space-6);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  position: relative;
+}
+/* engraved dotted seam under the header (echoes sidebar/cards) */
+.header::after {
+  content: '';
+  position: absolute;
+  left: var(--space-5);
+  right: var(--space-5);
+  bottom: -1px;
+  height: 1px;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--border-strong) 0 6px,
+    transparent 6px 12px
+  );
+  opacity: 0.5;
+}
+.title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: var(--fw-bold);
+}
+/* small status LED on the faceplate */
+.title::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--brand);
+  box-shadow: 0 0 8px var(--brand);
+  flex-shrink: 0;
+}
+.close {
+  width: var(--control-h);
+  height: var(--control-h);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-md);
+  line-height: 1;
+  color: var(--text-muted);
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  transition:
+    color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+}
+.close:hover {
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}
+.close:active {
+  transform: translateY(1px);
+}
+
+.body {
+  padding: var(--space-6);
+  overflow-y: auto;
+  flex: 1;
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-6);
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+@media (max-width: 600px) {
+  .overlay {
+    align-items: flex-end;
+    padding: var(--space-2);
+  }
+  .modal {
+    max-width: 100% !important;
+    max-height: calc(var(--app-vh) - var(--space-4));
+    border-radius: var(--radius-xl) var(--radius-xl) var(--radius-md) var(--radius-md);
+  }
+}
+
+@media (max-width: 520px) {
+  .modal {
+    max-height: calc(var(--app-vh) - var(--space-4));
+  }
+  .header {
+    padding: var(--space-3) var(--space-3);
+  }
+  .header::after {
+    left: var(--space-3);
+    right: var(--space-3);
+  }
+  .body {
+    padding: var(--space-3);
+  }
+  .footer {
+    padding: var(--space-3) var(--space-3);
+    flex-wrap: wrap;
+  }
+  .footer > button {
+    flex: 1;
+  }
+}

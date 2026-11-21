@@ -1,0 +1,1198 @@
+/* ============================================================
+   POS — "Register Readout"
+   The cart panel is a cash register: an LCD total readout on
+   top of a perforated thermal receipt with mechanical keys.
+   Uses GLOBAL tokens so it inherits the bench identity.
+   ============================================================ */
+
+.page {
+  /* Posisi diam register = margin topbar (14px, Topbar.module.css) + topbar +
+     padding atas konten. Register menempel di titik yang SAMA, jadi ia tak
+     pernah bergeser dan tingginya bisa dihitung tanpa mengukur DOM. */
+  --pos-register-top: calc(14px + var(--topbar-height) + var(--space-6));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* ---------- Tab bar (Kasir / Transaksi Terakhir) ---------- */
+.tabs {
+  display: flex;
+  gap: var(--space-1);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 2px;
+}
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 9px 16px;
+  min-height: var(--control-h);
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: var(--fw-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -3px;
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+}
+.tab:hover {
+  color: var(--text-secondary);
+}
+.tab svg {
+  font-size: 0.95em;
+}
+.tabActive {
+  color: var(--brand-hover);
+  border-bottom-color: var(--brand);
+}
+.tabCount {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: var(--radius-full);
+  background: var(--brand-soft);
+  color: var(--brand-hover);
+  font-size: var(--text-xs);
+  font-weight: var(--fw-bold);
+}
+
+.layout {
+  display: grid;
+  /* minmax, bukan 400px mati: kolom keranjang boleh mengembalikan ruang saat
+     containernya sempit. Ambang 1 vs 2 kolom di bawah terikat pada KEHADIRAN
+     SIDEBAR (di <=1024px sidebar hilang sehingga .layout justru melebar dari
+     667px ke 960px), jadi breakpoint itu tak bisa dijadikan container query —
+     hubungannya terbalik. Karena itu ruang sempit harus diserap oleh trek-nya
+     sendiri. Tanpa ini, zoom aplikasi 125% pada jendela 1097px membuat halaman
+     meluber 31px (terukur). Di lebar normal 1fr tetap menyisakan 400px penuh,
+     jadi tampilannya tak berubah.
+     minmax(0, 1fr), bukan 1fr polos: minimum otomatis 1fr = lebar isi
+     terpanjang, dan baris chip kategori yang panjang lalu melebarkan seluruh
+     kolom (terukur di 390px: 7 kategori = 674px, 13 = 1266px; total LCD
+     keluar layar). Dengan minimum 0, baris chip menggulir sendiri. */
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 400px);
+  gap: var(--space-4);
+  align-items: start;
+}
+
+/* ---------- Products (left) ---------- */
+.products {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+/* ---------- Pilih cabang kasir (modal, sebelum barang pertama) ---------- */
+.outletPickBody {
+  max-width: 60ch;
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-2);
+}
+.outletList {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--space-2);
+}
+/* Kanal ber-LED, sama dengan panel status tiket (Design System: Kanal pilihan). */
+.outletOpt {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 52px;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  text-align: left;
+  transition: border-color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
+}
+.outletOpt:hover {
+  border-color: var(--brand);
+}
+.outletOpt[aria-pressed='true'] {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+}
+.outletOptName {
+  flex: 1;
+  min-width: 0;
+  font-weight: var(--fw-semibold);
+  font-size: var(--text-sm);
+}
+.outletOptTag {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+.outletLed,
+.outletLedOn {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--brand);
+  opacity: 0.45;
+}
+.outletLedOn,
+.outletOpt[aria-pressed='true'] .outletLed {
+  opacity: 1;
+  box-shadow: 0 0 8px var(--brand);
+}
+
+/* ---------- Register (right) ---------- */
+.cartPanel {
+  position: sticky;
+  top: var(--pos-register-top);
+  display: flex;
+  flex-direction: column;
+  padding: 0 !important;
+  /* Jaring pengaman: normalnya hanya daftar item yang menggulir (lihat blok
+     >=1025px). Bila bagian bayar sendiri lebih tinggi dari layar (tiga tender
+     + diskon di layar pendek), seluruh register menggulir dengan LCD dan bar
+     Proses tetap menempel. */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  /* Dock ponsel menggulir ke sini; tanpa ini LCD mendarat di bawah header. */
+  scroll-margin-top: calc(var(--topbar-height) + var(--space-3));
+}
+
+/* ----- LCD readout ----- */
+/* Layar tetap GELAP di kedua tema, seperti LCD sungguhan (sama dengan hero
+   Dashboard). Dulu gradiennya berakhir di --bg-base yang ikut terang di light
+   mode, jadi angka dan label bercahaya mendarat di latar terang (label TOTAL
+   terukur 2.55:1). Isinya kini hanya token readout / skala terang yang tidak
+   berganti tema. */
+.register {
+  position: relative;
+  /* Wadah untuk ukuran angka LCD (cqi di .lcd). */
+  container-type: inline-size;
+  padding: var(--space-4) var(--space-5) var(--space-3);
+  background: radial-gradient(130% 150% at 0% 0%, var(--readout-surface), var(--readout-base));
+  border-bottom: 1px solid var(--border-strong);
+}
+/* faint scanline texture over the LCD */
+.register::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    color-mix(in srgb, var(--readout-text) 2.5%, transparent) 0 1px,
+    transparent 1px 3px
+  );
+  pointer-events: none;
+}
+.registerTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+.live {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.live::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 7px var(--accent);
+  animation: fm-pulse 1.8s var(--ease-in-out) var(--pulse-cycles);
+}
+/* Angka LCD selalu sebaris. Di 320px "Rp 3.450.000" pada 2.35rem sudah
+   patah jadi dua baris, "Rp 140.460.000" apalagi. Lebar satu karakter mono
+   ≈ 0.62em (0.6 + letter-spacing), jadi ukuran = lebar wadah / jumlah
+   karakter (--lcd-chars dari PosPage.tsx), dibatasi 2.35rem. */
+.lcd {
+  position: relative;
+  font-family: var(--font-mono);
+  font-weight: var(--fw-bold);
+  font-size: min(2.35rem, 100cqi / (var(--lcd-chars, 12) * 0.62));
+  white-space: nowrap;
+  line-height: 1.05;
+  letter-spacing: 0.01em;
+  color: var(--brand-400);
+  text-shadow: 0 0 16px color-mix(in srgb, var(--brand) 40%, transparent);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+/* Tanda LUNAS menggantikan LED LIVE setelah transaksi tersimpan. */
+.paidTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--green-400);
+}
+.paidTag::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--green-400);
+  box-shadow: 0 0 7px var(--green-400);
+}
+/* Baris kedua LCD: sisa / kembalian / pas. LCD selalu gelap, jadi skala
+   terang dipakai langsung (tak ikut berganti tema). */
+.lcdSub {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-top: 4px;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: var(--fw-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-variant-numeric: tabular-nums;
+}
+.lcdSub span:last-child {
+  font-size: var(--text-md);
+  letter-spacing: 0.01em;
+}
+.lcdSub.due {
+  color: var(--amber-400);
+}
+.lcdSub.change {
+  color: var(--green-400);
+}
+.lcdSub.exact {
+  color: var(--readout-muted);
+}
+/* "all-segments-on" ghost behind the live number — classic LCD trick */
+.lcdGhost {
+  position: absolute;
+  inset: 0;
+  color: color-mix(in srgb, var(--brand) 7%, transparent);
+  text-shadow: none;
+  pointer-events: none;
+}
+/* Nama cabang lebih penting daripada hitungan baris: bila tak muat sebaris,
+   hitungan yang turun, bukan nama cabang yang dielipsis. */
+.registerMeta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 4px var(--space-3);
+  margin-top: 8px;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--readout-muted);
+  position: relative;
+}
+
+/* Cabang kasir di pita LCD: selalu terlihat, satu ketukan untuk ganti. */
+.outletChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+  padding: 4px 8px;
+  margin: -4px -8px;
+  border-radius: var(--radius-xs);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--readout-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.outletChip:hover {
+  background: color-mix(in srgb, var(--readout-text) 10%, transparent);
+}
+.outletChip .outletLed,
+.outletChip .outletLedOn {
+  width: 6px;
+  height: 6px;
+}
+
+/* ----- Setelah lunas: struk & transaksi baru ----- */
+.donePanel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5) var(--space-5);
+}
+.doneTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: var(--fw-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--success-text);
+}
+.doneLed {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--success);
+  box-shadow: 0 0 8px var(--success);
+}
+.doneNo {
+  margin-left: auto;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+}
+.doneChange {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px dotted var(--border-strong);
+}
+/* Aturan Angka Mono: nominal yang diserahkan dibaca sebagai readout. */
+.doneChange strong {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--fw-bold);
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+.doneActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.doneActions > * {
+  flex: 1 1 140px;
+}
+.waBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--control-h);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: var(--fw-semibold);
+  color: var(--text-primary);
+}
+.waBtn:hover {
+  border-color: var(--success);
+  color: var(--success-text);
+}
+
+/* ----- Receipt header ----- */
+.cartHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-5);
+  border-bottom: 1px dashed var(--border-strong);
+}
+.cartHeader h2 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: var(--fw-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.cartHeader h2 svg {
+  color: var(--text-muted);
+}
+/* Target setinggi kontrol, dimakan margin negatif supaya kepala struk tidak
+   ikut meninggi. Dulu 86×32. */
+.clearBtn {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--control-h);
+  padding: 0 var(--space-3);
+  margin: calc(-1 * var(--space-3)) calc(-1 * var(--space-3)) calc(-1 * var(--space-3)) 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.clearBtn:hover {
+  color: var(--danger);
+}
+
+/* ----- Receipt body (thermal paper / monospace) ----- */
+.cartItems {
+  padding: var(--space-3) var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-height: 110px;
+  font-family: var(--font-mono);
+}
+.emptyCart {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  text-align: center;
+  padding: var(--space-6) 0;
+}
+/* Dua baris: nama selebar struk, lalu harga · qty · jumlah. Satu baris
+   dulu memeras nama jadi "Keyb…" dan harga satuan pecah 3 baris di 375px. */
+.cartItem {
+  display: grid;
+  /* Dulu 'unit qty total' di baris kedua: di ponsel tombol qty 44px memeras
+     harga satuan sampai tertimpa (terukur 115px teks di sel 0–67px). */
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'name total'
+    'unit qty';
+  align-items: center;
+  column-gap: var(--space-3);
+  row-gap: 4px;
+  padding-bottom: var(--space-3);
+  border-bottom: 1px dotted var(--border);
+}
+.cartItem:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+.cartItemName {
+  grid-area: name;
+  font-size: var(--text-sm);
+  font-weight: var(--fw-semibold);
+  overflow-wrap: anywhere;
+}
+.cartItemUnit {
+  grid-area: unit;
+  min-width: 0;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+.qtyControl {
+  grid-area: qty;
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+/* mechanical keys — depth via thicker bottom border, depress on :active */
+.qtyControl button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-xs);
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border-strong);
+  border-bottom-width: 3px;
+  color: var(--text-primary);
+  font-size: var(--text-md);
+  font-weight: var(--fw-bold);
+  line-height: 1;
+  transition: transform var(--dur-fast), border-color var(--dur-fast);
+}
+.qtyControl button:hover {
+  border-color: var(--brand);
+}
+.qtyControl button:active {
+  transform: translateY(2px);
+  border-bottom-width: 1px;
+}
+.qtyInput {
+  width: 3.2ch;
+  min-width: 34px;
+  height: 30px;
+  padding: 0 2px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-xs);
+  background: transparent;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: var(--fw-bold);
+  color: var(--text-primary);
+}
+.qtyInput:hover,
+.qtyInput:focus {
+  border-color: var(--border-strong);
+  background: var(--bg-input);
+}
+.restoreBtn {
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 var(--space-3);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-full);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--brand-text);
+}
+.restoreBtn:hover {
+  border-style: solid;
+  border-color: var(--brand);
+}
+.tenderRule {
+  margin: 0;
+  font-size: var(--text-xs);
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+.lineTotal {
+  grid-area: total;
+  align-self: start;
+  white-space: nowrap;
+  text-align: right;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: var(--fw-semibold);
+}
+
+/* ----- Perforated tear line between receipt & checkout ----- */
+.tearLine {
+  height: 11px;
+  flex: none;
+  background-image: radial-gradient(circle at 6px 100%, var(--bg-app) 0 4px, transparent 4.5px);
+  background-size: 13px 11px;
+  background-repeat: repeat-x;
+  border-top: 1px dashed var(--border-strong);
+}
+
+/* ---------- Checkout ---------- */
+.checkout {
+  padding: var(--space-4) var(--space-5) 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  background: var(--surface-glass-strong);
+}
+/* Bar Proses: kelanjutan .checkout (latar & jarak sama), tapi anak langsung
+   register supaya bisa menempel di tepi bawahnya. */
+.payBar {
+  padding: var(--space-3) var(--space-5) var(--space-4);
+  /* Kaca yang sama dengan .checkout, tapi diletakkan di atas permukaan kartu
+     sehingga padat: saat menempel, baris struk di bawahnya tak tembus. */
+  background:
+    linear-gradient(var(--surface-glass-strong), var(--surface-glass-strong)),
+    var(--bg-surface);
+}
+/* Bar Proses = penunjuk uang: aksi di kiri, readout mono di kanan (TOTAL,
+   SISA, KEMBALIAN). Saat kasir menerima uang LCD sudah tergulir ke atas, jadi
+   angka yang ditunggu pelanggan harus ada di bar yang menempel ini. Button
+   membungkus isinya dalam satu span; span itulah yang dibagi dua. */
+.payBtn {
+  justify-content: flex-start;
+  text-align: left;
+}
+.payBtn > span {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.payAction {
+  white-space: normal;
+  line-height: 1.25;
+}
+.payReadout {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.payReadout small {
+  font-size: var(--text-xs);
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.payReadout strong {
+  font-size: var(--text-sm);
+  font-weight: var(--fw-bold);
+}
+/* Belum siap: bar bergaris putus (Button), keterangan redup, angkanya tetap
+   terang. Sisa tagihan memakai tinta peringatan yang sama dengan status
+   "Kurang" di atasnya. */
+.payBtn[aria-disabled='true'] .payReadout small {
+  color: var(--text-muted);
+}
+.payBtn[aria-disabled='true'] .payReadout strong {
+  color: var(--text-primary);
+}
+.payBtn[data-state='due'] .payReadout strong {
+  color: var(--warning-text);
+}
+/* Pelanggan & diskon terlipat: tuts tambahan bergaris putus, bahasa yang sama
+   dengan nominal cepat di bawahnya. */
+.extras {
+  display: flex;
+  gap: var(--space-2);
+}
+.extraKey {
+  flex: 1 1 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-width: 0;
+  min-height: var(--control-h);
+  padding: 0 var(--space-3);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: var(--fw-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+  transition: border-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+.extraKey svg {
+  color: var(--text-muted);
+}
+.extraKey:hover {
+  border-style: solid;
+  border-color: var(--brand);
+  color: var(--brand-text);
+}
+.extraKey:hover svg {
+  color: inherit;
+}
+/* ----- Pelanggan transaksi (opsional) ----- */
+.customerBox {
+  position: relative;
+}
+.customerChip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--control-h);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border-brand);
+  border-radius: var(--radius-sm);
+  background: var(--brand-soft);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+}
+.customerChip span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.customerChip svg {
+  color: var(--brand-hover);
+}
+.customerChip button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-md);
+  line-height: 1;
+  color: var(--text-muted);
+  padding: 4px;
+}
+.customerChip button:hover {
+  color: var(--danger);
+}
+.custSuggest {
+  position: absolute;
+  z-index: var(--z-sticky);
+  left: 0;
+  right: 0;
+  margin-top: 4px;
+  list-style: none;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface-2);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+}
+.custSuggest button {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  width: 100%;
+  padding: 7px var(--space-3);
+  text-align: left;
+}
+.custSuggest button:hover,
+.custSuggest button[aria-selected='true'] {
+  background: var(--bg-hover);
+}
+.custSuggest strong {
+  font-size: var(--text-sm);
+  font-weight: var(--fw-semibold);
+}
+.custHint {
+  padding: 8px var(--space-3);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+.custSuggest button.custAdd {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  border-top: 1px dotted var(--border-strong);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: var(--fw-semibold);
+  color: var(--brand-text);
+}
+.custSuggest small {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.discountRow {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+}
+.discountWarn {
+  font-size: var(--text-xs);
+  line-height: 1.5;
+  color: var(--warning-text);
+}
+/* Hanya kolom input yang melebar — dulu selektor `> div` ikut menarik
+   toggle Rp/% jadi kotak kosong ~140px. */
+.discountRow > :first-child {
+  flex: 1;
+}
+.discountToggle {
+  display: flex;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.discountToggle button {
+  padding: 0 12px;
+  height: 40px;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: var(--fw-semibold);
+  color: var(--text-muted);
+  background: var(--bg-input);
+}
+.activeToggle {
+  background: var(--brand-fill) !important;
+  color: var(--on-brand) !important;
+}
+
+.summary {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+.summary > div {
+  display: flex;
+  justify-content: space-between;
+  color: var(--text-secondary);
+}
+.discountLine {
+  color: var(--warning-text) !important;
+}
+.totalLine {
+  font-size: var(--text-md);
+  font-weight: var(--fw-bold);
+  color: var(--text-primary) !important;
+  padding-top: 6px;
+  border-top: 1px dashed var(--border-strong);
+}
+
+.payments {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  container-type: inline-size;
+}
+.paymentsHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: var(--fw-semibold);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.tenderHint {
+  flex: 1;
+  text-align: right;
+  font-weight: var(--fw-normal);
+  text-transform: none;
+  letter-spacing: 0;
+}
+/* Pad tender: satu tuts per wallet. Tuts yang dipakai menyala. */
+.tenderKeys {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+  gap: var(--space-2);
+}
+.tenderKey {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-bottom-width: 3px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: var(--fw-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-align: left;
+  transition: border-color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast);
+}
+.tenderKey:hover {
+  border-color: var(--brand);
+  color: var(--text-primary);
+}
+.tenderKey:active {
+  transform: translateY(2px);
+  border-bottom-width: 1px;
+}
+.tenderKey[aria-pressed='true'] {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+  color: var(--brand-text);
+}
+.tenderLed {
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: var(--radius-full);
+  background: var(--brand);
+  opacity: 0.35;
+}
+.tenderKey[aria-pressed='true'] .tenderLed {
+  opacity: 1;
+  box-shadow: 0 0 8px var(--brand);
+}
+.paymentRow {
+  display: grid;
+  grid-template-columns: 90px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+}
+.paymentRow label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Wadah sempit: nama dompet naik ke atas kolom nominal. Sebaris, kolom
+   label 90px menyisakan 94px untuk nominal di 320px dan "3.450.000" sudah
+   terpotong 7px. Ambang diukur dari kasus terburuk layar sentuh: 90 label
+   + 16 jeda + 44 tuts hapus + 121 kolom yang memuat "888.888.888" = 271px.
+   Petunjuk tender ikut turun ke barisnya sendiri, bukan tiga baris rata
+   kanan di samping "BAYAR". */
+@container (max-width: 270px) {
+  .paymentRow {
+    grid-template-columns: minmax(0, 1fr) auto;
+    row-gap: 4px;
+  }
+  .paymentRow label {
+    grid-column: 1 / -1;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+  }
+  .paymentsHeader {
+    flex-wrap: wrap;
+  }
+  .tenderHint {
+    flex-basis: 100%;
+    text-align: left;
+  }
+}
+.tenderRemove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+}
+.tenderRemove:hover {
+  color: var(--danger-text);
+  background: var(--bg-hover);
+}
+/* Nominal uang yang lazim diserahkan — untuk baris tender terakhir. */
+.quickCash {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.quickCash button {
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-full);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+}
+.quickCash button:hover {
+  border-style: solid;
+  border-color: var(--brand);
+  color: var(--brand-text);
+}
+.statusLed {
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: var(--radius-full);
+  background: currentColor;
+}
+.paymentStatus {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.04em;
+  padding: 7px;
+  border-radius: var(--radius-sm);
+  text-transform: uppercase;
+}
+/* Teks sinyal memakai token -text (terbaca di kedua tema); dulu --green-400 /
+   --amber-400 mentah terukur 1,5:1 dan 1,9:1 di tema terang. */
+.paymentStatus.ok {
+  background: var(--success-soft);
+  color: var(--success-text);
+}
+.paymentStatus.bad {
+  background: var(--warning-soft);
+  color: var(--warning-text);
+}
+.paymentStatus.idle {
+  background: var(--bg-surface-2);
+  color: var(--text-secondary);
+}
+.paymentStatus.idle .statusLed {
+  opacity: 0.5;
+}
+
+.mobileCartDock {
+  display: none;
+}
+
+/* Register setinggi layar, sejajar tab (bukan di bawahnya): LCD di atas, bar
+   Proses di bawah, hanya struk yang menggulir. Dulu register mulai di bawah
+   tab tapi tingginya dihitung seolah sudah menempel di atas, jadi saat halaman
+   baru dibuka Proses jatuh di bawah layar (1366×768: 39px, 1280×800: 39px).
+   Kolom & ambangnya tetap milik .layout (lihat komentar di sana); .layout
+   hanya "dibuka" agar tab bisa duduk di kolom kiri saja. */
+@media (min-width: 1025px) {
+  .pagePos {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 400px);
+    grid-template-rows: auto 1fr;
+    align-items: start;
+  }
+  .pagePos .layout {
+    display: contents;
+  }
+  .pagePos .products {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  .pagePos .cartPanel {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    height: calc(var(--app-vh) - var(--pos-register-top) - var(--space-4));
+  }
+  .register {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+  }
+  .cartItems {
+    flex: 1 1 0;
+    /* Dua baris struk: batas sebelum jaring pengaman panel mengambil alih. */
+    min-height: 104px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .payBar {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+  }
+  .paymentStatus:not(.statusExtra) {
+    display: none;
+  }
+  /* Saat jaring pengaman aktif, kolom nominal yang baru difokus harus
+     mendarat di antara LCD dan bar Proses, bukan di bawah bar yang menempel
+     (terukur: tertutup penuh di demo 1366×768). Angka ≈ tinggi keduanya. */
+  .cartPanel {
+    scroll-padding-block: 128px 80px;
+  }
+}
+
+/* Struk yang terpotong di tepi bawah memudar, tanda masih ada baris lagi.
+   Pudar hilang di ujung guliran; tanpa luapan, timeline tak aktif dan mask
+   tetap di posisi dasar (tanpa pudar). */
+@supports (animation-timeline: scroll()) {
+  @media (min-width: 1025px) {
+    .cartItems {
+      mask-image: linear-gradient(to bottom, black calc(100% - var(--space-6)), transparent);
+      mask-size: 100% calc(100% + var(--space-6));
+      mask-repeat: no-repeat;
+      animation: receipt-more linear both;
+      animation-timeline: scroll(self);
+    }
+  }
+}
+@keyframes receipt-more {
+  from {
+    mask-size: 100% 100%;
+  }
+  to {
+    mask-size: 100% calc(100% + var(--space-6));
+  }
+}
+/* Tanda yang sama untuk jaring pengaman: bila seluruh register menggulir,
+   isi yang tersembunyi di balik bar Proses memudar ke arahnya. Timeline-nya
+   guliran panel; tanpa luapan ia tak aktif dan pudar tak pernah tampil. */
+@supports (animation-timeline: scroll()) {
+  @media (min-width: 1025px) {
+    .payBar::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 100%;
+      height: var(--space-6);
+      background: linear-gradient(to bottom, transparent, var(--bg-surface));
+      pointer-events: none;
+      opacity: 0;
+      animation: register-more linear both;
+      animation-timeline: scroll(nearest);
+    }
+  }
+}
+@keyframes register-more {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@media (max-width: 1024px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  /* clip, bukan hidden/auto: keduanya menjadikan panel wadah gulir sehingga
+     bar Proses menempel ke panel, bukan ke layar. clip tetap memotong sudut. */
+  .cartPanel {
+    position: static;
+    overflow: clip;
+  }
+  .payBar {
+    position: sticky;
+    bottom: env(safe-area-inset-bottom);
+    z-index: 2;
+  }
+  /* Kolom yang dituju (fokus, ketukan bar, tuts bayar) mendarat di atas bar
+     Proses yang menempel, bukan di baliknya. 96px ≈ tinggi bar + jeda. */
+  .checkout :is(input, button),
+  .paymentStatus {
+    scroll-margin-bottom: 96px;
+  }
+}
+
+@media (max-width: 720px) {
+  .page {
+    padding-bottom: calc(var(--mobile-nav-height) + 76px + env(safe-area-inset-bottom));
+  }
+  /* Duduk tepat di atas menu bawah (yang mengambang --space-2 dari tepi). */
+  .payBar {
+    bottom: calc(var(--mobile-nav-height) + var(--space-2) + env(safe-area-inset-bottom));
+  }
+  .checkout :is(input, button),
+  .paymentStatus {
+    scroll-margin-bottom: calc(var(--mobile-nav-height) + var(--space-2) + 96px);
+  }
+  .mobileCartDock {
+    position: fixed;
+    left: var(--space-4);
+    right: var(--space-4);
+    bottom: calc(var(--mobile-nav-height) + var(--space-4) + env(safe-area-inset-bottom));
+    z-index: var(--z-sticky);
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    align-items: center;
+    gap: var(--space-3);
+    /* Tanpa min-height sendiri: aturan global (global.css, ≤720px) memaksa
+       --control-h dengan !important. Batas serah terima dock → bar Proses
+       diukur dari dock yang tergambar (PosPage.tsx), bukan dari angka ini. */
+    padding: 10px var(--space-4);
+    border: 1px solid var(--border-brand);
+    border-radius: var(--radius-md);
+    color: var(--on-brand);
+    background: var(--gradient-brand);
+    box-shadow: var(--shadow-lg), var(--shadow-brand);
+  }
+  .mobileCartDock span {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-weight: var(--fw-semibold);
+  }
+  .mobileCartDock strong {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+}

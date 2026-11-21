@@ -1,0 +1,819 @@
+import { describe, it, expect } from 'vitest';
+import {
+  trendMode,
+  trendSeries,
+  trendGeometry,
+  transactionRows,
+  profitByDeviceCategory,
+  sparepartUsage,
+  restockSuggestions,
+  serviceFunnel,
+  completionDate,
+  avgTurnaroundDays,
+  ratioDelta,
+  periodComparison,
+  previousWindow,
+  comparisonWindows,
+  outletComparison,
+  receivablesAging,
+  agingFromRows,
+  serviceQuality,
+  technicianProfit,
+  awaitingPickup,
+  salesBreakdown,
+  periodPreset,
+  customerStats,
+  stockValue,
+  monthTargetPace,
+} from './reports';
+import type {
+  Service,
+  InventoryItem,
+  ServiceSparepart,
+  IncomeCategory,
+  ExpenseCategory,
+} from '@/data/types';
+
+const inc = (
+  date: string,
+  amount: number,
+  over: Partial<{
+    category: IncomeCategory;
+    description: string;
+    outletId: string | null;
+  }> = {},
+) => ({
+  date,
+  amount,
+  category: 'Servis' as IncomeCategory,
+  description: '',
+  outletId: null as string | null,
+  ...over,
+});
+const exp = (
+  date: string,
+  amount: number,
+  over: Partial<{
+    category: ExpenseCategory;
+    description: string;
+    outletId: string | null;
+  }> = {},
+) => ({
+  date,
+  amount,
+  category: 'Sparepart' as ExpenseCategory,
+  description: '',
+  outletId: null as string | null,
+  ...over,
+});
+
+const part = (over: Partial<ServiceSparepart>): ServiceSparepart => ({
+  itemId: over.itemId ?? 'i1',
+  name: over.name ?? 'LCD',
+  qty: over.qty ?? 1,
+  costPrice: over.costPrice ?? 50000,
+  sellPrice: over.sellPrice ?? 80000,
+  deducted: over.deducted ?? true,
+  kind: over.kind ?? 'inventory',
+});
+
+const svc = (over: Partial<Service>): Service => ({
+  id: over.id ?? 's1',
+  orgId: 'o1',
+  outletId: over.outletId ?? null,
+  serviceNo: over.serviceNo ?? 'FM-0001',
+  customerId: 'c1',
+  customerName: over.customerName ?? 'Budi',
+  customerPhone: '08',
+  category: over.category ?? 'HP',
+  device: 'iPhone',
+  complaint: '',
+  accessories: '',
+  status: over.status ?? 'selesai',
+  technicianId: null,
+  technicianName: over.technicianName ?? 'Andi',
+  estimateCost: over.estimateCost ?? 0,
+  finalCost: over.finalCost ?? 100000,
+  downPayment: over.downPayment ?? 0,
+  spareparts: over.spareparts ?? [],
+  warrantyServiceUntil: null,
+  warrantyPartsUntil: null,
+  pickedUp: false,
+  pickedUpAt: null,
+  warrantyClaimOf: null,
+  history: over.history ?? [],
+  completedAt: over.completedAt,
+  archived: false,
+  createdAt: over.createdAt ?? '2026-06-01T00:00:00.000Z',
+  updatedAt: '2026-06-01T00:00:00.000Z',
+  deletedAt: null,
+  ...over,
+});
+
+const item = (over: Partial<InventoryItem>): InventoryItem => ({
+  id: over.id ?? 'i1',
+  orgId: 'o1',
+  outletId: null,
+  name: over.name ?? 'LCD',
+  category: 'Layar',
+  sku: 'SKU1',
+  stock: over.stock ?? 5,
+  minStock: over.minStock ?? 2,
+  costPrice: 50000,
+  sellPrice: 80000,
+  supplierId: null,
+  createdAt: '',
+  updatedAt: '',
+  deletedAt: null,
+});
+
+describe('trendMode', () => {
+  it('uses daily buckets for short ranges', () => {
+    expect(trendMode('2026-06-01', '2026-06-30')).toBe('day');
+  });
+  it('uses weekly buckets for medium ranges', () => {
+    expect(trendMode('2026-01-01', '2026-04-01')).toBe('week');
+  });
+  it('uses monthly buckets for long ranges', () => {
+    expect(trendMode('2025-01-01', '2026-01-01')).toBe('month');
+  });
+});
+
+describe('trendSeries', () => {
+  it('buckets income and expense by day', () => {
+    const series = trendSeries(
+      [inc('2026-06-01', 100), inc('2026-06-01', 50), inc('2026-06-03', 200)],
+      [exp('2026-06-02', 30)],
+      '2026-06-01',
+      '2026-06-03',
+    );
+    expect(series).toHaveLength(3);
+    expect(series[0]).toMatchObject({ income: 150, expense: 0, net: 150 });
+    expect(series[1]).toMatchObject({ income: 0, expense: 30, net: -30 });
+    expect(series[2]).toMatchObject({ income: 200, expense: 0, net: 200 });
+  });
+  it('groups into months for long ranges', () => {
+    const series = trendSeries(
+      [inc('2025-01-15', 100), inc('2025-03-10', 200)],
+      [],
+      '2025-01-01',
+      '2026-01-01',
+    );
+    expect(series).toHaveLength(13);
+    expect(series[0].income).toBe(100);
+    expect(series[2].income).toBe(200);
+  });
+  it('menandai hari yang belum terjadi, bukan menganggapnya nol', () => {
+    const series = trendSeries([inc('2026-11-02', 100)], [], '2026-11-01', '2026-11-05', '2026-11-03');
+    expect(series.map((p) => p.future)).toEqual([false, false, false, true, true]);
+  });
+  it('bulan berjalan pada rentang panjang tidak dianggap masa depan', () => {
+    const series = trendSeries([], [], '2026-06-01', '2027-02-28', '2026-11-14');
+    expect(series.map((p) => p.future)).toEqual([false, false, false, false, false, false, true, true, true]);
+  });
+});
+
+// Grafik di layar dan grafik di laporan PDF menggambar dari fungsi ini. Kalau
+// ia berbeda di antara keduanya, pemilik mengarsipkan bentuk yang bukan yang
+// ia lihat — dan kertas tidak bisa memperbaiki diri.
+describe('trendGeometry', () => {
+  const pts = [
+    { label: 'A', income: 0, expense: 50, net: -50 },
+    { label: 'B', income: 100, expense: 0, net: 100 },
+  ];
+
+  it('memetakan nilai tertinggi ke atas plot dan nol ke garis dasar', () => {
+    const g = trendGeometry(pts);
+    expect(g.max).toBe(100);
+    expect(g.y(100)).toBeCloseTo(g.pad.top);
+    expect(g.y(0)).toBeCloseTo(g.pad.top + g.plotH);
+    expect(g.x(0)).toBeCloseTo(g.pad.left);
+    expect(g.x(1)).toBeCloseTo(g.pad.left + g.plotW);
+  });
+
+  it('menutup arsiran pemasukan ke garis dasar', () => {
+    expect(trendGeometry(pts).incArea.endsWith('Z')).toBe(true);
+    expect(trendGeometry([]).incArea).toBe('');
+  });
+
+  it('menjarangkan label sumbu X maksimal 8 dan tidak pernah bagi nol', () => {
+    const many = Array.from({ length: 31 }, (_, i) => ({
+      label: String(i),
+      income: 0,
+      expense: 0,
+      net: 0,
+    }));
+    expect(trendGeometry(many).xLabels.length).toBeLessThanOrEqual(8);
+    // Semua nilai nol: max dipaksa 1, jadi y() tetap angka sah.
+    expect(Number.isFinite(trendGeometry(many).y(0))).toBe(true);
+    // Satu titik diletakkan di tengah, bukan NaN dari pembagian (n-1) = 0.
+    expect(trendGeometry([pts[0]]).x(0)).toBeCloseTo(
+      trendGeometry([pts[0]]).pad.left + trendGeometry([pts[0]]).plotW / 2,
+    );
+  });
+
+  it('garis berhenti di hari ini; sisa sumbu tetap ada', () => {
+    const withFuture = [...pts, { label: 'C', income: 0, expense: 0, net: 0, future: true }];
+    const g = trendGeometry(withFuture);
+    // Tiga ember di sumbu, tapi jalur hanya melewati dua titik.
+    expect(g.incPath.split(' L ').length).toBe(2);
+    expect(g.nowX).toBeCloseTo(g.x(1));
+    expect(g.incArea).toContain(`L ${g.x(1)} `);
+    expect(trendGeometry(pts).nowX).toBeNull();
+  });
+
+  it('menghormati ukuran khusus dokumen cetak', () => {
+    const g = trendGeometry(pts, { width: 760, height: 200 });
+    expect(g.width).toBe(760);
+    expect(g.plotH).toBe(200 - g.pad.top - g.pad.bottom);
+  });
+});
+
+describe('transactionRows', () => {
+  it('signs amounts and sorts newest first', () => {
+    const rows = transactionRows([inc('2026-06-01', 100)], [exp('2026-06-05', 40)]);
+    expect(rows[0]).toMatchObject({
+      date: '2026-06-05',
+      type: 'Pengeluaran',
+      amount: -40,
+    });
+    expect(rows[1]).toMatchObject({ date: '2026-06-01', type: 'Pemasukan', amount: 100 });
+  });
+});
+
+describe('profitByDeviceCategory', () => {
+  it('groups realized services by category with profit', () => {
+    const result = profitByDeviceCategory([
+      svc({
+        category: 'HP',
+        finalCost: 200000,
+        spareparts: [part({ qty: 1, costPrice: 50000 })],
+      }),
+      svc({ id: 's2', category: 'HP', status: 'lunas', finalCost: 100000 }),
+      svc({ id: 's3', category: 'Laptop', finalCost: 300000 }),
+      svc({ id: 's4', category: 'HP', status: 'pengerjaan', finalCost: 999999 }), // excluded
+    ]);
+    const hp = result.find((r) => r.category === 'HP')!;
+    expect(hp.count).toBe(2);
+    expect(hp.revenue).toBe(300000);
+    expect(hp.profit).toBe(250000); // (200k-50k) + 100k
+  });
+
+  it('counts DP kept on a cancelled ticket as revenue, not as a unit', () => {
+    const batal = (refund: number | undefined, over: Partial<Service> = {}) =>
+      svc({
+        id: `b${refund}`,
+        status: 'batal',
+        downPayment: 100000,
+        finalCost: 0,
+        history: [{ at: '2026-06-02T03:00:00.000Z', status: 'batal', by: 'e1', byName: 'A', note: '', internal: false, refund }],
+        ...over,
+      });
+    const result = profitByDeviceCategory([
+      batal(30000, { spareparts: [part({ costPrice: 20000, deducted: true }), part({ costPrice: 99000, deducted: false })] }),
+      batal(100000), // DP dikembalikan penuh, tak ada biaya → tidak ikut
+      batal(undefined), // tiket lama: DP ditahan tak diketahui → tidak ikut
+    ]);
+    expect(result).toEqual([{ category: 'HP', count: 0, revenue: 70000, profit: 50000 }]);
+  });
+});
+
+describe('sparepartUsage', () => {
+  it('aggregates qty and cost per part name', () => {
+    const result = sparepartUsage([
+      svc({ spareparts: [part({ name: 'LCD', qty: 2, costPrice: 50000 })] }),
+      svc({
+        id: 's2',
+        spareparts: [
+          part({ name: 'LCD', qty: 1, costPrice: 50000 }),
+          part({ name: 'Baterai', qty: 4, costPrice: 30000 }),
+        ],
+      }),
+    ]);
+    expect(result[0]).toMatchObject({ name: 'Baterai', qty: 4 });
+    expect(result.find((r) => r.name === 'LCD')).toMatchObject({ qty: 3, cost: 150000 });
+  });
+});
+
+describe('restockSuggestions', () => {
+  it('returns items at or below min stock, neediest first', () => {
+    const result = restockSuggestions([
+      item({ id: 'a', stock: 5, minStock: 2 }), // ok
+      item({ id: 'b', stock: 1, minStock: 2 }),
+      item({ id: 'c', stock: 0, minStock: 1 }),
+    ]);
+    expect(result.map((i) => i.id)).toEqual(['c', 'b']);
+  });
+});
+
+describe('serviceFunnel', () => {
+  it('counts services per status in workflow order, dropping zeros', () => {
+    const result = serviceFunnel([
+      svc({ status: 'diterima' }),
+      svc({ id: 's2', status: 'pengerjaan' }),
+      svc({ id: 's3', status: 'pengerjaan' }),
+    ]);
+    expect(result.map((s) => s.status)).toEqual(['diterima', 'pengerjaan']);
+    expect(result[1].count).toBe(2);
+  });
+});
+
+describe('completionDate / avgTurnaroundDays', () => {
+  const withHistory = svc({
+    createdAt: '2026-06-01T00:00:00.000Z',
+    history: [
+      {
+        at: '2026-06-05T10:00:00.000Z',
+        status: 'selesai',
+        by: 'e1',
+        byName: 'A',
+        note: '',
+        internal: false,
+      },
+    ],
+  });
+  it('reads completion date from history', () => {
+    expect(completionDate(withHistory)).toBe('2026-06-05');
+  });
+  it('prefers the completedAt column over history (0080)', () => {
+    // Laporan tidak lagi memuat `history`; baris cloud hanya membawa kolom ini.
+    expect(completionDate(svc({ completedAt: '2026-06-07T10:00:00.000Z' }))).toBe('2026-06-07');
+  });
+  it('falls back to history when the column is absent', () => {
+    // Adapter lokal/demo menyimpan objek utuh dan tak punya kolom itu.
+    expect(completionDate(withHistory)).toBe('2026-06-05');
+    expect(completionDate(svc({}))).toBeNull();
+  });
+  it('column wins when both exist, so a reopened ticket keeps its first date', () => {
+    const both = svc({
+      completedAt: '2026-06-05T10:00:00.000Z',
+      history: [
+        {
+          at: '2026-06-20T10:00:00.000Z',
+          status: 'selesai',
+          by: 'e1',
+          byName: 'A',
+          note: '',
+          internal: false,
+        },
+      ],
+    });
+    expect(completionDate(both)).toBe('2026-06-05');
+  });
+  it('averages intake→completion spans', () => {
+    const other = svc({
+      id: 's2',
+      createdAt: '2026-06-01T00:00:00.000Z',
+      history: [
+        {
+          at: '2026-06-03T00:00:00.000Z',
+          status: 'selesai',
+          by: 'e',
+          byName: 'A',
+          note: '',
+          internal: false,
+        },
+      ],
+    });
+    expect(avgTurnaroundDays([withHistory, other])).toBe(3); // (4 + 2) / 2
+  });
+  it('returns 0 when nothing completed', () => {
+    expect(avgTurnaroundDays([svc({ history: [] })])).toBe(0);
+  });
+});
+
+describe('ratioDelta', () => {
+  it('computes growth fraction', () => {
+    expect(ratioDelta(150, 100)).toBeCloseTo(0.5);
+    expect(ratioDelta(50, 100)).toBeCloseTo(-0.5);
+  });
+  it('guards divide-by-zero', () => {
+    expect(ratioDelta(0, 0)).toBe(0);
+  });
+
+  it('mengembalikan null saat tidak ada dasar pembanding', () => {
+    // Dulu ini `1`, yang tampil sebagai "+100,0%" dan tidak bisa dibedakan
+    // dari pertumbuhan dua kali lipat sungguhan. Periode setelah periode mati
+    // jadi terbaca seperti kabar baik.
+    expect(ratioDelta(100, 0)).toBeNull();
+  });
+
+  it('kehancuran ke nol tetap dilaporkan sebagai -100%', () => {
+    // Arah sebaliknya HARUS tetap berupa angka: ada dasarnya, dan kabar
+    // buruknya justru yang paling perlu terbaca (PRODUCT.md, Prinsip 4).
+    expect(ratioDelta(0, 100)).toBeCloseTo(-1);
+  });
+});
+
+describe('periodComparison', () => {
+  it('compares against the preceding equal-length window', () => {
+    // Current window 06-08..06-14 (span 6) → previous window 06-01..06-07.
+    const incomes = [inc('2026-06-10', 200), inc('2026-06-03', 100)];
+    const result = periodComparison(incomes, [], '2026-06-08', '2026-06-14');
+    expect(result.current.income).toBe(200);
+    expect(result.previous.income).toBe(100);
+    expect(result.incomeDelta).toBeCloseTo(1); // 100 → 200 = +100%
+  });
+
+  it('mengaku tidak punya dasar saat periode lalu kosong', () => {
+    // Regresi yang ditemukan saat kritik: pemanggil hanya mengambil periode
+    // terpilih, jadi `previous` selalu nol dan chip di layar cuma bisa 0%
+    // atau +100%. Fungsinya benar; yang salah adalah datanya tidak diberikan.
+    const result = periodComparison(
+      [inc('2026-06-10', 200)],
+      [],
+      '2026-06-08',
+      '2026-06-14',
+    );
+    expect(result.previous.income).toBe(0);
+    expect(result.incomeDelta).toBeNull();
+  });
+
+  it('menghitung jendela pembanding yang sama panjang', () => {
+    expect(previousWindow('2026-06-08', '2026-06-14')).toEqual(['2026-06-01', '2026-06-07']);
+  });
+
+  it('memakai jendela pembanding yang diberikan', () => {
+    const result = periodComparison(
+      [inc('2026-11-05', 300), inc('2026-10-05', 100), inc('2026-10-25', 999)],
+      [],
+      '2026-11-01',
+      '2026-11-14',
+      ['2026-10-01', '2026-10-14'],
+    );
+    expect(result.previous.income).toBe(100);
+    expect(result.incomeDelta).toBeCloseTo(2);
+  });
+});
+
+describe('comparisonWindows', () => {
+  it('bulan berjalan dipotong ke hari ini, dibanding tanggal yang sama bulan lalu', () => {
+    // Regresi kritik 14 Nov 2026: 14 hari November dulu dibanding 30 hari Oktober.
+    expect(comparisonWindows('2026-11-01', '2026-11-30', '2026-11-14')).toEqual({
+      current: ['2026-11-01', '2026-11-14'],
+      previous: ['2026-10-01', '2026-10-14'],
+      clamped: true,
+    });
+  });
+
+  it('bulan penuh yang sudah lewat dibanding bulan sebelumnya, dipotong di akhir bulan', () => {
+    expect(comparisonWindows('2026-03-01', '2026-03-31', '2026-11-14').previous).toEqual([
+      '2026-02-01',
+      '2026-02-28',
+    ]);
+    expect(comparisonWindows('2026-10-01', '2026-10-31', '2026-11-14')).toMatchObject({
+      current: ['2026-10-01', '2026-10-31'],
+      previous: ['2026-09-01', '2026-09-30'],
+      clamped: false,
+    });
+  });
+
+  it('rentang bebas memakai jendela geser sepanjang bagian yang sudah terjadi', () => {
+    expect(comparisonWindows('2026-11-10', '2026-11-20', '2026-11-14')).toEqual({
+      current: ['2026-11-10', '2026-11-14'],
+      previous: ['2026-11-05', '2026-11-09'],
+      clamped: true,
+    });
+  });
+
+  it('periode yang belum dimulai tidak dipotong', () => {
+    expect(comparisonWindows('2026-12-01', '2026-12-31', '2026-11-14').clamped).toBe(false);
+  });
+});
+
+describe('outletComparison', () => {
+  it('groups by outlet and labels null as Tanpa Cabang', () => {
+    const result = outletComparison(
+      [
+        inc('2026-06-01', 100, { outletId: 'A' }),
+        inc('2026-06-01', 50, { outletId: null }),
+      ],
+      [exp('2026-06-01', 20, { outletId: 'A' })],
+      [{ id: 'A', name: 'Cabang Pusat' }],
+      '2026-06-01',
+      '2026-06-30',
+    );
+    const pusat = result.find((r) => r.outletId === 'A')!;
+    expect(pusat).toMatchObject({
+      name: 'Cabang Pusat',
+      income: 100,
+      expense: 20,
+      net: 80,
+    });
+    expect(result.find((r) => r.name === 'Tanpa Cabang')).toMatchObject({ income: 50 });
+  });
+});
+
+describe('receivablesAging', () => {
+  it('lists completed services with outstanding balance, aged', () => {
+    const today = new Date('2026-06-20T00:00:00.000Z');
+    const result = receivablesAging(
+      [
+        svc({
+          status: 'selesai',
+          finalCost: 200000,
+          downPayment: 50000,
+          history: [
+            {
+              at: '2026-06-18T00:00:00.000Z',
+              status: 'selesai',
+              by: 'e',
+              byName: 'A',
+              note: '',
+              internal: false,
+            },
+          ],
+        }),
+        svc({ id: 's2', status: 'selesai', finalCost: 100000, downPayment: 100000 }), // paid → excluded
+        svc({ id: 's3', status: 'pengerjaan', finalCost: 100000, downPayment: 0 }), // not done → excluded
+      ],
+      today,
+    );
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({ outstanding: 150000, bucket: '0-7' });
+  });
+  it('buckets older debts as 31+', () => {
+    const today = new Date('2026-06-20T00:00:00.000Z');
+    const result = receivablesAging(
+      [
+        svc({
+          status: 'selesai',
+          finalCost: 100000,
+          downPayment: 0,
+          createdAt: '2026-04-01T00:00:00.000Z',
+          history: [],
+        }),
+      ],
+      today,
+    );
+    expect(result[0].bucket).toBe('31+');
+  });
+});
+
+describe('capital flows are excluded from every reporting aggregate', () => {
+  const modal = inc('2026-06-10', 13500000, { category: 'Modal' });
+  const prive = exp('2026-06-10', 9000000, { category: 'Prive' });
+
+  it('trendSeries: owner money never enters the trend', () => {
+    const clean = trendSeries(
+      [inc('2026-06-10', 100)],
+      [exp('2026-06-10', 40)],
+      '2026-06-01',
+      '2026-06-30',
+    );
+    const withCapital = trendSeries(
+      [inc('2026-06-10', 100), modal],
+      [exp('2026-06-10', 40), prive],
+      '2026-06-01',
+      '2026-06-30',
+    );
+    expect(withCapital).toEqual(clean);
+  });
+
+  it('periodComparison: deltas unaffected by an injection', () => {
+    const clean = periodComparison(
+      [inc('2026-06-10', 200)],
+      [],
+      '2026-06-08',
+      '2026-06-14',
+    );
+    const withCapital = periodComparison(
+      [inc('2026-06-10', 200), modal],
+      [],
+      '2026-06-08',
+      '2026-06-14',
+    );
+    expect(withCapital).toEqual(clean);
+  });
+
+  it('outletComparison: injection into a branch does not inflate its net', () => {
+    const result = outletComparison(
+      [
+        inc('2026-06-01', 100, { outletId: 'A' }),
+        inc('2026-06-01', 13500000, { outletId: 'A', category: 'Modal' }),
+      ],
+      [exp('2026-06-01', 20, { outletId: 'A' })],
+      [{ id: 'A', name: 'Cabang Pusat' }],
+      '2026-06-01',
+      '2026-06-30',
+    );
+    expect(result.find((r) => r.outletId === 'A')).toMatchObject({
+      income: 100,
+      expense: 20,
+      net: 80,
+    });
+  });
+
+  // Daftar transaksi mentah HARUS tetap menampilkannya — itu bukan ringkasan
+  // laba, dan menyembunyikannya bikin saldo tak ada penjelasnya.
+  it('transactionRows: still lists capital rows', () => {
+    const rows = transactionRows([inc('2026-06-10', 100), modal], [prive]);
+    expect(rows).toHaveLength(3);
+    expect(rows.some((r) => r.category === 'Modal')).toBe(true);
+    expect(rows.some((r) => r.category === 'Prive')).toBe(true);
+  });
+});
+
+describe('sparepartUsage — hanya yang benar-benar terpakai', () => {
+  it('mengabaikan baris yang belum dipotong stok dan baris biaya dadakan', () => {
+    const result = sparepartUsage([
+      svc({
+        spareparts: [
+          part({ name: 'LCD', qty: 2, costPrice: 50000 }),
+          part({ name: 'Baterai', qty: 5, costPrice: 30000, deducted: false }),
+          part({ name: 'Ongkos kirim', qty: 3, costPrice: 10000, kind: 'manual' }),
+        ],
+      }),
+    ]);
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({ name: 'LCD', qty: 2, cost: 100000 });
+  });
+});
+
+describe('agingFromRows', () => {
+  it('menghitung umur dari tanggal selesai dan mengelompokkannya, tertua dulu', () => {
+    const rows = [
+      { serviceId: 'a', serviceNo: 'FM-1', customerName: 'Andi', outstanding: 50000, since: '2026-06-20' },
+      { serviceId: 'b', serviceNo: 'FM-2', customerName: 'Budi', outstanding: 10000, since: '2026-05-01' },
+    ];
+    const out = agingFromRows(rows, new Date('2026-06-25T00:00:00'));
+    expect(out.map((r) => r.serviceNo)).toEqual(['FM-2', 'FM-1']);
+    expect(out[0].bucket).toBe('31+');
+    expect(out[1]).toMatchObject({ ageDays: 5, bucket: '0-7' });
+  });
+});
+
+describe('serviceQuality', () => {
+  const at = (d: string) => `${d}T05:00:00.000Z`;
+  const intake = [
+    svc({ id: 'a', status: 'lunas', createdAt: at('2026-11-02') }),
+    svc({ id: 'b', status: 'batal', createdAt: at('2026-11-03') }),
+    svc({ id: 'c', status: 'pengerjaan', createdAt: at('2026-11-04') }),
+    svc({ id: 'k', status: 'diterima', createdAt: at('2026-11-05'), warrantyClaimOf: 'old' }),
+  ];
+  const done = [
+    svc({ id: 'a', status: 'lunas', createdAt: at('2026-11-02'), completedAt: at('2026-11-03'), estimateCost: 100, finalCost: 105 }),
+    svc({ id: 'd', status: 'selesai', createdAt: at('2026-10-20'), completedAt: at('2026-11-05'), estimateCost: 100, finalCost: 150 }),
+    svc({ id: 'e', status: 'lunas', createdAt: at('2026-11-06'), completedAt: at('2026-11-08'), estimateCost: 0 }),
+    svc({ id: 'k2', status: 'selesai', createdAt: at('2026-11-01'), completedAt: at('2026-11-30'), warrantyClaimOf: 'x' }),
+  ];
+
+  it('batal & klaim dari tiket masuk; kecepatan & estimasi dari unit selesai, tanpa klaim', () => {
+    expect(serviceQuality(intake, done)).toEqual({
+      intake: 3,
+      cancelled: 1,
+      claims: 1,
+      done: 3,
+      // 1, 16, 2 hari → median 2 (bukan rata-rata 6,3: satu unit tunggu part tak menyeret semuanya).
+      medianDays: 2,
+      estimated: 2,
+      overEstimate: 1, // 105 masih dalam toleransi 10%, 150 tidak
+    });
+  });
+
+  it('tanpa unit selesai, median null — bukan 0 hari yang dikarang', () => {
+    expect(serviceQuality([], []).medianDays).toBeNull();
+  });
+});
+
+describe('technicianProfit', () => {
+  const at = (d: string) => `${d}T05:00:00.000Z`;
+  it('diurutkan menurut laba, bukan omzet; klaim tidak dihitung', () => {
+    const rows = technicianProfit([
+      // Andi: omzet besar dari LCD mahal, laba tipis.
+      svc({ id: '1', technicianName: 'Andi', finalCost: 2_000_000, spareparts: [part({ costPrice: 1_800_000 })], createdAt: at('2026-11-01'), completedAt: at('2026-11-04') }),
+      // Rina: dua jasa bersih.
+      svc({ id: '2', technicianName: 'Rina', finalCost: 300_000, createdAt: at('2026-11-01'), completedAt: at('2026-11-02') }),
+      svc({ id: '3', technicianName: 'Rina', finalCost: 250_000, createdAt: at('2026-11-03'), completedAt: at('2026-11-03') }),
+      svc({ id: '4', technicianName: 'Rina', finalCost: 999_000, warrantyClaimOf: '2' }),
+    ]);
+    expect(rows.map((r) => [r.name, r.units, r.revenue, r.profit])).toEqual([
+      ['Rina', 2, 550_000, 550_000],
+      ['Andi', 1, 2_000_000, 200_000],
+    ]);
+    expect(rows[0].medianDays).toBe(0.5);
+  });
+});
+
+describe('awaitingPickup', () => {
+  it('unit selesai/lunas/batal yang belum diambil, tertua dulu, umur dari tanggal selesai', () => {
+    const today = new Date(2026, 10, 14, 12);
+    const rows = awaitingPickup(
+      [
+        svc({ id: 'a', serviceNo: 'FM-1', status: 'selesai', completedAt: '2026-11-10T05:00:00.000Z' }),
+        svc({ id: 'b', serviceNo: 'FM-2', status: 'lunas', completedAt: '2026-10-01T05:00:00.000Z' }),
+        svc({ id: 'c', serviceNo: 'FM-3', status: 'lunas', pickedUp: true, completedAt: '2026-10-01T05:00:00.000Z' }),
+        svc({ id: 'd', serviceNo: 'FM-4', status: 'pengerjaan' }),
+        // Batal tanpa riwayat (daftar cloud): umur dari updatedAt.
+        svc({ id: 'e', serviceNo: 'FM-5', status: 'batal', updatedAt: '2026-11-04T05:00:00.000Z' }),
+      ],
+      today,
+    );
+    expect(rows.map((r) => [r.serviceNo, r.ageDays, r.bucket])).toEqual([
+      ['FM-2', 44, '31+'],
+      ['FM-5', 10, '8-30'],
+      ['FM-1', 4, '0-7'],
+    ]);
+  });
+});
+
+describe('salesBreakdown', () => {
+  const line = (itemId: string, qty: number, sellPrice: number, costPrice: number) => ({
+    itemId,
+    name: itemId.toUpperCase(),
+    qty,
+    sellPrice,
+    costPrice,
+  });
+  const sales = [
+    // Struk berdiskon 10%: 1.000.000 → 900.000.
+    { date: '2026-11-02', subtotal: 1_000_000, total: 900_000, voided: false, lines: [line('lcd', 1, 800_000, 600_000), line('kabel', 2, 100_000, 30_000)] },
+    { date: '2026-11-03', subtotal: 100_000, total: 100_000, voided: false, lines: [line('kabel', 1, 100_000, 30_000)] },
+    { date: '2026-11-04', subtotal: 500_000, total: 500_000, voided: true, lines: [line('lcd', 1, 500_000, 400_000)] },
+    { date: '2026-10-30', subtotal: 999_000, total: 999_000, voided: false, lines: [line('lcd', 1, 999_000, 1)] },
+  ];
+
+  it('diskon dibagi ke baris, jadi omzet per barang = total struk', () => {
+    const r = salesBreakdown(sales, '2026-11-01', '2026-11-30');
+    expect(r).toMatchObject({ count: 2, revenue: 1_000_000, cost: 690_000, discount: 100_000, subtotal: 1_100_000, voidCount: 1, voidValue: 500_000 });
+    const sum = r.products.reduce((a, p) => a + p.revenue, 0);
+    expect(sum).toBeCloseTo(r.revenue);
+    expect(r.products.reduce((a, p) => a + p.profit, 0)).toBeCloseTo(r.revenue - r.cost);
+    // Kabel: 2 × 100rb × 0,9 + 100rb = 280rb omzet, modal 90rb → laba 190rb, di atas LCD (720rb − 600rb = 120rb).
+    expect(r.products.map((p) => [p.key, p.qty, Math.round(p.revenue), Math.round(p.profit)])).toEqual([
+      ['kabel', 3, 280_000, 190_000],
+      ['lcd', 1, 720_000, 120_000],
+    ]);
+  });
+});
+
+describe('periodPreset', () => {
+  it('hari ini, 7 hari, bulan ini, bulan lalu, tahun ini', () => {
+    expect(periodPreset('today', '2026-11-14')).toEqual(['2026-11-14', '2026-11-14']);
+    expect(periodPreset('7d', '2026-11-14')).toEqual(['2026-11-08', '2026-11-14']);
+    expect(periodPreset('month', '2026-11-14')).toEqual(['2026-11-01', '2026-11-30']);
+    expect(periodPreset('lastMonth', '2026-11-14')).toEqual(['2026-10-01', '2026-10-31']);
+    expect(periodPreset('year', '2026-11-14')).toEqual(['2026-01-01', '2026-12-31']);
+  });
+  it('bulan lalu dari Januari jatuh ke Desember tahun sebelumnya', () => {
+    expect(periodPreset('lastMonth', '2027-01-05')).toEqual(['2026-12-01', '2026-12-31']);
+  });
+});
+
+describe('customerStats', () => {
+  it('baru vs kembali dari data pelanggan; belanja = servis selesai + kasir; pembeli umum terpisah', () => {
+    const r = customerStats(
+      [{ customerId: 'a', customerName: 'Ana' }, { customerId: 'b', customerName: 'Budi' }],
+      [
+        { customerId: 'a', customerName: 'Ana', finalCost: 500_000, warrantyClaimOf: null },
+        { customerId: 'c', customerName: 'Citra', finalCost: 300_000, warrantyClaimOf: null },
+        { customerId: 'a', customerName: 'Ana', finalCost: 999_000, warrantyClaimOf: 'x' },
+      ],
+      [
+        { date: '2026-11-03', total: 200_000, voided: false, customerId: 'b', customerName: 'Budi' },
+        { date: '2026-11-03', total: 50_000, voided: false, customerId: null },
+        { date: '2026-11-04', total: 70_000, voided: true, customerId: 'b', customerName: 'Budi' },
+        { date: '2026-10-04', total: 70_000, voided: false, customerId: 'a', customerName: 'Ana' },
+      ],
+      new Set(['b']),
+      '2026-11-01',
+      '2026-11-30',
+    );
+    expect(r).toMatchObject({ active: 3, fresh: 1, returning: 2, walkIn: 1, spendTotal: 1_000_000 });
+    expect(r.top.map((c) => [c.name, c.visits, c.spend])).toEqual([
+      ['Ana', 1, 500_000],
+      ['Citra', 0, 300_000],
+      ['Budi', 2, 200_000],
+    ]);
+  });
+});
+
+describe('stockValue', () => {
+  it('modal di rak, nilai jual, dan barang yang tak terjual/terpakai di periode', () => {
+    const r = stockValue(
+      [
+        { id: 'lcd', name: 'LCD', stock: 2, costPrice: 500_000, sellPrice: 800_000 },
+        { id: 'bat', name: 'Baterai', stock: 5, costPrice: 100_000, sellPrice: 180_000 },
+        { id: 'kbl', name: 'Kabel', stock: 10, costPrice: 10_000, sellPrice: 25_000 },
+        { id: 'hab', name: 'Habis', stock: 0, costPrice: 99_000, sellPrice: 1 },
+      ],
+      [{ date: '2026-11-02', voided: false, lines: [{ itemId: 'kbl', name: 'Kabel', qty: 1, sellPrice: 25_000, costPrice: 10_000 }] }],
+      [{ spareparts: [{ itemId: 'bat', name: 'Baterai', qty: 1, costPrice: 100_000, sellPrice: 180_000, deducted: true }] }],
+      '2026-11-01',
+      '2026-11-30',
+    );
+    expect(r).toMatchObject({ cost: 1_600_000, retail: 2_750_000, items: 4, idleCount: 1, idleValue: 1_000_000 });
+    expect(r.idle.map((i) => i.id)).toEqual(['lcd']);
+  });
+});
+
+describe('monthTargetPace', () => {
+  it('hanya untuk tepat satu bulan kalender', () => {
+    expect(monthTargetPace('2026-11-01', '2026-11-30', '2026-11-15')).toBeCloseTo(0.5);
+    expect(monthTargetPace('2026-10-01', '2026-10-31', '2026-11-15')).toBe(1);
+    expect(monthTargetPace('2026-12-01', '2026-12-31', '2026-11-15')).toBe(0);
+    expect(monthTargetPace('2026-11-08', '2026-11-14', '2026-11-15')).toBeNull();
+    expect(monthTargetPace('2026-01-01', '2026-12-31', '2026-11-15')).toBeNull();
+  });
+});
+

@@ -1,0 +1,520 @@
+/* ============================================================
+   AuthPage — "Terminal Akses Bench" signature
+   Split layout: brand panel (identitas + diagnostic rail) +
+   form panel (faceplate bersekrup). Token saja → dark/light auto.
+   ============================================================ */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--bg-base);
+  z-index: var(--z-modal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(var(--space-3), 4vw, var(--space-5));
+  overflow: auto;
+  container-type: inline-size;
+  container-name: auth;
+}
+
+.shell {
+  width: 100%;
+  max-width: 940px;
+  display: grid;
+  grid-template-columns: 1.08fr 1fr;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  box-shadow: var(--shadow-bench-tight);
+  animation: fm-scale-in var(--dur-normal) var(--ease-emphasized);
+}
+
+/* ---------- Brand panel ---------- */
+.brandPanel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding: var(--space-8);
+  background:
+    radial-gradient(120% 80% at 0% 0%, color-mix(in srgb, var(--brand) 14%, transparent), transparent 60%),
+    var(--bg-app);
+  border-right: 1px solid var(--border);
+  overflow: hidden;
+}
+.grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  /* 30px, sama dengan bench ambient di global.css:56 dan pitch yang ditulis
+     DESIGN.md:181. Sebelumnya 26px — grid yang sama dengan dua langkah
+     berbeda, dan panel ini menutupi body sehingga keduanya bertemu di tepi. */
+  background-size: 30px 30px;
+  pointer-events: none;
+}
+.brandTop {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.voltModule {
+  position: relative;
+  min-height: 132px;
+  display: grid;
+  grid-template-columns: 98px 1fr;
+  align-items: center;
+  gap: var(--space-4);
+  isolation: isolate;
+}
+
+.voltModule::before {
+  content: '';
+  position: absolute;
+  width: 156px;
+  height: 156px;
+  left: -46px;
+  top: -16px;
+  z-index: -1;
+  background: radial-gradient(circle, var(--accent-soft), transparent 68%);
+  opacity: 0.76;
+}
+
+.voltModule > svg {
+  justify-self: center;
+  filter: drop-shadow(0 12px 14px color-mix(in srgb, var(--volt-display) 22%, transparent));
+}
+
+.voltTrace {
+  position: absolute;
+  left: 78px;
+  right: 0;
+  top: 35px;
+  height: 1px;
+  z-index: -1;
+  border-top: 1px dotted var(--border-brand);
+}
+
+.voltTrace::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: -4px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 9px var(--accent);
+}
+
+/* Garis pemisah netral, bukan spine. Spine (DESIGN.md:256) memakai warna
+   sinyal untuk MENGKLASIFIKASI baris atau kartu; blok ini cuma teks pendamping
+   maskot dan tidak mengklasifikasi apa pun. Brand di sini hanya bersaing
+   dengan tombol masuk — amber kedua di layar yang sama. */
+.voltCopy {
+  min-width: 0;
+  padding-left: var(--space-4);
+  border-left: 2px solid var(--border-strong);
+}
+
+.voltCopy > span,
+.voltCopy strong,
+.voltCopy small {
+  display: block;
+}
+
+.voltCopy > span {
+  color: var(--accent-text);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.voltCopy strong {
+  margin-top: 5px;
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  line-height: 1.35;
+}
+
+.voltCopy small {
+  margin-top: 5px;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  line-height: 1.45;
+}
+.brandLogo {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.brandWord {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: var(--fw-bold);
+  color: var(--text-primary);
+}
+.brandBody {
+  position: relative;
+  margin-top: auto;
+}
+.brandTagline {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  line-height: 1.2;
+  color: var(--text-primary);
+  margin: 0 0 var(--space-3);
+}
+.brandSub {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  line-height: 1.55;
+  margin: 0;
+}
+
+/* Diagnostic rail — mirrors the sidebar's "live bench" language. */
+.rail {
+  position: relative;
+  list-style: none;
+  margin: 0;
+  padding: var(--space-3) 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  border-top: 1px dotted var(--border-strong);
+}
+.railRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+.railLed {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--text-muted);
+}
+.railKey {
+  color: var(--text-secondary);
+  letter-spacing: 0.06em;
+}
+.railDots {
+  flex: 1;
+  border-bottom: 1px dotted var(--border-strong);
+  transform: translateY(-2px);
+}
+.railVal {
+  color: var(--text-primary);
+  letter-spacing: 0.04em;
+}
+.brandFoot {
+  position: relative;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.18em;
+  color: var(--text-muted);
+}
+
+/* ---------- Form panel: faceplate ---------- */
+.formPanel {
+  position: relative;
+  padding: var(--space-8);
+  display: flex;
+  flex-direction: column;
+}
+.screw {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, var(--border-strong), var(--bg-base));
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+.screw::after {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  border-top: 1px solid var(--text-muted);
+  transform: rotate(45deg);
+  opacity: 0.5;
+}
+.screwTL { top: 12px; left: 12px; }
+.screwTR { top: 12px; right: 12px; }
+.screwBL { bottom: 12px; left: 12px; }
+.screwBR { bottom: 12px; right: 12px; }
+
+.mobileBrand {
+  display: none;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-display);
+  font-weight: var(--fw-bold);
+  font-size: var(--text-lg);
+  color: var(--text-primary);
+  margin-bottom: var(--space-5);
+}
+
+.mobileVolt {
+  display: none;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+  padding: 7px var(--space-3) 7px 8px;
+  background: var(--bg-app);
+  /* Sekarang seragam dengan tepi atas & bawahnya sendiri, yang memang sudah
+     memakai --border-strong. Versi lamanya amber di satu sisi saja. */
+  border-left: 2px solid var(--border-strong);
+  border-top: 1px dotted var(--border-strong);
+  border-bottom: 1px dotted var(--border-strong);
+}
+
+.mobileVolt > span,
+.mobileVolt small,
+.mobileVolt strong {
+  min-width: 0;
+  display: block;
+}
+
+.mobileVolt small {
+  color: var(--accent-text);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.mobileVolt strong {
+  margin-top: 2px;
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  line-height: 1.35;
+}
+
+.terminalTop {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-5);
+}
+.backBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 44px;
+  padding: 8px 12px 8px 10px;
+  margin-right: var(--space-1);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-app);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-weight: var(--fw-semibold);
+  cursor: pointer;
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out);
+}
+.backBtn:hover {
+  border-color: var(--border-brand);
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+.themeBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-app);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+.themeBtn:hover {
+  border-color: var(--border-brand);
+  color: var(--text-primary);
+}
+.terminalLabel {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+.modeTag {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background: var(--brand-soft);
+  color: var(--brand-text);
+  border: 1px solid var(--border-brand);
+}
+
+/* LED status light (shared idiom with billing/sidebar). */
+.led {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--text-muted);
+}
+.ledOk {
+  background: var(--success);
+  box-shadow: 0 0 0 3px var(--success-soft), 0 0 9px var(--success);
+}
+.ledLive {
+  background: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft), 0 0 9px var(--accent);
+  animation: fm-pulse 1.8s var(--ease-in-out) var(--pulse-cycles);
+}
+/* Tautan reset kedaluwarsa: terminal mati, bukan "siap" cyan berdenyut. */
+.ledFault {
+  background: var(--danger);
+  box-shadow: 0 0 0 3px var(--danger-soft);
+}
+
+.heading {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  margin: 0 0 4px;
+  color: var(--text-primary);
+}
+.hint {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  margin: 0 0 var(--space-6);
+}
+
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  text-align: left;
+  margin-bottom: var(--space-5);
+}
+
+.consent {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin: calc(-1 * var(--space-2)) 0 0;
+}
+.consentLink {
+  color: var(--brand-text);
+  font-weight: var(--fw-medium);
+  text-decoration: underline;
+}
+.consentLink:hover {
+  color: var(--brand-hover);
+}
+
+.links {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: center;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin-top: auto;
+}
+.linkRow {
+  color: var(--text-muted);
+}
+.link {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  padding-inline: var(--space-2);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-out);
+}
+.link:hover {
+  color: var(--text-primary);
+}
+.linkStrong {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  padding-inline: var(--space-1);
+  color: var(--brand-text);
+  font-weight: var(--fw-semibold);
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-out);
+}
+.linkStrong:hover {
+  color: var(--brand-hover);
+}
+
+/* ---------- Responsive: collapse to a single faceplate ---------- */
+@container auth (max-width: 720px) {
+  .shell {
+    grid-template-columns: 1fr;
+    max-width: 440px;
+  }
+  .brandPanel {
+    display: none;
+  }
+  .mobileBrand {
+    display: flex;
+  }
+  .mobileVolt {
+    display: flex;
+  }
+  .formPanel {
+    padding: var(--space-6);
+  }
+}
+
+@container auth (max-width: 400px) {
+  .formPanel {
+    padding: var(--space-5);
+  }
+
+  .terminalLabel {
+    display: none;
+  }
+
+  .modeTag {
+    margin-left: 0;
+  }
+
+  .themeBtn {
+    margin-left: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shell,
+  .ledLive {
+    animation: none;
+  }
+}

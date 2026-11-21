@@ -1,0 +1,365 @@
+import type {
+  Organization,
+  Employee,
+  Wallet,
+  FixedCost,
+  Outlet,
+  OutletRent,
+  Role,
+  ID,
+} from '@/data/types';
+import { repository } from '@/data';
+import { getSupabase, isSupabaseConfigured } from '@/data/supabase-client';
+import { newId, derivePrefix } from '@/lib/id';
+import { hashPin } from '@/lib/pin';
+import { looksLikeCash } from '@/lib/business/finance';
+import type { TranslationKey } from '@/i18n';
+
+export interface WizardWalletDraft {
+  name: string;
+  balance: number;
+}
+export interface WizardEmployeeDraft {
+  name: string;
+  role: Role;
+  pin: string;
+}
+export interface WizardCostDraft {
+  name: string;
+  amount: number;
+}
+export interface WizardOutletDraft {
+  name: string;
+  address: string;
+  /** Sewa tahunan diratakan ÷ 12 di break-even; tak diisi = bulanan (dari catatan). */
+  rentMode?: OutletRent['mode'];
+  rentYearly?: number;
+}
+
+export interface WizardData {
+  shopName: string;
+  address: string;
+  phone: string;
+  servicePrefix: string;
+  wallets: WizardWalletDraft[];
+  categories: string[];
+  employees: WizardEmployeeDraft[];
+  fixedCosts: WizardCostDraft[];
+  /** Physical locations. First entry is the primary outlet. */
+  outlets: WizardOutletDraft[];
+  targetRevenue: number;
+  targetServiceCount: number;
+}
+
+export function emptyWizardData(): WizardData {
+  return {
+    shopName: '',
+    address: '',
+    phone: '',
+    servicePrefix: '',
+    wallets: [{ name: 'Tunai', balance: 0 }],
+    categories: ['Laptop', 'HP / Smartphone', 'Printer', 'PC / Komputer'],
+    employees: [{ name: '', role: 'owner', pin: '' }],
+    fixedCosts: [],
+    outlets: [{ name: '', address: '' }],
+    targetRevenue: 0,
+    targetServiceCount: 0,
+  };
+}
+
+export interface StepError {
+  field: string;
+  /** Kunci pesan, diterjemahkan oleh Wizard. Logika ini tetap murni tanpa `t`. */
+  messageKey: TranslationKey;
+}
+
+/** Validate a single wizard step. Returns [] when valid. */
+export function validateStep(step: number, data: WizardData): StepError[] {
+  const errors: StepError[] = [];
+  if (step === 1) {
+    if (!data.shopName.trim()) errors.push({ field: 'shopName', messageKey: 'onboarding.err.shopName' });
+  }
+  if (step === 2) {
+    const valid = data.wallets.filter((w) => w.name.trim());
+    if (valid.length === 0)
+      errors.push({ field: 'wallets', messageKey: 'onboarding.err.wallet' });
+  }
+  if (step === 3) {
+    if (data.categories.length === 0)
+      errors.push({ field: 'categories', messageKey: 'onboarding.err.category' });
+  }
+  if (step === 4) {
+    const owners = data.employees.filter((e) => e.role === 'owner');
+    if (owners.length === 0)
+      errors.push({ field: 'employees', messageKey: 'onboarding.err.owner' });
+    data.employees.forEach((e, i) => {
+      if (!e.name.trim()) errors.push({ field: `emp-name-${i}`, messageKey: 'onboarding.err.name' });
+      if (!/^\d{4}$/.test(e.pin))
+        errors.push({ field: `emp-pin-${i}`, messageKey: 'onboarding.err.pin' });
+    });
+  }
+  // Step 6 = Outlet. The first outlet's name falls back to the shop name, so
+  // only additional outlets must be named. Always need at least one.
+  if (step === 6) {
+    if (data.outlets.length === 0)
+      errors.push({ field: 'outlets', messageKey: 'onboarding.err.outlet' });
+    data.outlets.forEach((o, i) => {
+      if (i > 0 && !o.name.trim())
+        errors.push({ field: `outlet-name-${i}`, messageKey: 'onboarding.err.outletName' });
+    });
+  }
+  return errors;
+}
+
+/**
+ * Map outlet drafts to records. The first outlet is primary and inherits the
+ * shop name/address when left blank (single-outlet shops need not retype it).
+ */
+function buildOutlets(
+  drafts: WizardOutletDraft[],
+  orgId: ID,
+  shopName: string,
+  shopAddress: string,
+  now: string,
+): Outlet[] {
+  return drafts.map((o, i) => ({
+    id: newId(),
+    orgId,
+    outletId: null,
+    name: o.name.trim() || (i === 0 ? shopName.trim() : `Outlet ${i + 1}`),
+    address: o.address.trim() || (i === 0 ? shopAddress.trim() : ''),
+    isPrimary: i === 0,
+    lat: null,
+    lng: null,
+    geofenceRadiusM: null,
+    createdAt: now,
+    updatedAt: now,
+    deletedAt: null,
+  }));
+}
+
+/** Setelan sewa per cabang dari draf wizard; hanya cabang tahunan yang dicatat. */
+export function buildRent(outlets: Outlet[], drafts: WizardOutletDraft[]): Record<ID, OutletRent> {
+  const rent: Record<ID, OutletRent> = {};
+  outlets.forEach((o, i) => {
+    const d = drafts[i];
+    if (d?.rentMode === 'tahunan' && (d.rentYearly ?? 0) > 0) rent[o.id] = { mode: 'tahunan', yearly: d.rentYearly! };
+  });
+  return rent;
+}
+
+/**
+ * Persist the wizard result: organization profile, employees (with hashed
+ * PINs), wallets, fixed costs, and category/target config. Returns the
+ * created org + the owner employee for auto-login.
+ */
+export async function commitWizard(
+  data: WizardData,
+  opts?: { forceLocal?: boolean },
+): Promise<{ org: Organization; owner: Employee }> {
+  // `forceLocal` is used by the public landing demo: it runs in production
+  // (Supabase configured) but writes to a swapped in-memory repository, so it
+  // must take the local commit path rather than the cloud RPC (which needs an
+  // authenticated account the anonymous visitor doesn't have).
+  if (isSupabaseConfigured && !opts?.forceLocal) return commitWizardCloud(data);
+
+  const orgId = newId();
+  const now = new Date().toISOString();
+  const prefix = data.servicePrefix.trim().toUpperCase() || derivePrefix(data.shopName);
+
+  const org: Organization = {
+    id: orgId,
+    name: data.shopName.trim(),
+    address: data.address.trim(),
+    phone: data.phone.trim(),
+    logoDataUrl: null,
+    servicePrefix: prefix,
+    planType: 'trial',
+    trialStartedAt: now,
+    planExpiredAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+    maxOutlets: 5,
+    maxUsers: -1,
+    createdAt: now,
+    // Device categories live on the org row (settings.deviceCategories, 0032)
+    // so they sync across devices and are never lost on a second device.
+    settings: { deviceCategories: data.categories },
+  };
+
+  // Scope the repository to the new org before writing.
+  repository.setScope(orgId, null);
+  await repository.setSingleton('organization', org);
+
+  // Employees with salted PIN hashes.
+  const employees: Employee[] = [];
+  for (const draft of data.employees) {
+    const empId = newId();
+    const pinHash = await hashPin(draft.pin, empId);
+    employees.push({
+      id: empId,
+      orgId,
+      outletId: null,
+      name: draft.name.trim(),
+      role: draft.role,
+      pinHash,
+      active: true,
+      createdAt: now,
+      updatedAt: now,
+      deletedAt: null,
+    });
+  }
+  await repository.putMany('employees', employees);
+
+  // Wallets.
+  const wallets: Wallet[] = data.wallets
+    .filter((w) => w.name.trim())
+    .map((w, i) => ({
+      id: newId(),
+      orgId,
+      outletId: null,
+      name: w.name.trim(),
+      balance: w.balance,
+      sortOrder: i,
+      isCash: looksLikeCash(w.name),
+      createdAt: now,
+      updatedAt: now,
+      deletedAt: null,
+    }));
+  await repository.putMany('wallets', wallets);
+
+  // Outlets (≥1; first is primary). Empty array = caller opts out (dev seed).
+  const outlets = buildOutlets(data.outlets, orgId, data.shopName, data.address, now);
+  if (outlets.length) await repository.putMany('outlets', outlets);
+
+  // Fixed costs.
+  const fixedCosts: FixedCost[] = data.fixedCosts
+    .filter((c) => c.name.trim())
+    .map((c) => ({
+      id: newId(),
+      orgId,
+      outletId: null,
+      name: c.name.trim(),
+      amount: c.amount,
+      createdAt: now,
+      updatedAt: now,
+      deletedAt: null,
+    }));
+  if (fixedCosts.length) await repository.putMany('fixedCosts', fixedCosts);
+
+  // Target ikut ke baris organisasi (settings.monthlyTarget) supaya sama di
+  // semua perangkat — dulu hanya localStorage, jadi Indikator Break-Even
+  // berbeda antara laptop dan HP. Salinan lokal disimpan sebagai cadangan.
+  const monthlyTarget = {
+    revenue: data.targetRevenue,
+    serviceCount: data.targetServiceCount,
+    overheadBudget: 0,
+  };
+  localStorage.setItem(`fixmaster-target-${orgId}`, JSON.stringify(monthlyTarget));
+  const orgWithTarget = await repository.setSingleton('organization', {
+    ...org,
+    settings: { ...(org.settings ?? {}), monthlyTarget, rent: buildRent(outlets, data.outlets) },
+  });
+
+  const owner = employees.find((e) => e.role === 'owner') ?? employees[0];
+  return { org: orgWithTarget, owner };
+}
+
+/**
+ * Cloud onboarding (Option B): the signed-in account becomes the org owner.
+ * The org + owner membership are created server-side via the
+ * `create_organization` RPC (which reads auth.uid()), so the org id is
+ * generated by Postgres. Wallets + fixed costs are then written through the
+ * Supabase adapter under the new org scope. Non-owner employees are NOT
+ * created here — they join later via the invite flow (Fase 1). PINs are unused
+ * in cloud mode (each person signs in with their own account).
+ */
+async function commitWizardCloud(
+  data: WizardData,
+): Promise<{ org: Organization; owner: Employee }> {
+  const supabase = getSupabase();
+  if (!supabase) throw new Error('Supabase tidak tersedia');
+
+  const now = new Date().toISOString();
+  const prefix = data.servicePrefix.trim().toUpperCase() || derivePrefix(data.shopName);
+  const ownerDraft = data.employees.find((e) => e.role === 'owner') ?? data.employees[0];
+
+  // Atomic: creates the org + owner membership (org id generated server-side).
+  const { data: orgId, error } = await supabase.rpc('create_organization', {
+    p_name: data.shopName.trim(),
+    p_owner_name: ownerDraft?.name.trim() || 'Owner',
+    p_address: data.address.trim(),
+    p_phone: data.phone.trim(),
+    p_service_prefix: prefix,
+  });
+  if (error) throw error;
+  const newOrgId = orgId as ID;
+
+  repository.setScope(newOrgId, null);
+
+  // Wallets.
+  const wallets: Wallet[] = data.wallets
+    .filter((w) => w.name.trim())
+    .map((w, i) => ({
+      id: newId(),
+      orgId: newOrgId,
+      outletId: null,
+      name: w.name.trim(),
+      balance: w.balance,
+      sortOrder: i,
+      isCash: looksLikeCash(w.name),
+      createdAt: now,
+      updatedAt: now,
+      deletedAt: null,
+    }));
+  if (wallets.length) await repository.putMany('wallets', wallets);
+
+  // Outlets (≥1; first is primary). Empty array = caller opts out (dev seed).
+  const outlets = buildOutlets(data.outlets, newOrgId, data.shopName, data.address, now);
+  if (outlets.length) await repository.putMany('outlets', outlets);
+
+  // Fixed costs.
+  const fixedCosts: FixedCost[] = data.fixedCosts
+    .filter((c) => c.name.trim())
+    .map((c) => ({
+      id: newId(),
+      orgId: newOrgId,
+      outletId: null,
+      name: c.name.trim(),
+      amount: c.amount,
+      createdAt: now,
+      updatedAt: now,
+      deletedAt: null,
+    }));
+  if (fixedCosts.length) await repository.putMany('fixedCosts', fixedCosts);
+
+  // Target ikut ke baris organisasi bersama kategori di bawah (satu penulisan),
+  // supaya sama di semua perangkat. Salinan lokal tetap ditulis sebagai cadangan.
+  const monthlyTarget = {
+    revenue: data.targetRevenue,
+    serviceCount: data.targetServiceCount,
+    overheadBudget: 0,
+  };
+  localStorage.setItem(`fixmaster-target-${newOrgId}`, JSON.stringify(monthlyTarget));
+
+  // Device categories live on the org row (settings.deviceCategories, 0032) so
+  // they sync across devices. Write the owner's chosen list to the cloud column
+  // — NOT localStorage, which would leave new orgs with empty cloud categories
+  // (the category dropdown would then be empty on every other device).
+  const created = await repository.getSingleton('organization');
+  if (!created) throw new Error('Gagal memuat organisasi yang baru dibuat');
+  const org = await repository.setSingleton('organization', {
+    ...created,
+    settings: {
+      ...(created.settings ?? {}),
+      deviceCategories: data.categories,
+      monthlyTarget,
+      rent: buildRent(outlets, data.outlets),
+    },
+  });
+  const employees = await repository.list('employees');
+  const owner = employees.find((e) => e.role === 'owner') ?? employees[0];
+  return { org, owner };
+}
+
+export function findOwnerId(employees: Employee[]): ID | null {
+  return employees.find((e) => e.role === 'owner')?.id ?? null;
+}

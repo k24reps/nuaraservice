@@ -1,6 +1,6 @@
 # Log Wawancara - Dashboard Nuara Service
 
-> Status: selesai | Putaran terakhir selesai: P12 | Pertanyaan dijawab: 222 (199 sampai review awal + 15 keputusan audit + 8 asumsi disetujui) | Sumber terserah: 16, semuanya sudah disetujui atau diubah user; [ASUMSI] tersisa: 0 | Diperbarui: 2026-11-04
+> Status: selesai | Putaran terakhir selesai: P13 (2026-11-21, fork FixMaster) | Pertanyaan dijawab: 230 (222 sampai 2026-11-04 + 8 di P13) | Sumber terserah: 16, semuanya sudah disetujui atau diubah user; [ASUMSI] tersisa: 0 | Diperbarui: 2026-11-21
 <!-- Status: berjalan -> siap-tulis (P12 dikonfirmasi) -> selesai (dokumen ditulis).
 Sumber: user = dipilih atau diketik user (termasuk memilih opsi Rekomendasi);
 terserah = user menyerahkan, AI memakai rekomendasi -> [ASUMSI];
@@ -189,6 +189,14 @@ Konteks repo (Fase 1): landing page statis di root (index.html, style.css, scrip
 | A15d | Isi nota dan tampilan garansi (R9, R15) | Isi nota pelunasan dan nota penjualan; aturan samaran nama; garansi di tracking tampil sebagai jumlah hari sebelum Diambil dan tanggal berakhir sesudahnya (disetujui di review 2026-11-04) | user | PRD F-04.2, F-07.8, F-17.1 |
 | A15e | Akun staf | Pemilik bisa mengaktifkan kembali akun; Pemilik tidak bisa menonaktifkan atau mengubah peran akunnya sendiri; selalu ada minimal satu Pemilik aktif (disetujui di review 2026-11-04) | user | PRD F-08.6, F-08.7; BSD profiles |
 | A15f | Pemberitahuan privasi (R17) | Teks pemberitahuan privasi diisi Pemilik di Pengaturan (`privacy_notice`) dan tampil di tanda terima dan tracking bila diisi (disetujui di review 2026-11-04) | user | PRD F-04.2, F-06.2, F-16.1; BSD settings |
+| P13.1 | Dasar kode (2026-11-21) | Fork FixMaster: salin kode FixMaster lalu ganti UI-nya ke dens-ui; TRD dan IPD ditulis ulang, PRD tetap acuan fitur. Rencana Next.js dari nol dibatalkan | user | TRD 1-2, IPD |
+| P13.2 | Lokasi kode | Folder `dashboard/` di repo nuaraservice (sesuai CLAUDE.md lama); disalin sekali tanpa riwayat git FixMaster | user | TRD 3 |
+| P13.3 | Tampilan | Komponen dens-ui (github.com/dendense/dens-ui), warnanya diganti token Nuara (navy/amber DBD), bukan Mars Green | user | DBD, TRD 1 |
+| P13.4 | Cakupan salinan | Buang bagian SaaS (landing, harga dan saldo unit, operator, demo, onboarding SaaS); fitur operasional toko tetap | user | TRD 1, IPD L-43 |
+| P13.5 | Database | Proyek Supabase baru milik Nuara; skema FixMaster utuh dengan satu organisasi; satu migrasi tambahan mematikan potongan unit; pendaftaran org baru, operator, dan pembayaran dihapus | user | TRD 2, 5; BSD |
+| P13.6 | Selisih PRD vs FixMaster | Perilaku FixMaster dulu; selisih dicatat di IPD lalu diputuskan Pemilik satu per satu setelah UI dipindah ke dens-ui | user | IPD Daftar Selisih |
+| P13.7 | Strategi pindah UI | Bertahap per halaman; Tailwind + dens-ui berdampingan dengan CSS Modules; aplikasi tetap bisa di-build di setiap commit | user | IPD Fase B, TRD 9 |
+| P13.8 | Lingkup sesi 2026-11-21 | Fase 1 (salin, buang SaaS, merek Nuara, migrasi penetral, build/test/lint lolos) + perbarui dokumen, lalu commit dan push ke branch `claude/` | user | IPD L-43 |
 
 ## Perubahan (mode update)
 | Tanggal | Kode | Perubahan | Jawaban | Dokumen terdampak |
@@ -209,3 +217,4 @@ Konteks repo (Fase 1): landing page statis di root (index.html, style.css, scrip
 | 2026-11-04 | A14 (S11) | `audit_logs.record_id` menjadi teks agar perubahan Pengaturan (kunci teks) bisa dicatat | "perbaiki poin s11" | BSD audit_logs |
 | 2026-11-04 | A15 (R1-R23) | Semua perbaikan kecil: total jam IPD dihitung ulang (R1); langkah padat dipecah L-10/L-40, L-11/L-41, L-12/L-38, L-18/L-39, L-31/L-42 (R2); ERD dilengkapi (R3); klaim indeks pencarian dijujurkan (R4); `prepare: false` dan nama kunci Supabase baru (R5); kode error dan operasi Admin API (R6); urutan L-03/L-04/L-06 (R7); L-01 dan L-17 dikoreksi (R8); samaran nama dan tampilan garansi (R9); kunci saldo awal + Koreksi saldo (R10); visibilitas modal di stok (R11); kunci login per username + IP (R12); host `lacak.` hanya tracking (R13); tahap final tidak bisa dimundurkan (R14); isi nota (R15); cara ukur metrik (R16); teks pemberitahuan privasi (R17); `estimate_decision` 4 nilai dan klaim garansi disetujui otomatis (R18); draf form pulih setelah sesi habis (R19); keputusan turunan dicatat sebagai A3a sampai A15f (R20); hitungan pertanyaan dan nama tabel log dikoreksi (R21); CLAUDE.md antislop-ui diselaraskan (R22); teks pesan hanya di AFD (R23) | "kerjakan semua perbaikan kecil" | semua dokumen |
 | 2026-11-04 | A16 (review asumsi) | 8 asumsi baru (A3a, A6a, A15a sampai A15f) disetujui apa adanya; tanda [ASUMSI] dihapus dari PRD 8 dan sumber di log menjadi user | "Setujui semua" | PRD 8; log |
+| 2026-11-21 | A17 (P13) | Rencana Next.js + Drizzle dibatalkan; dasar kode = salinan FixMaster di `dashboard/`, UI dens-ui dengan warna Nuara, satu toko per database (migrasi 0105). Penyimpangan dari P13.4 yang menunggu konfirmasi Pemilik: wizard pengaturan awal toko FixMaster dipertahankan, karena itu satu-satunya jalan membuat toko pertama dan akun Pemilik; yang dibuang hanya jalur SaaS di sekitarnya (landing, pilihan paket, trial) | wawancara P13 | TRD; IPD; CLAUDE.md; catatan kepala PRD, AFD, BSD, DBD |

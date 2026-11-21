@@ -1,0 +1,47 @@
+name: Dashboard CI
+
+# Gerbang "selesai" Nuara Dashboard (folder dashboard/): lint, type-check +
+# build, dan tes unit. Landing page di root tidak punya build, jadi workflow
+# ini hanya jalan bila isi dashboard/ berubah. Tes integrasi (staging
+# Supabase) dijalankan lokal karena butuh kunci service_role.
+on:
+  push:
+    branches: [main]
+    paths: ['dashboard/**', '.github/workflows/dashboard-ci.yml']
+  pull_request:
+    paths: ['dashboard/**', '.github/workflows/dashboard-ci.yml']
+
+concurrency:
+  group: dashboard-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: dashboard
+
+jobs:
+  verify:
+    name: Lint · Build · Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: dashboard/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type-check + build
+        run: npm run build
+
+      - name: Test
+        run: npm run test

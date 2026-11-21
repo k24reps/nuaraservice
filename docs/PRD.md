@@ -2,6 +2,9 @@
 
 > Versi: 0.2 | Diperbarui: 2026-11-04 | Status: Draft
 
+> [!note] Sejak 2026-11-21 (wawancara P13)
+> Dasar kode Nuara Dashboard adalah salinan FixMaster (TRD 1). Dokumen ini tetap acuan fitur dan istilah. Perilaku aplikasi yang berbeda dari PRD dicatat di IPD bagian "Daftar Selisih" dan diputuskan Pemilik per butir; sampai diputuskan, aplikasi berperilaku seperti FixMaster.
+
 ## 1. Ringkasan
 Nuara Dashboard adalah aplikasi web internal Nuara Service (workshop servis laptop/PC, HP, dan elektronik rumah tangga di belakang kampus UNJANI Cimahi) yang menggantikan FixMaster. Dipakai Pemilik, Admin konter, dan Teknisi untuk mencatat tiket servis, estimasi, pembayaran, stok sparepart, absensi, dan laporan. Pelanggan tidak punya akun; mereka menerima link tracking pribadi berbrand Nuara lewat WhatsApp. Urutan nilai: (1) tracking berbrand Nuara, (2) semua urusan workshop di satu tempat, (3) angka usaha yang jelas, (4) tidak ada biaya langganan bulanan.
 

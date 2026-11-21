@@ -5,3 +5,7 @@
 Thumbs.db
 desktop.ini
 .impeccable/questions/
+
+# Skill proyek Nuara Dashboard ikut repo (dashboard/AGENTS.md §7); folder
+# .claude/ lain (setelan lokal) tetap tidak di-commit.
+!dashboard/.claude/

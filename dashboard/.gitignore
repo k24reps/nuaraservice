@@ -1,0 +1,47 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Generated screenshots (rebuild with shoot-*.mjs scripts)
+scripts/shots/
+docs/obsidian-vault/attachments/
+
+# Supabase CLI local state (link metadata, temp files)
+supabase/.temp/
+prod_public_schema.sql
+
+# Release worktree (git worktree add .tmp-release)
+.tmp-release/
+
+# Dump teks landing page untuk audit copy (dibuat ulang dari src/i18n/id.ts)
+landing-copy-audit.md
+
+# Skill proyek (AGENTS.md §7): biner mesin impeccable diunduh ulang oleh
+# peluncurnya (terverifikasi hash) — 15 MB per platform, jangan masuk repo.
+.claude/skills/impeccable/scripts/bin/
+# Sesi "live" impeccable menyuntik skrip ke halaman; tak boleh ter-commit.
+.impeccable/live/
+
+# Foto tinjauan impeccable (scripts/shoot-landing.mjs OUT=.impeccable/review); dibuat ulang kapan saja.
+.impeccable/review/

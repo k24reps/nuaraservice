@@ -1,0 +1,355 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--bg-app);
+  z-index: var(--z-modal);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: var(--space-6);
+  overflow-y: auto;
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 30px 30px;
+}
+
+.container {
+  width: 100%;
+  max-width: 680px;
+  margin: auto 0;
+  animation: fm-fade-in var(--dur-slow) var(--ease-out);
+}
+
+/* Judul halaman, bukan kartu atau baris — jadi bukan tempat spine. Amber di
+   sini bersaing dengan tombol lanjut, yang justru satu-satunya aksi di layar
+   onboarding (One Amber Rule, DESIGN.md:187). */
+.header {
+  text-align: left;
+  margin-bottom: var(--space-6);
+  padding-left: var(--space-4);
+  border-left: 3px solid var(--border-strong);
+}
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: var(--fw-extra);
+  color: var(--text-primary);
+}
+.logoMark {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  background: var(--gradient-brand);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--on-brand);
+  font-size: 1.2rem;
+  box-shadow: var(--shadow-brand);
+}
+.subtitle {
+  color: var(--text-secondary);
+  font-size: var(--text-base);
+  margin-top: var(--space-2);
+}
+
+/* ---------- Dev-only seed bar ---------- */
+.devBar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: var(--space-5);
+  padding: var(--space-3);
+  border: 1px dashed var(--border-brand);
+  border-radius: var(--radius-md);
+  background: var(--accent-soft);
+}
+.devBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 9px 18px;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  /* Tinta gelap layar VOLT di kedua tema. --text-inverse putih di tema terang
+     cuma 3.1:1 di atas cyan --accent-600. */
+  color: var(--volt-display);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.02em;
+  transition: transform var(--dur-fast) var(--ease-out), filter var(--dur-fast);
+}
+.devBtn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.08);
+}
+.devBtn:active:not(:disabled) {
+  transform: translateY(0);
+}
+.devBtn:disabled {
+  opacity: 0.7;
+  cursor: progress;
+}
+.devHint {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* ---------- Progress ---------- */
+.progress {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--space-6);
+}
+.progressItem {
+  display: flex;
+  align-items: center;
+}
+.dot {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-sm);
+  font-weight: var(--fw-semibold);
+  border: 2px solid var(--border-strong);
+  background: var(--bg-surface);
+  color: var(--text-muted);
+  transition: all var(--dur-normal) var(--ease-out);
+  position: relative;
+  z-index: 1;
+}
+.dot.active {
+  border-color: var(--brand-fill-edge);
+  background: var(--brand-fill);
+  color: var(--on-brand);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+.dot.done {
+  border-color: var(--success);
+  background: var(--success);
+  color: var(--on-signal);
+}
+.dotLabel {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  margin: 0 var(--space-2);
+}
+.line {
+  width: 28px;
+  height: 2px;
+  background: repeating-linear-gradient(90deg, var(--border-strong) 0 4px, transparent 4px 8px);
+}
+
+/* ---------- Card ---------- */
+/* Tanpa pita brand 3px di tepi ATAS. Dua alasan: spine DESIGN.md:256 ada di
+   leading edge (kiri), bukan atas — dan pita lurus 3px di atas sudut
+   --radius-lg 16px melebar jadi busur tebal yang meruncing di kedua ujungnya.
+   Kartunya juga tidak mengklasifikasi apa pun; amber-nya hanya bersaing
+   dengan tombol lanjut, satu-satunya aksi di layar onboarding. */
+.card {
+  position: relative;
+  background: var(--surface-glass);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  padding: var(--space-8);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+.card::before,
+.card::after {
+  content: '';
+  position: absolute;
+  top: 12px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  opacity: 0.45;
+}
+.card::before { left: 12px; }
+.card::after { right: 12px; }
+.step {
+  animation: fm-slide-up var(--dur-normal) var(--ease-out);
+}
+.stepTitle {
+  font-size: var(--text-xl);
+  margin-bottom: 4px;
+}
+.stepDesc {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  margin-bottom: var(--space-5);
+}
+.stepBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.listRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr 40px;
+  gap: var(--space-2);
+  align-items: start;
+}
+/* Sewa per outlet: baris penuh di bawah nama & alamat. */
+.rentLine {
+  grid-column: 1 / -1;
+  display: grid;
+  /* subgrid: select & nominal sejajar dengan kolom nama/alamat, menumpuk di ponsel. */
+  grid-template-columns: subgrid;
+  gap: var(--space-2);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px dotted var(--border);
+}
+.empRow {
+  display: grid;
+  grid-template-columns: 1.4fr 110px 90px 40px;
+  gap: var(--space-2);
+  align-items: start;
+}
+.roleSelect {
+  min-height: var(--control-h);
+  padding: 10px 12px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-control);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: var(--text-base);
+  cursor: pointer;
+}
+.roleSelect:focus {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: var(--ring);
+}
+.removeBtn {
+  min-height: var(--control-h);
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
+  transition: all var(--dur-fast) var(--ease-out);
+}
+.removeBtn:hover {
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 6px 12px;
+  background: var(--brand-soft);
+  color: var(--brand-hover);
+  border: 1px solid var(--border-brand);
+  border-radius: var(--radius-full);
+  font-size: var(--text-sm);
+  font-weight: var(--fw-medium);
+}
+.chip button {
+  color: inherit;
+  opacity: 0.7;
+  font-size: var(--text-xs);
+}
+.chip button:hover {
+  opacity: 1;
+}
+.adder {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+}
+.adder > div {
+  flex: 1;
+}
+
+.formError {
+  color: var(--danger-text);
+  font-size: var(--text-sm);
+  font-weight: var(--fw-medium);
+}
+
+.stepHint {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.actions {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+}
+
+@media (max-width: 640px) {
+  .overlay {
+    padding: var(--space-4);
+  }
+  .card {
+    padding: var(--space-5);
+  }
+  .row,
+  .empRow,
+  .listRow {
+    grid-template-columns: 1fr;
+  }
+  .dotLabel {
+    display: none;
+  }
+}
+
+/* Peringatan "kamu mungkin salah tempat" di atas wizard cloud. Sengaja
+   menonjol: menyelesaikan setup di sini membuat toko tandingan yang tak bisa
+   lagi diundang — kesalahan yang tak ada jalan mundurnya di UI. */
+.inviteWarn {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--warning);
+  border-left-width: 3px;
+  border-radius: var(--radius-md);
+  background: var(--warning-soft);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+.inviteWarn strong {
+  color: var(--text-primary);
+}
