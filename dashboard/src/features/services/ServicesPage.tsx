@@ -1,17 +1,32 @@
-import { EmptyValue } from '@/components/ui/EmptyValue';
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  Card,
-  Button,
-  Input,
-  Badge,
-  EmptyState,
-  Icon,
-  CategoryChips,
-  ConfirmDialog,
-  PageSummary,
-} from '@/components/ui';
+  ArrowDown,
+  ArrowUp,
+  Calendar,
+  CircleCheck,
+  Cpu,
+  ExternalLink,
+  LoaderCircle,
+  Package,
+  Pencil,
+  Plus,
+  Search,
+  SlidersHorizontal,
+  User,
+  Wrench,
+  X,
+} from 'lucide-react';
+import { Badge } from '@/components/dens/badge';
+import { Button } from '@/components/dens/button';
+import { ConfirmDialog } from '@/components/dens/confirm-dialog';
+import { EmptyState } from '@/components/dens/empty-state';
+import { FilterChips } from '@/components/dens/filter-chips';
+import { Input } from '@/components/dens/input';
+import { SelectBox } from '@/components/dens/select-box';
+import { SummaryStrip } from '@/components/dens/summary-strip';
+import { TextInput } from '@/components/dens/text-input';
+import { WhatsAppIcon } from '@/components/dens/whatsapp-icon';
 import { ThumbDock } from '@/components/layout/ThumbDock';
 import { repository } from '@/data';
 import { useCollection, useDerivedQuery } from '@/hooks/useCollection';
@@ -20,12 +35,13 @@ import { useServiceSummary } from '@/hooks/useServiceSummary';
 import { SERVICE_LIST_CAP, useServiceArchive } from '@/hooks/useServiceArchive';
 import { useSessionStore } from '@/stores/session';
 import { toast } from '@/stores/toast';
-import { fmtNumber, fmtRp } from '@/lib/format';
+import { EMPTY_VALUE, fmtNumber, fmtRp } from '@/lib/format';
 import { addDays, fmtDate, localDateOf, localDateStr, localDayStartISO, monthRange } from '@/lib/time';
+import { cn } from '@/lib/utils';
 import { serviceSummary } from '@/lib/business/dashboard';
 import {
+  STATUS_BADGE,
   STATUS_LABELS,
-  STATUS_TONE,
   visibleServices,
   isAwaitingPickup,
   serviceProfit,
@@ -71,10 +87,58 @@ import { NotifyModal } from './NotifyModal';
 import { TicketDoneModal } from './TicketDoneModal';
 import { SparepartPickerModal } from './SparepartPickerModal';
 import type { Service, ServiceSparepart, ServiceStatus } from '@/data/types';
-import styles from './ServicesPage.module.css';
 import { useT, type TranslationKey } from '@/i18n';
 import { interpolate } from '@/lib/business/notify';
 import { PICKUP_NOTE, UNPICK_NOTE } from '@/lib/business/services';
+
+/**
+ * Kartu di <=1024px, daftar baris di layar yang lebih lebar (DBD bagian 4,
+ * keputusan P17.3). Ambangnya sama dengan laci sidebar (`drawer` di app.css):
+ * di bawahnya sidebar menjadi laci dan tablet melihat kartu satu atau dua kolom.
+ * Media query, bukan @container: ini selera per perangkat, sedangkan daftar
+ * baris sendiri sudah muat di lebar wadah berapa pun lewat container query.
+ */
+const CARDS_QUERY = '(max-width: 1024px)';
+
+/**
+ * Daftar baris menjadi tabel (judul kolom tampil, segmen berbaris dalam lajur)
+ * bila lantai semua lajur muat sebaris. Ambang = jumlah lantai (`tracks` di
+ * bawah) + jarak antarsegmen 12px + lajur kanan 11 + 9 + 7.5rem + tiga jarak
+ * 16px + padding baris 16 + 4px, diukur dari wadah daftar (zoom aplikasi ikut
+ * dihitung):
+ *   5 segmen  104+132+120+156+88 + 4x12 = 648 + 508 -> 1156px
+ *   <=4 segmen 104+132+120+156   + 3x12 = 548 + 508 -> 1056px
+ * Persis, tak dibulatkan: kerapatan Padat di 1366px memberi wadah 1056px.
+ * Toko satu teknisi (kolom Teknisi otomatis hilang) jadi tabel sejak 1056px.
+ * Kelasnya ditulis utuh karena Tailwind hanya membuat kelas yang tertulis.
+ */
+const TABLE_AT = {
+  5: {
+    head: '@min-[1156px]/svc:grid',
+    main: '@min-[1156px]/svc:grid @min-[1156px]/svc:gap-x-3 @min-[1156px]/svc:gap-y-0',
+    srOnly: '@min-[1156px]/svc:sr-only',
+    hide: '@min-[1156px]/svc:hidden',
+  },
+  4: {
+    head: '@min-[1056px]/svc:grid',
+    main: '@min-[1056px]/svc:grid @min-[1056px]/svc:gap-x-3 @min-[1056px]/svc:gap-y-0',
+    srOnly: '@min-[1056px]/svc:sr-only',
+    hide: '@min-[1056px]/svc:hidden',
+  },
+} as const;
+
+/*
+ * Lajur baris: utama (segmen), status 11rem, biaya 9rem, aksi 7.5rem (tiga
+ * tombol 40px; membuka tiket = klik barisnya). Di layar sentuh aksi 8.25rem
+ * (tiga tombol 44px), hanya selama lajurnya tetap. Di wadah <861px biaya dan
+ * aksi turun ke baris kedua, seperti Inventori.
+ */
+const ROW_COST =
+  'grid-cols-[minmax(0,1fr)_11rem_9rem_7.5rem] [grid-template-areas:"main_status_cost_actions"] pointer-coarse:@min-[861px]/svc:grid-cols-[minmax(0,1fr)_11rem_9rem_8.25rem]';
+const ROW_NO_COST =
+  'grid-cols-[minmax(0,1fr)_11rem_7.5rem] [grid-template-areas:"main_status_actions"] pointer-coarse:@min-[861px]/svc:grid-cols-[minmax(0,1fr)_11rem_8.25rem]';
+const ROW_BASE =
+  'relative grid min-h-14 items-center gap-x-4 py-2 pl-4 pr-1 @max-[861px]/svc:grid-cols-[minmax(0,1fr)_auto] @max-[861px]/svc:gap-y-0.5 @max-[861px]/svc:[grid-template-areas:"main_status"_"cost_actions"]';
 
 /**
  * Jendela daftar "panas" di cloud: SEMUA tiket yang belum tuntas (berapa pun
@@ -156,12 +220,10 @@ export function ServicesPage() {
   const [categoryFilter, setCategoryFilter] = useState(start.category);
   const [pickupFilter, setPickupFilter] = useState<'all' | 'awaiting'>(start.pickup);
   const [moreOpen, setMoreOpen] = useState(false);
-  // Tampilan ditentukan perangkat, bukan dipilih (keputusan pemilik, 7 Nov
-  // 2026): kartu di ponsel, daftar di layar yang lebih lebar. Ambangnya sama
-  // dengan tata letak ponsel halaman ini (@media max-width 720px di CSS).
-  // Media query, bukan @container: ini selera per perangkat, sedangkan daftar
-  // sendiri sudah muat di lebar berapa pun lewat container query.
-  const view = useMediaQuery('(max-width: 720px)') ? 'cards' : 'list';
+  // Tampilan ditentukan perangkat, bukan dipilih (keputusan pemilik FixMaster,
+  // 7 Nov 2026): kartu di ponsel dan tablet, daftar di layar yang lebih lebar
+  // (CARDS_QUERY, P17.3).
+  const view = useMediaQuery(CARDS_QUERY) ? 'cards' : 'list';
   const [techFilter, setTechFilter] = useState(start.tech);
   const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>(start.payment);
   // `?date=month` = "Unit masuk bulan ini" dari Dashboard.
@@ -316,7 +378,7 @@ export function ServicesPage() {
   );
   const showTech = cols.has('technician') && distinctTechs > 1;
   // Di ponsel teknisi, urutan, dan sakelar lingkup dilipat ke tombol filter di
-  // samping kolom cari (CSS); yang aktif ikut dihitung di tombol itu.
+  // samping kolom cari (foldOnPhone); yang aktif ikut dihitung di tombol itu.
   const foldedOnMobile = [
     showTechFilter && techFilter !== 'all',
     sort !== 'newest',
@@ -372,7 +434,7 @@ export function ServicesPage() {
   // Lajur segmen Daftar dari kolom yang diaktifkan toko, supaya segmen antar
   // baris sejajar. Urutan = urutan segmen di JSX (nomor dulu). Tiap lajur punya
   // lantai (minmax) selebar isi terpendek yang masih terbaca; jumlah lantainya
-  // menurunkan ambang judul kolom di CSS (`@container svcRows (min-width: …)`).
+  // menurunkan ambang judul kolom (TABLE_AT di atas).
   const tracks = [
     '6.5rem',
     // Segmen keluhan-penanganan paling lebar (tiga baris ringkasan kerja); nama
@@ -388,7 +450,7 @@ export function ServicesPage() {
   ]
     .filter(Boolean);
   const rowTracks = tracks.join(' ');
-  // Jumlah segmen = jumlah lajur; CSS memilih ambang tabel dari sini.
+  // Jumlah segmen = jumlah lajur; ambang tabel (TABLE_AT) dipilih dari sini.
   const segCount = tracks.length;
 
   // Seluruh baris Daftar membuka tiket. Jalur papan ketik & pembaca layar tetap
@@ -576,6 +638,7 @@ export function ServicesPage() {
     }
   };
 
+
   // Tombol ikon yang sama berulang di setiap baris ("Ubah", "Notifikasi & nota"):
   // tiap tombol menunjuk nomor tiketnya lewat aria-describedby supaya pembaca
   // layar tahu ia milik tiket yang mana. Daftar dan Kartu tak pernah tampil
@@ -584,9 +647,17 @@ export function ServicesPage() {
 
   // Label sel yang tampil sebagai judul kolom (atau tak tampil sama sekali di
   // tata letak mengalir) tetap sampai ke pembaca layar sebagai teks tersembunyi.
-  const srLabel = (key: Parameters<typeof t>[0]) => (
-    <span className="fm-visually-hidden">{t(key)}: </span>
+  const srLabel = (key: Parameters<typeof t>[0]) => <span className="sr-only">{t(key)}: </span>;
+
+  // Isi sel yang memang kosong: mata melihat tanda pisah, pembaca layar mendengar "kosong".
+  const emptyValue = (
+    <>
+      <span aria-hidden="true">{EMPTY_VALUE}</span>
+      <span className="sr-only">{t('common.emptyValue')}</span>
+    </>
   );
+
+  const wide = TABLE_AT[segCount === 5 ? 5 : 4];
 
   // Pickup indicator: prominent "Belum diambil" for closed-but-uncollected
   // units, dim "Diambil" for collected ones, nothing for in-progress tickets.
@@ -594,14 +665,19 @@ export function ServicesPage() {
   // ikon terpisah di kolom aksi).
   const renderPickup = (s: Service) => {
     if (!s.pickedUp && !isAwaitingPickup(s)) return null;
-    const cls = s.pickedUp ? styles.pickupDone : styles.pickupWait;
+    const cls = cn(
+      'mt-1 inline-flex items-center gap-1.5 whitespace-nowrap text-xs font-semibold leading-snug [&_svg]:size-3.5 [&_svg]:shrink-0',
+      s.pickedUp ? 'text-muted-foreground' : 'text-foreground',
+    );
+    // Titik amber: unit siap diambil menuntut perhatian; yang sudah diambil redup.
     const content = s.pickedUp ? (
       <>
-        <Icon name="circle-check" aria-hidden /> {t('services.pickedUp')}
+        <CircleCheck aria-hidden /> {t('services.pickedUp')}
       </>
     ) : (
       <>
-        <Icon name="box" aria-hidden /> {t('services.notPickedUp')}
+        <span aria-hidden className="size-2 shrink-0 rounded-full bg-highlight" />
+        <Package aria-hidden /> {t('services.notPickedUp')}
       </>
     );
     if (!isManager) return <span className={cls}>{content}</span>;
@@ -609,7 +685,10 @@ export function ServicesPage() {
     return (
       <button
         type="button"
-        className={[cls, styles.pickupBtn].join(' ')}
+        className={cn(
+          cls,
+          '-mx-1.5 rounded-md px-1.5 py-0.5 text-left outline-none transition-colors hover:bg-accent hover:underline hover:decoration-dotted hover:underline-offset-[3px] focus-visible:ring-2 focus-visible:ring-ring pointer-coarse:min-h-11',
+        )}
         onClick={() => void togglePickup(s)}
         title={action}
         // Nama memuat teks yang terlihat, lalu tiketnya dan apa yang terjadi bila
@@ -626,17 +705,23 @@ export function ServicesPage() {
     const days = isClosedOut(s) ? null : stalledDays(s, today);
     if (days === null) return null;
     return (
-      <span className={styles.stallTag} title={t('services.stallHint')}>
+      <span
+        className="mt-1 flex items-center gap-1.5 whitespace-nowrap text-xs font-semibold leading-snug text-warning-foreground"
+        title={t('services.stallHint')}
+      >
+        <span aria-hidden className="size-2 shrink-0 rounded-full bg-warning-foreground" />
         {interpolate(t('services.stalledDays'), { n: String(days) })}
       </span>
     );
   };
 
-  // Lencana status yang bisa diklik untuk mengubah status; sama di ketiga tampilan.
+  // Lencana status yang bisa diklik untuk mengubah status; sama di kedua tampilan.
+  // Margin negatif = padding, jadi lencananya sejajar tepi lajur; pensil hanya
+  // tampil saat hover atau fokus keyboard.
   const renderStatus = (s: Service) => (
     <button
       type="button"
-      className={styles.statusBtn}
+      className="group/status -mx-1.5 -my-0.5 inline-flex max-w-[calc(100%+0.75rem)] items-center gap-1 rounded-full px-1.5 py-0.5 outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring pointer-coarse:min-h-11"
       onClick={() => {
         setStatusTarget(s);
         setStatusOpen(true);
@@ -647,49 +732,63 @@ export function ServicesPage() {
         status: t(`statusLabel.${s.status}`),
       })}
     >
-      <Badge tone={STATUS_TONE[s.status]} dot>
-        {t(`statusLabel.${s.status}`)}
-      </Badge>
-      <Icon name="pen" aria-hidden />
+      <Badge variant={STATUS_BADGE[s.status]}>{t(`statusLabel.${s.status}`)}</Badge>
+      <Pencil
+        aria-hidden
+        className="size-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover/status:opacity-100 group-focus-visible/status:opacity-100"
+      />
     </button>
   );
 
   // Judul kolom yang bisa diurutkan (hanya tampil di tata letak lebar). Klik: naik,
-  // turun, lalu kembali ke Terbaru (nextSort). Panah mono menandai arah; di kolom
-  // yang tak aktif ia tersembunyi sampai disorot, supaya judul tak terlihat seperti
+  // turun, lalu kembali ke Terbaru (nextSort). Panah menandai arah; di kolom yang
+  // tak aktif ia tersembunyi sampai disorot, supaya judul tak terlihat seperti
   // tabel penuh panah. Tak memakai aria-sort (hanya sah di columnheader, dan daftar
-  // ini bukan tabel): urutan aktif dibacakan lewat teks tersembunyi.
-  const sortHead = (column: ServiceSortColumn, label: string) => {
+  // ini bukan tabel): urutan aktif dibacakan lewat teks tersembunyi. Padding 4px
+  // memberi target >=24px (WCAG 2.5.8); margin negatif mengembalikan hurufnya ke
+  // garis sel di bawahnya.
+  const sortHead = (column: ServiceSortColumn, label: string, alignEnd = false) => {
     const dir = sortDirectionOn(sort, column);
+    const Arrow = dir === 'descending' ? ArrowDown : ArrowUp;
     return (
       <button
         type="button"
-        className={styles.sortBtn}
+        className={cn(
+          'group/sort -m-1 inline-flex min-w-0 max-w-[calc(100%+0.5rem)] items-center gap-1 justify-self-start whitespace-nowrap rounded-md p-1 uppercase tracking-[inherit] outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring',
+          dir !== 'none' && 'text-foreground',
+          alignEnd && 'flex-row-reverse',
+        )}
         data-dir={dir}
         onClick={() => change(() => setSort(nextSort(sort, column)))}
         title={interpolate(t('services.sortBy'), { column: label })}
       >
-        <span className={styles.sortLabel}>{label}</span>
-        <Icon name={dir === 'descending' ? 'arrow-down' : 'arrow-up'} className={styles.sortMark} aria-hidden />
+        <span className="min-w-0 truncate">{label}</span>
+        <Arrow
+          aria-hidden
+          className={cn(
+            'size-3 shrink-0 transition-opacity',
+            dir === 'none'
+              ? 'opacity-0 group-hover/sort:opacity-60 group-focus-visible/sort:opacity-60'
+              : 'text-primary opacity-100',
+          )}
+        />
         {dir !== 'none' && (
-          <span className="fm-visually-hidden">
-            {interpolate(t('services.sortCurrent'), { order: t(SORT_LABEL_KEY[sort]) })}
-          </span>
+          <span className="sr-only">{interpolate(t('services.sortCurrent'), { order: t(SORT_LABEL_KEY[sort]) })}</span>
         )}
       </button>
     );
   };
 
-  // Biaya, sama di ketiga tampilan: biaya final (plus modal/profit untuk pemilik
+  // Biaya, sama di kedua tampilan: biaya final (plus modal/profit untuk pemilik
   // bila ada modal), atau estimasi berlabel selama biaya final belum ditetapkan.
   // Tiket batal: DP yang ditahan (biaya cek), dengan modal = biaya yang tetap
   // ditanggung, sama seperti rincian Detail Servis.
-  const renderCost = (s: Service) => {
+  const renderCost = (s: Service, align: 'end' | 'start' = 'end') => {
     const shown = costReadout(s);
-    if (shown.kind === 'none') return <span className={styles.muted}><EmptyValue /></span>;
+    if (shown.kind === 'none') return <span className="text-muted-foreground">{emptyValue}</span>;
     if (shown.kind === 'estimate') {
       return (
-        <span className={styles.estimate} title={t('services.estimateHint')}>
+        <span className="whitespace-nowrap font-mono text-xs text-muted-foreground" title={t('services.estimateHint')}>
           {interpolate(t('services.estimateShort'), { amount: fmtRp(shown.amount) })}
         </span>
       );
@@ -699,33 +798,40 @@ export function ServicesPage() {
     const profit = kept ? (cancelledProfit(s) ?? 0) : serviceProfit(s);
     return (
       <>
-        <span className={styles.cost}>{fmtRp(shown.amount)}</span>
+        <span className="font-mono font-semibold tabular-nums text-foreground">{fmtRp(shown.amount)}</span>
         {kept && (
-          <span className={styles.costTag} title={t('services.keptHint')}>
+          <span className="mt-0.5 block text-xs font-medium text-muted-foreground" title={t('services.keptHint')}>
             {t('services.keptTag')}
           </span>
         )}
         {/* Hanya kalau ada modal. Tanpa sparepart, profit SAMA DENGAN biaya, dan
-            sub-baris cuma mengulang angka di atasnya. */}
+            sub-baris cuma mengulang angka di atasnya. Angka tanpa "Rp": baris di
+            atasnya sudah menetapkan mata uangnya. Tanda dan warna yang membawa
+            arti: abu = modal keluar, hijau = profit, kuning = rugi. */}
         {isOwner && modal > 0 && (
-          <span className={styles.breakdown}>
+          <span
+            className={cn(
+              'mt-0.5 flex gap-2 font-mono text-xs font-medium leading-snug tabular-nums',
+              // Di wadah sempit biaya turun ke baris kedua, rata kiri; rinciannya ikut.
+              align === 'end' ? 'justify-end @max-[861px]/svc:justify-start' : 'justify-start',
+            )}
+          >
             {/* Label margin lewat teks tersembunyi, bukan aria-label: aria-label pada
                 <span> biasa tak dibacakan, sehingga pembaca layar hanya mengucap
                 "-850.000 +650.000" tanpa tahu mana modal dan mana profit. */}
-            <span className={styles.modal}>
+            <span className="text-muted-foreground">
               <span aria-hidden>-{fmtNumber(modal)}</span>
-              <span className="fm-visually-hidden">
-                {interpolate(t('services.modalAria'), { amount: fmtRp(modal) })}
-              </span>
+              <span className="sr-only">{interpolate(t('services.modalAria'), { amount: fmtRp(modal) })}</span>
             </span>
-            <span className={styles.profit} data-loss={profit < 0 ? 'true' : undefined}>
+            <span
+              className={profit < 0 ? 'text-warning-foreground' : 'text-success-foreground'}
+              data-loss={profit < 0 ? 'true' : undefined}
+            >
               <span aria-hidden>
                 {profit >= 0 && '+'}
                 {fmtNumber(profit)}
               </span>
-              <span className="fm-visually-hidden">
-                {interpolate(t('services.profitAria'), { amount: fmtRp(profit) })}
-              </span>
+              <span className="sr-only">{interpolate(t('services.profitAria'), { amount: fmtRp(profit) })}</span>
             </span>
           </span>
         )}
@@ -733,38 +839,48 @@ export function ServicesPage() {
     );
   };
 
-  // Shared action cluster so the list and cards stay in sync. Tiga aksi tetap
-  // untuk semua tiket; tanda ambil ada di label status ambil (renderPickup).
-  // Sparepart hanya untuk tiket yang masih dikerjakan, dan ditaruh paling kiri:
-  // kelompoknya rata kanan, jadi tiga aksi tetap sejajar antarbaris.
-  // `viewLink` hanya untuk Kartu: di Daftar seluruh baris sudah tautan ke tiket
-  // (openTicket), jadi ikon tautannya menghabiskan 40px lajur tanpa menambah jalan.
+  // Aksi sama di Daftar dan Kartu. Tiga aksi tetap untuk semua tiket; tanda ambil
+  // ada di label status ambil (renderPickup). Sparepart hanya untuk tiket yang
+  // masih dikerjakan, dan ditaruh paling kiri: kelompoknya rata kanan, jadi tiga
+  // aksi tetap sejajar antarbaris. `viewLink` hanya untuk Kartu: di Daftar seluruh
+  // baris sudah tautan ke tiket (openTicket).
+  const iconBtn = 'text-muted-foreground hover:text-foreground [&_svg]:size-[18px]';
   const renderActions = (s: Service, viewLink = false) => (
     <>
       {canQuickAddParts(s.status) && (
-        <button
-          className={styles.iconBtn}
+        <Button
+          variant="ghost"
+          size="icon"
+          className={iconBtn}
           onClick={() => setPartsFor(s.id)}
           title={t('services.addPart')}
           aria-label={t('services.addPart')}
           aria-describedby={noId(s)}
         >
-          <Icon name="microchip" aria-hidden />
-        </button>
+          <Cpu aria-hidden />
+        </Button>
       )}
       {viewLink && (
-        <Link
-          className={styles.iconBtn}
-          to={`/services/${s.id}`}
-          title={t('services.viewTicket')}
-          aria-label={t('services.viewTicket')}
-          aria-describedby={noId(s)}
+        <Button
+          asChild
+          variant="ghost"
+          size="icon"
+          className={iconBtn}
         >
-          <Icon name="up-right-from-square" aria-hidden />
-        </Link>
+          <Link
+            to={`/services/${s.id}`}
+            title={t('services.viewTicket')}
+            aria-label={t('services.viewTicket')}
+            aria-describedby={noId(s)}
+          >
+            <ExternalLink aria-hidden />
+          </Link>
+        </Button>
       )}
-      <button
-        className={styles.iconBtn}
+      <Button
+        variant="ghost"
+        size="icon"
+        className={iconBtn}
         onClick={() => {
           setNotifyTarget(s);
           setNotifyOpen(true);
@@ -773,10 +889,12 @@ export function ServicesPage() {
         aria-label={t('services.notifyReceipt')}
         aria-describedby={noId(s)}
       >
-        <Icon name="whatsapp" aria-hidden />
-      </button>
-      <button
-        className={styles.iconBtn}
+        <WhatsAppIcon />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        className={iconBtn}
         onClick={() => {
           setEditing(s);
           setEditOpen(true);
@@ -785,13 +903,39 @@ export function ServicesPage() {
         aria-label={t('common.edit')}
         aria-describedby={noId(s)}
       >
-        <Icon name="pen" aria-hidden />
-      </button>
+        <Pencil aria-hidden />
+      </Button>
     </>
   );
 
+  // Ponsel (<=720px, ambang menu bawah): teknisi, urutan, dan lingkup dilipat ke
+  // tombol filter di samping kolom cari, supaya tiket pertama naik ke layar
+  // pertama. Baris filter tanpa isi yang tampil tidak boleh memakan jarak.
+  const foldOnPhone = !moreOpen && 'phone:hidden';
+  const phoneBarEmpty = !moreOpen && pickupFilter !== 'awaiting' && !filtersActive;
+  const panel = 'overflow-hidden rounded-2xl bg-card text-card-foreground shadow-panel ring-1 ring-border/60';
+  const filterSelect = 'w-auto min-w-[9.5rem] phone:w-full phone:min-w-0';
+  const countPill = 'rounded-full bg-primary px-1.5 font-mono text-xs leading-[18px] text-primary-foreground';
+
+  const loadMore = (
+    <div className={cn('flex flex-wrap items-center gap-3', view === 'list' ? 'border-t border-border/70 px-5 py-4' : 'px-1')}>
+      {rows.length > shownRows.length && (
+        <Button variant="outline" size="sm" onClick={() => setLimit((n) => n + LIST_PAGE_SIZE)}>
+          <ArrowDown aria-hidden />
+          {t('services.showMore')}
+        </Button>
+      )}
+      <span className="font-mono text-xs text-muted-foreground">
+        {interpolate(t('services.shownOf'), { shown: String(shownRows.length), total: String(rows.length) })}
+        {rows.length !== stats.total && interpolate(t('services.totalTail'), { n: String(stats.total) })}
+        {scope === 'open' && closedCount > 0 && interpolate(t('services.closedHiddenTail'), { n: String(closedCount) })}
+        {windowed && archive.length === 0 && t(truncated ? 'services.truncatedTail' : 'services.olderTail')}
+      </span>
+    </div>
+  );
+
   return (
-    <div className={styles.wrap} ref={wrapRef}>
+    <div data-nu className="flex flex-col gap-4 phone:gap-3" ref={wrapRef}>
       <ConfirmDialog
         open={!!pickupConfirm}
         title={t('services.unpaidTitle')}
@@ -811,9 +955,9 @@ export function ServicesPage() {
           if (s) void togglePickup(s, true);
         }}
       />
-      {/* Satu strip readout, bukan lima kartu. Di ponsel ia satu baris empat
+      {/* Satu strip ringkasan, bukan lima kartu. Di ponsel ia satu baris empat
           hitungan berlabel pendek; nilai rupiah ada di Dashboard & Laporan. */}
-      <PageSummary
+      <SummaryStrip
         label={t('services.summaryAria')}
         items={[
           { label: t('services.statTotal'), short: t('services.statTotalShort'), value: stats.total },
@@ -835,193 +979,213 @@ export function ServicesPage() {
         ]}
       />
 
-      <div className={styles.toolbar}>
-        <div className={styles.search}>
-          <Input
+      <div className="flex flex-wrap items-center gap-3 phone:flex-nowrap phone:items-stretch">
+        <div className="min-w-0 max-w-xl flex-[1_1_18rem] phone:max-w-none">
+          <TextInput
             placeholder={t('services.searchPh')}
             value={query}
             onChange={(e) => change(() => setQuery(e.target.value))}
             onClear={() => change(() => setQuery(''))}
             clearLabel={t('services.searchClear')}
-            iconLeft={<Icon name="magnifying-glass" aria-hidden />}
+            start={<Search aria-hidden />}
             aria-label={t('services.searchAria')}
           />
         </div>
         {/* Ponsel: seluruh filter (termasuk sakelar lingkup) dilipat ke sini,
             di samping kolom cari, supaya tiket pertama naik ke layar pertama. */}
-        <button
-          type="button"
-          className={[styles.toggle, styles.phoneMore, moreOpen ? styles.toggleOn : ''].join(' ')}
+        <Button
+          variant="outline"
+          size="icon"
+          className="relative hidden shrink-0 phone:inline-flex aria-expanded:bg-accent"
           aria-expanded={moreOpen}
           aria-controls="servis-filter-lainnya"
           aria-label={t('services.moreFilters')}
           title={t('services.moreFilters')}
           onClick={() => setMoreOpen((v) => !v)}
         >
-          <Icon name="sliders" aria-hidden />
+          <SlidersHorizontal aria-hidden />
           {moreActive + foldedOnMobile > 0 && (
-            <span className={styles.toggleCount}>{moreActive + foldedOnMobile}</span>
+            <span className={cn(countPill, 'absolute -right-1 -top-1')}>{moreActive + foldedOnMobile}</span>
           )}
-        </button>
-        <div className={styles.toolbarActions}>
-          <Button onClick={openNew} iconLeft={<Icon name="plus" aria-hidden />}>
-            {t('services.new')}
-          </Button>
-        </div>
+        </Button>
+        <Button className="ml-auto phone:hidden" onClick={openNew}>
+          <Plus aria-hidden />
+          {t('services.new')}
+        </Button>
       </div>
 
-      <div className={styles.filterBar} role="group" aria-label={t('services.filterAria')} data-more={moreOpen}>
-        {showTechFilter && (
-          <select
-            className={styles.select}
-            value={techFilter}
-            onChange={(e) => change(() => setTechFilter(e.target.value))}
-            aria-label={t('services.filterTech')}
-          >
-            <option value="all">{t('services.allTechs')}</option>
-            {me && <option value="me">{t('services.myTickets')}</option>}
-            {activeTechs.map((e) => (
-              <option key={e.id} value={e.id}>
-                {e.name}
-              </option>
-            ))}
-            <option value="none">{t('services.unassigned')}</option>
-          </select>
+      <div
+        className={cn(
+          'flex flex-wrap items-center gap-2 phone:grid phone:grid-cols-2',
+          phoneBarEmpty && 'phone:hidden',
         )}
-        <select
-          className={styles.select}
+        role="group"
+        aria-label={t('services.filterAria')}
+      >
+        {showTechFilter && (
+          <SelectBox
+            size="sm"
+            className={cn(filterSelect, foldOnPhone)}
+            value={techFilter}
+            onValueChange={(v) => change(() => setTechFilter(v))}
+            aria-label={t('services.filterTech')}
+            options={[
+              { value: 'all', label: t('services.allTechs') },
+              ...(me ? [{ value: 'me', label: t('services.myTickets') }] : []),
+              ...activeTechs.map((e) => ({ value: e.id, label: e.name })),
+              { value: 'none', label: t('services.unassigned') },
+            ]}
+          />
+        )}
+        <SelectBox
+          size="sm"
+          className={cn(filterSelect, foldOnPhone)}
           value={sort}
-          onChange={(e) => change(() => setSort(e.target.value as ServiceSort))}
+          onValueChange={(v) => change(() => setSort(v as ServiceSort))}
           aria-label={t('services.sortAria')}
-        >
-          {SERVICE_SORTS.map((value) => (
-            <option key={value} value={value}>
-              {t(SORT_LABEL_KEY[value])}
-            </option>
-          ))}
-        </select>
+          options={SERVICE_SORTS.map((value) => ({ value, label: t(SORT_LABEL_KEY[value]) }))}
+        />
         {/* Sakelar lingkup: tiga posisi bertingkat dalam satu rumah. Angka =
             tiket yang tampil bila posisi itu dipilih. Semua sengaja tanpa angka:
             di cloud daftarnya berjendela (31 hari), jadi angkanya akan
             bertabrakan dengan TOTAL di strip atas, dan chip status di bawah
-            sudah menghitungnya. */}
-        <div className={[styles.scope, styles.foldable].join(' ')} role="group" aria-label={t('services.scopeAria')}>
+            sudah menghitungnya. Di ponsel satu baris penuh, lebar tiap tuts
+            mengikuti isinya, dan label boleh turun baris bila tak muat. */}
+        <div
+          className={cn(
+            'inline-flex items-center gap-0.5 rounded-full bg-secondary p-0.5 phone:col-span-2 phone:flex',
+            foldOnPhone,
+          )}
+          role="group"
+          aria-label={t('services.scopeAria')}
+        >
           {SERVICE_SCOPES.map((value) => {
             const count = value === 'open' ? openCount : value === 'stalled' ? stalledCount : null;
             return (
               <button
                 key={value}
                 type="button"
-                className={styles.scopeCell}
+                className="inline-flex h-8 min-w-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3 text-[13px] font-medium text-secondary-foreground outline-none transition-colors hover:bg-card/60 focus-visible:ring-2 focus-visible:ring-ring aria-pressed:bg-card aria-pressed:text-foreground aria-pressed:shadow-[0_1px_2px_rgb(6_32_54/0.08)] pointer-coarse:min-h-11 phone:flex-auto phone:whitespace-normal phone:px-2 phone:leading-tight"
                 aria-pressed={scope === value}
                 onClick={() => change(() => setScope(value))}
                 title={t(SCOPE_TEXT[value].hint)}
               >
-                {/* Lampu peringatan Tertahan menyala selama ada tiket yang tertahan. */}
+                {/* Titik peringatan Tertahan menyala selama ada tiket yang tertahan. */}
                 {value === 'stalled' && (
-                  <span className={styles.scopeLed} data-lit={stalledCount > 0} aria-hidden />
+                  <span
+                    aria-hidden
+                    className={cn(
+                      'size-2 shrink-0 rounded-full',
+                      stalledCount > 0 ? 'bg-warning-foreground' : 'bg-muted-foreground/40',
+                    )}
+                  />
                 )}
                 <span>{t(SCOPE_TEXT[value].label)}</span>
-                {count !== null && <span className={styles.scopeCount}>{fmtNumber(count)}</span>}
+                {count !== null && (
+                  <span className="font-mono text-xs tabular-nums text-muted-foreground">{fmtNumber(count)}</span>
+                )}
               </button>
             );
           })}
         </div>
-        <button
-          type="button"
-          className={[styles.toggle, styles.moreBtn, moreOpen ? styles.toggleOn : ''].join(' ')}
+        <Button
+          variant="outline"
+          size="sm"
+          className="phone:hidden aria-expanded:bg-accent"
           aria-expanded={moreOpen}
           aria-controls="servis-filter-lainnya"
           onClick={() => setMoreOpen((v) => !v)}
         >
-          <Icon name="sliders" aria-hidden />
+          <SlidersHorizontal aria-hidden />
           {t('services.moreFilters')}
-          {moreActive > 0 && <span className={styles.toggleCount}>{moreActive}</span>}
-        </button>
+          {moreActive > 0 && <span className={countPill}>{moreActive}</span>}
+        </Button>
         {/* Hanya muncul dari tautan Dashboard "unit menunggu diambil". */}
         {pickupFilter === 'awaiting' && (
-          <button
-            type="button"
-            className={[styles.toggle, styles.toggleOn, styles.awaitingChip].join(' ')}
+          <Button
+            variant="soft"
+            size="sm"
             onClick={() => change(() => setPickupFilter('all'))}
             aria-label={t('services.awaitingOffAria')}
             title={t('services.awaitingOffHint')}
           >
-            {t('services.awaiting')} <Icon name="times" aria-hidden />
-          </button>
+            {t('services.awaiting')} <X aria-hidden />
+          </Button>
         )}
         {filtersActive && (
-          <button type="button" className={styles.resetBtn} onClick={resetFilters}>
+          <Button variant="link" size="sm" className="phone:justify-self-start" onClick={resetFilters}>
             {t('services.resetFilters')}
-          </button>
+          </Button>
         )}
       </div>
 
       {moreOpen && (
         <div
           id="servis-filter-lainnya"
-          className={styles.morePanel}
+          className="flex flex-wrap items-center gap-2 rounded-2xl bg-surface p-3 ring-1 ring-border/60 phone:grid phone:grid-cols-2"
           role="group"
           aria-label={t('services.moreFilters')}
         >
-          <select
-            className={styles.select}
+          <SelectBox
+            size="sm"
+            className={filterSelect}
             value={categoryFilter}
-            onChange={(e) => change(() => setCategoryFilter(e.target.value))}
+            onValueChange={(v) => change(() => setCategoryFilter(v))}
             aria-label={t('services.filterDevice')}
-          >
-            <option value="all">{t('services.allDevices')}</option>
-            {categories.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-          <select
-            className={styles.select}
+            options={[
+              { value: 'all', label: t('services.allDevices') },
+              ...categories.map((c) => ({ value: c, label: c })),
+            ]}
+          />
+          <SelectBox
+            size="sm"
+            className={filterSelect}
             value={dateFilter}
-            onChange={(e) => change(() => setDateFilter(e.target.value as DateFilter))}
+            onValueChange={(v) => change(() => setDateFilter(v as DateFilter))}
             aria-label={t('services.filterDate')}
-          >
-            <option value="all">{t('services.allDates')}</option>
-            <option value="last7">{t('services.last7')}</option>
-            <option value="thisMonth">{t('services.thisMonth')}</option>
-            <option value="custom">{t('services.pickDates')}</option>
-          </select>
+            options={[
+              { value: 'all', label: t('services.allDates') },
+              { value: 'last7', label: t('services.last7') },
+              { value: 'thisMonth', label: t('services.thisMonth') },
+              { value: 'custom', label: t('services.pickDates') },
+            ]}
+          />
           {dateFilter === 'custom' && (
-            <span className={styles.dateRange}>
-              <input
+            <span className="flex items-center gap-2 phone:col-span-2">
+              <Input
                 type="date"
-                className={styles.dateInput}
+                className="h-8 w-auto rounded-full px-3 text-[13px] pointer-coarse:h-11 phone:min-w-0 phone:flex-1"
                 value={customFrom}
                 onChange={(e) => change(() => setCustomFrom(e.target.value))}
                 aria-label={t('services.dateFrom')}
               />
-              <span aria-hidden>–</span>
-              <input
+              <span aria-hidden>{EMPTY_VALUE}</span>
+              <Input
                 type="date"
-                className={styles.dateInput}
+                className="h-8 w-auto rounded-full px-3 text-[13px] pointer-coarse:h-11 phone:min-w-0 phone:flex-1"
                 value={customTo}
                 onChange={(e) => change(() => setCustomTo(e.target.value))}
                 aria-label={t('services.dateTo')}
               />
             </span>
           )}
-          {/* Terakhir: di ponsel ia mengambil satu baris penuh (lihat .wideSelect). */}
-          <select
-            className={[styles.select, styles.wideSelect].join(' ')}
+          {/* Terakhir: di ponsel ia mengambil satu baris penuh ("Semua Pembayaran" lebih lebar dari separuh baris). */}
+          <SelectBox
+            size="sm"
+            className={cn(filterSelect, 'phone:col-span-2')}
             value={paymentFilter}
-            onChange={(e) => change(() => setPaymentFilter(e.target.value as PaymentFilter))}
+            onValueChange={(v) => change(() => setPaymentFilter(v as PaymentFilter))}
             aria-label={t('services.filterPayment')}
-          >
-            <option value="all">{t('services.allPayments')}</option>
-            <option value="unpaid">{t('services.unpaid')}</option>
-            <option value="dp">{t('services.dpUnpaid')}</option>
-          </select>
+            options={[
+              { value: 'all', label: t('services.allPayments') },
+              { value: 'unpaid', label: t('services.unpaid') },
+              { value: 'dp', label: t('services.dpUnpaid') },
+            ]}
+          />
         </div>
       )}
 
-      <CategoryChips
+      <FilterChips
         categories={statusCounts}
         total={filteredExceptStatus.length}
         value={activeStatus}
@@ -1030,14 +1194,16 @@ export function ServicesPage() {
         labelOf={(id) => t(`statusLabel.${id as ServiceStatus}`) ?? id}
       />
 
-      <Card>
-        {loading ? (
-          <p className={styles.loading}>
-            <Icon name="circle-notch" className="spin" aria-hidden /> {t('services.loading')}
+      {loading ? (
+        <div className={panel}>
+          <p className="flex items-center justify-center gap-2 p-12 text-sm text-muted-foreground">
+            <LoaderCircle aria-hidden className="size-4 animate-spin motion-reduce:animate-none" /> {t('services.loading')}
           </p>
-        ) : rows.length === 0 ? (
+        </div>
+      ) : rows.length === 0 ? (
+        <div className={panel}>
           <EmptyState
-            icon={<Icon name="screwdriver-wrench" aria-hidden />}
+            icon={<Wrench aria-hidden />}
             title={t(visible.length === 0 ? 'services.emptyTitle' : 'services.noResults')}
             description={
               visible.length === 0
@@ -1048,228 +1214,281 @@ export function ServicesPage() {
             }
             action={
               visible.length === 0 ? (
-                <Button onClick={openNew} iconLeft={<Icon name="plus" aria-hidden />}>
+                <Button onClick={openNew}>
+                  <Plus aria-hidden />
                   {t('services.new')}
                 </Button>
               ) : filtersActive ? (
-                <Button variant="secondary" size="sm" onClick={resetFilters}>
+                <Button variant="outline" size="sm" onClick={resetFilters}>
                   {t('services.resetFilters')}
                 </Button>
               ) : scope === 'open' && closedCount > 0 ? (
-                <Button variant="secondary" size="sm" onClick={() => change(() => setScope('all'))}>
+                <Button variant="outline" size="sm" onClick={() => change(() => setScope('all'))}>
                   {t('services.showClosed')}
                 </Button>
               ) : null
             }
           />
-        ) : (
-          <div>
-            {/* Daftar: satu baris per tiket, konsep sama dengan Inventori & Kasir. */}
-            {view === 'list' && (
-              <div
-                className={styles.rowList}
-                data-segs={segCount}
-                style={{ '--row-cols': rowTracks } as CSSProperties}
-              >
-              {/* Judul kolom: hanya di tata letak lebar, saat segmen berbaris dalam lajur.
-                  Baris di bawah (ul) tak pernah jadi tabel bagi pembaca layar, jadi judul
-                  yang hanya label disembunyikan (aria-hidden): tiap sel membawa labelnya
-                  sendiri sebagai teks tersembunyi (srLabel). Judul yang bisa diurutkan
-                  (No. Servis, Pelanggan, Status, Biaya) adalah tombol sungguhan di dalam
-                  grup berlabel, jadi wadahnya TIDAK aria-hidden. */}
-              <div
-                className={[styles.row, styles.rowHead, cols.has('cost') ? '' : styles.rowNoCost].join(' ')}
-                role="group"
-                aria-label={t('services.sortAria')}
-              >
-                <div className={styles.rowMain}>
-                  {sortHead('date', t('services.colNo'))}
-                  {cols.has('customer') && sortHead('customer', t('services.colCustomer'))}
-                  {cols.has('device') && <span aria-hidden="true">{t('services.colDevice')}</span>}
-                  {showNotes && (
-                    <span aria-hidden="true">
-                      {showComplaint && showFix
-                        ? t('services.colNotes')
-                        : t(showFix ? 'services.colFix' : 'services.colComplaint')}
-                    </span>
-                  )}
-                  {showTech && <span aria-hidden="true">{t('services.colTech')}</span>}
-                </div>
-                <span className={styles.rowStatus}>{sortHead('status', t('common.status'))}</span>
-                {cols.has('cost') && <span className={styles.rowCost}>{sortHead('cost', t('services.colCost'))}</span>}
-                <span className={styles.rowActions} aria-hidden="true">
-                  {t('common.actions')}
+        </div>
+      ) : view === 'list' ? (
+        /* Daftar: satu baris per tiket. Segmen opsional mengikuti Pengaturan >
+           kolom Servis; lajurnya (--row-cols) dibentuk dari segmen yang aktif,
+           jadi segmen antar baris sejajar. Semua lajur minmax(…) dan teksnya
+           dipotong atau dijepit, sehingga baris tak pernah meluap. */
+        <div className={panel}>
+          <div
+            className="@container/svc"
+            data-segs={segCount}
+            style={{ '--row-cols': rowTracks } as CSSProperties}
+          >
+            {/* Judul kolom: hanya di tata letak lebar, saat segmen berbaris dalam lajur.
+                Baris di bawah (ul) tak pernah jadi tabel bagi pembaca layar, jadi judul
+                yang hanya label disembunyikan (aria-hidden): tiap sel membawa labelnya
+                sendiri sebagai teks tersembunyi (srLabel). Judul yang bisa diurutkan
+                (No. Servis, Pelanggan, Status, Biaya) adalah tombol sungguhan di dalam
+                grup berlabel, jadi wadahnya TIDAK aria-hidden. */}
+            <div
+              data-row-head
+              className={cn(
+                ROW_BASE,
+                cols.has('cost') ? ROW_COST : ROW_NO_COST,
+                'hidden min-h-0 whitespace-nowrap border-b border-border/70 bg-surface py-2.5 font-mono text-xs font-medium uppercase tracking-[0.06em] text-muted-foreground',
+                wide.head,
+              )}
+              role="group"
+              aria-label={t('services.sortAria')}
+            >
+              <div className="grid min-w-0 grid-cols-(--row-cols) items-center gap-x-3 [grid-area:main] [&>span]:truncate">
+                {sortHead('date', t('services.colNo'))}
+                {cols.has('customer') && sortHead('customer', t('services.colCustomer'))}
+                {cols.has('device') && <span aria-hidden="true">{t('services.colDevice')}</span>}
+                {showNotes && (
+                  <span aria-hidden="true">
+                    {showComplaint && showFix
+                      ? t('services.colNotes')
+                      : t(showFix ? 'services.colFix' : 'services.colComplaint')}
+                  </span>
+                )}
+                {showTech && <span aria-hidden="true">{t('services.colTech')}</span>}
+              </div>
+              <span className="min-w-0 [grid-area:status]">{sortHead('status', t('common.status'))}</span>
+              {cols.has('cost') && (
+                <span className="flex min-w-0 justify-end [grid-area:cost]">
+                  {sortHead('cost', t('services.colCost'), true)}
                 </span>
-              </div>
-              <ul className={styles.rows}>
-                {shownRows.map((s) => (
-                  <li
-                    key={s.id}
-                    className={[styles.row, cols.has('cost') ? '' : styles.rowNoCost].join(' ')}
-                    data-tone={STATUS_TONE[s.status]}
-                    onClick={(e) => openTicket(e, s.id)}
-                  >
-                    <div className={styles.rowMain}>
-                      {/* Nomor + tanggal masuk: satu identitas tiket, satu segmen. */}
-                      <div className={[styles.rowCell, styles.mono].join(' ')} data-seg="id">
-                        <Link to={`/services/${s.id}`} className={styles.noLink} id={noId(s)}>
-                          {s.serviceNo}
-                        </Link>
-                        <small className={styles.sub}>{fmtDate(localDateOf(s.createdAt))}</small>
-                      </div>
-                      {cols.has('customer') && (
-                        <div className={styles.rowCell} data-seg="customer">
-                          {srLabel('services.colCustomer')}
-                          <strong className={styles.customerName} title={s.customerName || undefined}>
-                            {s.customerName}
-                          </strong>
-                          <small
-                            className={[styles.sub, styles.phone].join(' ')}
-                            title={s.customerPhone || undefined}
-                          >
-                            {s.customerPhone}
-                          </small>
-                        </div>
-                      )}
-                      {cols.has('device') && (
-                        <div className={styles.rowCell} data-seg="device">
-                          {srLabel('services.colDevice')}
-                          <span className={styles.rowTitle} title={s.device || undefined}>
-                            {s.device}
-                          </span>
-                          <small className={styles.sub}>{s.category}</small>
-                        </div>
-                      )}
-                      {showNotes && (
-                        <div
-                          className={styles.rowCell}
-                          data-seg="notes"
-                          data-single={showComplaint !== showFix ? 'true' : undefined}
-                        >
-                          {showComplaint && (
-                            <span className={styles.clamp} title={s.complaint || undefined}>
-                              <b>{t('services.colComplaint')}</b> {s.complaint || <EmptyValue />}
-                            </span>
-                          )}
-                          {showFixLine(s) && (
-                            <span
-                              className={[styles.clamp, styles.clamp3].join(' ')}
-                              title={s.completionNote || undefined}
-                            >
-                              <b>{t('services.colFix')}</b> {s.completionNote || <EmptyValue />}
-                            </span>
-                          )}
-                        </div>
-                      )}
-                      {showTech && (
-                        <div className={styles.rowCell} data-seg="technician">
-                          {srLabel('services.colTech')}
-                          <span className={styles.rowTech} title={t('services.colTech')}>
-                            <Icon name="screwdriver-wrench" aria-hidden />
-                            <span>{s.technicianName || <EmptyValue />}</span>
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                    {/* Satu zona pindai: lencana status, lalu sinyal "belum diambil" dan
-                        "tertahan". Dulu yang pertama di kolom perangkat, yang kedua di
-                        sini, sehingga satu unit (Lunas, tak diambil 9 hari) memajang dua
-                        sinyal di dua tempat. */}
-                    <div className={styles.rowStatus}>
-                      {renderStatus(s)}
-                      {renderPickup(s)}
-                      {renderStall(s)}
-                    </div>
-                    {cols.has('cost') && (
-                      <div className={styles.rowCost}>
-                        {srLabel('services.colCost')}
-                        {renderCost(s)}
-                      </div>
-                    )}
-                    <div className={styles.rowActions}>{renderActions(s)}</div>
-                  </li>
-                ))}
-              </ul>
-              </div>
-            )}
-
-            {view === 'cards' && (
-            <ul className={styles.cardList}>
+              )}
+              {/* "AKSI" rata dengan glyph ikon terakhir, bukan tepi kotak tombolnya. */}
+              <span
+                className="flex justify-end pr-3 [grid-area:actions] pointer-coarse:@min-[861px]/svc:pr-3.5"
+                aria-hidden="true"
+              >
+                {t('common.actions')}
+              </span>
+            </div>
+            <ul className="m-0 list-none p-0">
               {shownRows.map((s) => (
-                <li key={s.id} className={styles.jobCard} data-tone={STATUS_TONE[s.status]}>
-                  <div className={styles.jobTop}>
-                    <Link to={`/services/${s.id}`} className={styles.jobNo} id={noId(s)}>
-                      {s.serviceNo}
-                    </Link>
-                    {renderStatus(s)}
+                <li
+                  key={s.id}
+                  className={cn(
+                    ROW_BASE,
+                    cols.has('cost') ? ROW_COST : ROW_NO_COST,
+                    'cursor-pointer border-t border-border/70 transition-colors first:border-t-0 hover:bg-accent/60',
+                  )}
+                  onClick={(e) => openTicket(e, s.id)}
+                >
+                  <div
+                    className={cn(
+                      'flex min-w-0 flex-wrap items-center gap-x-4 gap-y-0.5 [grid-area:main] grid-cols-(--row-cols)',
+                      '@max-[521px]/svc:flex-col @max-[521px]/svc:items-start',
+                      wide.main,
+                    )}
+                  >
+                    {/* Nomor + tanggal masuk: satu identitas tiket, satu segmen.
+                        Cukup selebar lajur tabelnya; tanpa ini ia ikut membengkak
+                        dan mendorong perangkat ke baris kedua. */}
+                    <div
+                      className="flex min-w-0 flex-[0_1_6.5rem] flex-col items-start text-sm leading-snug @max-[521px]/svc:flex-none @max-[521px]/svc:flex-row @max-[521px]/svc:items-baseline @max-[521px]/svc:gap-2"
+                      data-seg="id"
+                    >
+                      <Link
+                        to={`/services/${s.id}`}
+                        className="whitespace-nowrap font-mono font-semibold text-foreground underline-offset-4 outline-none hover:text-primary hover:underline focus-visible:rounded focus-visible:ring-2 focus-visible:ring-ring pointer-coarse:-mx-2 pointer-coarse:-my-3.5 pointer-coarse:inline-block pointer-coarse:px-2 pointer-coarse:py-3.5"
+                        id={noId(s)}
+                      >
+                        {s.serviceNo}
+                      </Link>
+                      <small className="block text-xs text-muted-foreground">{fmtDate(localDateOf(s.createdAt))}</small>
+                    </div>
+                    {cols.has('customer') && (
+                      <div
+                        className="flex min-w-0 flex-[1_1_9rem] flex-col items-start text-sm leading-snug @max-[521px]/svc:flex-none"
+                        data-seg="customer"
+                      >
+                        {srLabel('services.colCustomer')}
+                        {/* Nama pelanggan boleh dua baris: satu baris berelipsis menyembunyikan
+                            nama belakang (pembeda antar "Budi"). */}
+                        <strong
+                          className="line-clamp-2 max-w-full font-semibold text-foreground [overflow-wrap:anywhere]"
+                          title={s.customerName || undefined}
+                        >
+                          {s.customerName}
+                        </strong>
+                        {/* Nomor HP mono, tak boleh dipotong: nomor yang kehilangan digit = nomor salah. */}
+                        <small
+                          className="block max-w-full truncate font-mono text-xs text-muted-foreground @max-[521px]/svc:hidden"
+                          title={s.customerPhone || undefined}
+                        >
+                          {s.customerPhone}
+                        </small>
+                      </div>
+                    )}
+                    {cols.has('device') && (
+                      <div
+                        className="flex min-w-0 flex-[1_1_9rem] flex-col items-start text-sm leading-snug @max-[521px]/svc:flex-none"
+                        data-seg="device"
+                      >
+                        {srLabel('services.colDevice')}
+                        {/* Nama perangkat boleh dua baris: "MacBook Pro 13" 2019" tanpa
+                            tahun modelnya kehilangan pembeda antartiket. */}
+                        <span className="line-clamp-2 max-w-full text-foreground [overflow-wrap:break-word]" title={s.device || undefined}>
+                          {s.device}
+                        </span>
+                        <small className="block max-w-full truncate text-xs text-muted-foreground @max-[521px]/svc:hidden">
+                          {s.category}
+                        </small>
+                      </div>
+                    )}
+                    {showNotes && (
+                      <div
+                        className="flex min-w-0 flex-[2_1_14rem] flex-col items-start gap-0.5 text-sm leading-snug @max-[521px]/svc:hidden"
+                        data-seg="notes"
+                        data-single={showComplaint !== showFix ? 'true' : undefined}
+                      >
+                        {/* Label yang mengulang judul kolom disembunyikan secara visual
+                            (bukan display: none) saat judul tampil dan toko hanya memakai
+                            satu jenis catatan: judulnya aria-hidden, jadi label inilah
+                            satu-satunya nama sel bagi pembaca layar. */}
+                        {showComplaint && (
+                          <span className="line-clamp-2 text-xs text-muted-foreground" title={s.complaint || undefined}>
+                            <b className={cn('mr-1 font-semibold text-foreground/70', showComplaint !== showFix && wide.srOnly)}>
+                              {t('services.colComplaint')}
+                            </b>{' '}
+                            {s.complaint || emptyValue}
+                          </span>
+                        )}
+                        {showFixLine(s) && (
+                          <span className="line-clamp-3 text-xs text-muted-foreground" title={s.completionNote || undefined}>
+                            <b className={cn('mr-1 font-semibold text-foreground/70', showComplaint !== showFix && wide.srOnly)}>
+                              {t('services.colFix')}
+                            </b>{' '}
+                            {s.completionNote || emptyValue}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    {showTech && (
+                      <div
+                        className="flex min-w-0 flex-[1_1_9rem] flex-col items-start text-sm leading-snug @max-[521px]/svc:hidden"
+                        data-seg="technician"
+                      >
+                        {srLabel('services.colTech')}
+                        <span className="flex max-w-full items-start gap-1.5 text-muted-foreground" title={t('services.colTech')}>
+                          <Wrench aria-hidden className={cn('mt-[0.2em] size-3.5 shrink-0', wide.hide)} />
+                          <span className="line-clamp-2 [overflow-wrap:anywhere]">{s.technicianName || emptyValue}</span>
+                        </span>
+                      </div>
+                    )}
                   </div>
-                  <div className={styles.jobDevice}>
-                    <strong title={s.device || undefined}>{s.device}</strong>
-                    <small>{s.category}</small>
+                  {/* Satu zona pindai: lencana status, lalu sinyal "belum diambil" dan
+                      "tertahan". Di wadah sempit lencananya rata kanan di baris pertama. */}
+                  <div className="flex min-w-0 flex-col items-start [grid-area:status] @max-[861px]/svc:items-end @max-[861px]/svc:self-start @max-[861px]/svc:pr-1.5">
+                    {renderStatus(s)}
                     {renderPickup(s)}
-                    {showComplaint && s.complaint && (
-                      <small className={styles.jobNote}>
-                        <b>{t('services.colComplaint')}</b> {s.complaint}
-                      </small>
-                    )}
-                    {showFix && s.completionNote && (
-                      <small className={styles.jobNote}>
-                        <b>{t('services.colFix')}</b> {s.completionNote}
-                      </small>
-                    )}
                     {renderStall(s)}
                   </div>
-                  <div className={styles.jobMeta}>
-                    <span className={styles.customerName}>
-                      <Icon name="user" aria-hidden /> {s.customerName}
-                    </span>
-                    <span>
-                      <Icon name="calendar" aria-hidden /> {fmtDate(localDateOf(s.createdAt))}
-                    </span>
-                    {s.technicianName && (
-                      <span>
-                        <Icon name="screwdriver-wrench" aria-hidden /> {s.technicianName}
-                      </span>
-                    )}
-                  </div>
-                  <div className={styles.jobFoot}>
-                    <div className={styles.jobCost}>
+                  {cols.has('cost') && (
+                    <div className="whitespace-nowrap text-right text-sm [grid-area:cost] @max-[861px]/svc:text-left">
                       {srLabel('services.colCost')}
-                      {renderCost(s)}
+                      {renderCost(s, 'end')}
                     </div>
-                    <div className={styles.jobActions}>{renderActions(s, true)}</div>
-                  </div>
+                  )}
+                  <div className="flex justify-end [grid-area:actions]">{renderActions(s)}</div>
                 </li>
               ))}
             </ul>
-            )}
-
-            {/* Satu footer untuk kedua tampilan, karena keduanya memakai
-                `shownRows` yang sama. */}
-            <div className={styles.loadMore}>
-              {rows.length > shownRows.length && (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => setLimit((n) => n + LIST_PAGE_SIZE)}
-                  iconLeft={<Icon name="arrow-down" aria-hidden />}
-                >
-                  {t('services.showMore')}
-                </Button>
-              )}
-              <span className={styles.loadMoreHint}>
-                {interpolate(t('services.shownOf'), { shown: String(shownRows.length), total: String(rows.length) })}
-                {rows.length !== stats.total && interpolate(t('services.totalTail'), { n: String(stats.total) })}
-                {scope === 'open' && closedCount > 0 && interpolate(t('services.closedHiddenTail'), { n: String(closedCount) })}
-                {windowed && archive.length === 0 && t(truncated ? 'services.truncatedTail' : 'services.olderTail')}
-              </span>
-            </div>
           </div>
-        )}
-      </Card>
+          {loadMore}
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {/* Kartu: satu atau dua kolom mengikuti lebar (auto-fill, tanpa breakpoint). */}
+          <ul className="m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(min(18.75rem,100%),1fr))] gap-3 p-0">
+            {shownRows.map((s) => (
+              <li
+                key={s.id}
+                className="flex min-w-0 flex-col gap-2 rounded-2xl bg-card px-4 py-3 text-card-foreground shadow-panel ring-1 ring-border/60"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  {/* Nomor tiket = pintu ke detail; tingginya sekelas tombol supaya mudah diketuk. */}
+                  <Link
+                    to={`/services/${s.id}`}
+                    className="inline-flex min-h-10 items-center whitespace-nowrap font-mono text-sm font-semibold text-foreground underline-offset-4 outline-none hover:text-primary hover:underline focus-visible:rounded focus-visible:ring-2 focus-visible:ring-ring pointer-coarse:min-h-11"
+                    id={noId(s)}
+                  >
+                    {s.serviceNo}
+                  </Link>
+                  {renderStatus(s)}
+                </div>
+                <div className="min-w-0 [overflow-wrap:anywhere]">
+                  <strong className="block text-base font-semibold" title={s.device || undefined}>
+                    {s.device}
+                  </strong>
+                  <small className="text-xs text-muted-foreground">{s.category}</small>
+                  {renderPickup(s) && <div>{renderPickup(s)}</div>}
+                  {showComplaint && s.complaint && (
+                    <small className="mt-1 block text-xs text-muted-foreground">
+                      <b className="mr-1 font-semibold text-foreground/70">{t('services.colComplaint')}</b> {s.complaint}
+                    </small>
+                  )}
+                  {showFix && s.completionNote && (
+                    <small className="mt-1 block text-xs text-muted-foreground">
+                      <b className="mr-1 font-semibold text-foreground/70">{t('services.colFix')}</b> {s.completionNote}
+                    </small>
+                  )}
+                  {renderStall(s)}
+                </div>
+                <div className="flex min-w-0 flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground [overflow-wrap:anywhere] [&_svg]:size-3.5 [&_svg]:shrink-0">
+                  <span className="inline-flex min-w-0 items-center gap-1.5 font-semibold text-foreground">
+                    <User aria-hidden className="text-muted-foreground" /> {s.customerName}
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <Calendar aria-hidden /> {fmtDate(localDateOf(s.createdAt))}
+                  </span>
+                  {s.technicianName && (
+                    <span className="inline-flex min-w-0 items-center gap-1.5">
+                      <Wrench aria-hidden /> {s.technicianName}
+                    </span>
+                  )}
+                </div>
+                {/* Angka tetap satu baris; aksi turun ke baris sendiri, rata kanan,
+                    hanya bila tidak muat. */}
+                <div className="mt-0.5 flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-2">
+                  <div className="flex flex-col items-start whitespace-nowrap">
+                    {srLabel('services.colCost')}
+                    {renderCost(s, 'start')}
+                  </div>
+                  <div className="ml-auto flex gap-1">{renderActions(s, true)}</div>
+                </div>
+              </li>
+            ))}
+          </ul>
+          {loadMore}
+        </div>
+      )}
 
       <ThumbDock>
-        <Button onClick={openNew} iconLeft={<Icon name="plus" aria-hidden />}>
+        <Button onClick={openNew}>
+          <Plus aria-hidden />
           {t('services.new')}
         </Button>
       </ThumbDock>
@@ -1295,19 +1514,13 @@ export function ServicesPage() {
         service={done ? (services.find((s) => s.id === done.service.id) ?? done.service) : null}
         variant={done?.variant ?? 'intake'}
       />
-      <NotifyModal
-        open={notifyOpen}
-        onClose={() => setNotifyOpen(false)}
-        service={notifyTarget}
-      />
+      <NotifyModal open={notifyOpen} onClose={() => setNotifyOpen(false)} service={notifyTarget} />
       {/* key per tiket: pencarian dan jumlah di pemilih tidak terbawa ke tiket lain. */}
       <SparepartPickerModal
         key={partsFor ?? 'none'}
         open={!!partsService}
         onClose={() => setPartsFor(null)}
-        existingItemIds={(partsService?.spareparts ?? [])
-          .map((p) => p.itemId)
-          .filter((x): x is string => !!x)}
+        existingItemIds={(partsService?.spareparts ?? []).map((p) => p.itemId).filter((x): x is string => !!x)}
         onPick={addPart}
         ticket={partsService ?? undefined}
         modalDadakan={

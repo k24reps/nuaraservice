@@ -1,6 +1,6 @@
 # Log Wawancara - Dashboard Nuara Service
 
-> Status: selesai | Putaran terakhir selesai: P16 (2026-11-21, layar masuk) | Pertanyaan dijawab: 241 (222 sampai 2026-11-04 + 8 di P13 + 5 di P14 + 4 di P15 + 2 di P16) | Sumber terserah: 16, semuanya sudah disetujui atau diubah user; [ASUMSI] tersisa: 0 | Diperbarui: 2026-11-21
+> Status: selesai | Putaran terakhir selesai: P17 (2026-11-21, daftar tiket Servis) | Pertanyaan dijawab: 244 (222 sampai 2026-11-04 + 8 di P13 + 5 di P14 + 4 di P15 + 2 di P16 + 3 di P17) | Sumber terserah: 16, semuanya sudah disetujui atau diubah user; [ASUMSI] tersisa: 0 | Diperbarui: 2026-11-21
 <!-- Status: berjalan -> siap-tulis (P12 dikonfirmasi) -> selesai (dokumen ditulis).
 Sumber: user = dipilih atau diketik user (termasuk memilih opsi Rekomendasi);
 terserah = user menyerahkan, AI memakai rekomendasi -> [ASUMSI];
@@ -208,6 +208,9 @@ Konteks repo (Fase 1): landing page statis di root (index.html, style.css, scrip
 | P15.4 | Lonceng notifikasi | Disembunyikan sampai fitur notifikasi dibuat; masuk Daftar Selisih G-11 | user | IPD G-11 |
 | P16.1 | Tata letak layar masuk | Satu kartu di tengah: logo + "Nuara Service" di atas kartu, judul dan petunjuk yang sudah ada, tanpa teks promosi baru; dipakai juga untuk password baru dan PIN | user | DBD 3, IPD L-58 |
 | P16.2 | Kalimat persetujuan saat daftar | Dibuang; tautan /terms dan /privacy sudah tidak ada sejak L-43 | user | IPD L-58 |
+| P17.1 | Cakupan L-48 | Form Servis Baru/Ubah tiket ikut dipindah bersama daftar tiket; modal lain (ubah status, kirim WA/nota, tiket jadi, pemilih sparepart) tetap di L-49 bersama detail tiket | user | IPD L-48, L-49 |
+| P17.2 | Warna lencana Lunas | Hijau seperti Selesai (peta DBD bagian 3); Lunas sendiri belum ada di PRD (selisih G-03) | user | DBD 3 |
+| P17.3 | Daftar tiket jadi kartu | Ikut DBD: kartu di 1024px ke bawah (satu atau dua kolom), daftar baris di atasnya; FixMaster dulu hanya di ponsel (720px) | user | DBD 4, IPD L-48 |
 
 ## Perubahan (mode update)
 | Tanggal | Kode | Perubahan | Jawaban | Dokumen terdampak |
@@ -232,3 +235,4 @@ Konteks repo (Fase 1): landing page statis di root (index.html, style.css, scrip
 | 2026-11-21 | A18 (P14) | Fondasi dens-ui: hanya tema terang (gelap dimatikan L-47), font Figtree + JetBrains Mono, bentuk dan bayangan dens-ui menggantikan rancangan Archivo/radius kecil/datar di DBD; sonner, vaul, cmdk dipasang | wawancara P14 | DBD 2-3, 6-7; TRD 1-3, 9; IPD L-46, L-47 |
 | 2026-11-21 | A19 (P15) | Kerangka aplikasi dipindah ke dens-ui; layar masuk/PIN/wizard menjadi langkah baru L-58; toast sonner; target sentuh 44px hanya di pointer kasar; lonceng palsu disembunyikan (G-11); tema gelap dimatikan untuk seluruh aplikasi (P14.1) | wawancara P15 | IPD L-47, L-58, G-11; DBD 2-3, 5; TRD 1-2 |
 | 2026-11-21 | A20 (P16) | Layar masuk, daftar, password baru, PIN, dan wizard toko dipindah ke dens-ui dalam satu kartu di tengah; maskot VOLT, panel merek, dan kalimat persetujuan dibuang; komponen form Field, PasswordInput, PasswordStrength ditambahkan | wawancara P16 | IPD L-58; DBD 3; TRD 2-3 |
+| 2026-11-21 | A21 (P17) | Daftar tiket Servis dan form Servis Baru/Ubah dipindah ke dens-ui; Lunas berwarna hijau seperti Selesai; daftar tiket menjadi kartu di 1024px ke bawah; komponen pengganti FixMaster (ringkasan, chip saring, kolom teks, pilihan, dialog form) ditambahkan | wawancara P17 | IPD L-48, L-49; DBD 3-4 |

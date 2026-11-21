@@ -1,5 +1,10 @@
 import { useState } from 'react';
-import { Modal, Input, Select, Button, FormFields, FormRow, FormError, Icon } from '@/components/ui';
+import { LoaderCircle, Plus } from 'lucide-react';
+import { Button } from '@/components/dens/button';
+import { Field, FormMessage } from '@/components/dens/field';
+import { FormDialog } from '@/components/dens/form-dialog';
+import { SelectBox } from '@/components/dens/select-box';
+import { TextInput } from '@/components/dens/text-input';
 import { useFormFault } from '@/hooks/useFormFault';
 import { repository } from '@/data';
 import { newId, nextDocNumber } from '@/lib/id';
@@ -19,7 +24,6 @@ import type { Service, Customer, Employee, ScreenLockKind } from '@/data/types';
 import type { TranslationKey } from '@/i18n';
 import { saveScreenLock } from '@/data/serviceSecret';
 import { useT } from '@/i18n';
-import styles from './ServiceModal.module.css';
 import { interpolate } from '@/lib/business/notify';
 import { currentTerms } from '@/lib/business/serviceTerms';
 import { useListNav } from '@/hooks/useListNav';
@@ -207,22 +211,54 @@ export function ServiceModal({
 
   const nav = useListNav(suggestions.length, (i) => pickCustomer(suggestions[i]));
   const suggestList = suggestions.length > 0 && (
-    <div className={styles.suggest} role="listbox" id="intake-customer-suggest">
-      <span className={styles.suggestHint}>{t('serviceForm.suggestHint')}</span>
+    <div
+      className="absolute inset-x-0 top-[calc(100%+4px)] z-20 max-h-58 overflow-y-auto rounded-xl bg-popover p-1 text-popover-foreground shadow-raised ring-1 ring-border/70"
+      role="listbox"
+      id="intake-customer-suggest"
+    >
+      <span className="block px-2 pb-1.5 pt-1 text-xs text-muted-foreground">{t('serviceForm.suggestHint')}</span>
       {suggestions.map((c, i) => (
         <button
           type="button"
           key={c.id}
           id={`intake-cust-${i}`}
-          className={styles.suggestItem}
+          className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left outline-none transition-colors hover:bg-accent aria-selected:bg-accent pointer-coarse:min-h-11"
           role="option"
           aria-selected={i === nav.active}
           tabIndex={-1}
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => pickCustomer(c)}
         >
-          <span className={styles.suggestName}>{c.name}</span>
-          <span className={styles.suggestPhone}>{c.phone}</span>
+          <span className="text-sm font-medium text-foreground">{c.name}</span>
+          <span className="ml-auto font-mono text-xs text-muted-foreground">{c.phone}</span>
+        </button>
+      ))}
+    </div>
+  );
+  // Kolom nama dan nomor berbagi satu daftar saran; atributnya sama.
+  const comboProps = (field: 'name' | 'phone') => ({
+    role: 'combobox' as const,
+    'aria-autocomplete': 'list' as const,
+    'aria-expanded': suggestField === field && suggestions.length > 0,
+    'aria-controls': 'intake-customer-suggest',
+    'aria-activedescendant': suggestField === field && nav.active >= 0 ? `intake-cust-${nav.active}` : undefined,
+    onKeyDown: nav.onKeyDown,
+    onFocus: () => setSuggestField(field),
+    onBlur: () => hideSuggest(field),
+  });
+
+  // Pilihan cepat di bawah kolom teks: ketuk untuk menambahkan, dipisah koma.
+  const quickChips = (label: string, items: string[], onPick: (v: string) => void) => (
+    <div className="mt-2 flex flex-wrap gap-1.5">
+      <span className="w-full text-xs text-muted-foreground">{label}</span>
+      {items.map((tpl) => (
+        <button
+          type="button"
+          key={tpl}
+          className="inline-flex h-7 items-center gap-1 rounded-full border border-dashed border-border bg-surface px-2.5 text-xs font-medium text-muted-foreground outline-none transition-colors hover:border-solid hover:border-primary/40 hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring pointer-coarse:min-h-11 [&_svg]:size-3"
+          onClick={() => onPick(tpl)}
+        >
+          <Plus aria-hidden /> {tpl}
         </button>
       ))}
     </div>
@@ -412,8 +448,11 @@ export function ServiceModal({
     }
   };
 
+  // Dua kolom selama jendela cukup lebar (container query: zoom aplikasi ikut dihitung).
+  const row = 'grid gap-4 @lg/form:grid-cols-2';
+
   return (
-    <Modal
+    <FormDialog
       open={open}
       onClose={close}
       title={editing ? interpolate(t('serviceForm.editTitle'), { no: editing.serviceNo }) : t('serviceForm.newTitle')}
@@ -423,7 +462,7 @@ export function ServiceModal({
           {!editing && hasContent && (
             <Button
               variant="ghost"
-              className={styles.clearBtn}
+              className="mr-auto compact:mr-0"
               onClick={() => {
                 intakeDraft = null;
                 applyDraft(null);
@@ -432,10 +471,11 @@ export function ServiceModal({
               {t('serviceForm.clear')}
             </Button>
           )}
-          <Button variant="secondary" onClick={close}>
+          <Button variant="outline" onClick={close}>
             {t('common.cancel')}
           </Button>
-          <Button type="submit" form="service-intake" loading={busy}>
+          <Button type="submit" form="service-intake" disabled={busy}>
+            {busy && <LoaderCircle aria-hidden className="animate-spin motion-reduce:animate-none" />}
             {t('common.save')}
           </Button>
         </>
@@ -444,211 +484,188 @@ export function ServiceModal({
       {/* <form>: Enter di field satu baris menyimpan (Keluhan tetap baris baru). */}
       <form
         id="service-intake"
+        className="@container/form grid gap-4"
+        noValidate
         onSubmit={(e) => {
           e.preventDefault();
           void save();
         }}
       >
-      <FormFields>
-        <FormError>{error}</FormError>
+        <FormMessage>{error}</FormMessage>
         {needOutlet && (
-          <Select
-            label={t('serviceForm.outlet')}
-            invalid={invalid('outlet')}
-            value={outletId}
-            onChange={(e) => {
-              setOutletId(e.target.value);
-              setError('');
-            }}
-            options={outletOptions}
-            placeholder={t('serviceForm.outletPlaceholder')}
-            autoFocus
-          />
-        )}
-        <FormRow>
-          <div className={styles.suggestWrap}>
-            <Input
-              label={t('serviceForm.customerName')}
-              invalid={invalid('name')}
-              value={customerName}
-              autoCapWords
-              onChange={(e) => {
-                setCustomerName(e.target.value);
-                setSuggestField('name');
+          <Field label={t('serviceForm.outlet')} invalid={invalid('outlet')}>
+            <SelectBox
+              value={outletId}
+              onValueChange={(v) => {
+                setOutletId(v);
+                setError('');
               }}
-              onFocus={() => setSuggestField('name')}
-              onBlur={() => hideSuggest('name')}
-              onKeyDown={nav.onKeyDown}
-              aria-controls="intake-customer-suggest"
-              aria-activedescendant={suggestField === 'name' && nav.active >= 0 ? `intake-cust-${nav.active}` : undefined}
-              autoFocus={!needOutlet}
+              options={outletOptions}
+              placeholder={t('serviceForm.outletPlaceholder')}
+              data-autofocus
             />
+          </Field>
+        )}
+        <div className={row}>
+          <div className="relative">
+            <Field label={t('serviceForm.customerName')} invalid={invalid('name')}>
+              <TextInput
+                capitalize="words"
+                value={customerName}
+                onChange={(e) => {
+                  setCustomerName(e.target.value);
+                  setSuggestField('name');
+                }}
+                {...comboProps('name')}
+                data-autofocus={!needOutlet || undefined}
+              />
+            </Field>
             {suggestField === 'name' && suggestList}
           </div>
-          <div className={styles.suggestWrap}>
-            <Input
-              label={t('serviceForm.customerPhone')}
-              invalid={invalid('phone')}
-              value={customerPhone}
-              inputMode="tel"
-              onChange={(e) => {
-                setCustomerPhone(e.target.value);
-                setSuggestField('phone');
-              }}
-              onFocus={() => setSuggestField('phone')}
-              onBlur={() => hideSuggest('phone')}
-              onKeyDown={nav.onKeyDown}
-              aria-controls="intake-customer-suggest"
-              aria-activedescendant={suggestField === 'phone' && nav.active >= 0 ? `intake-cust-${nav.active}` : undefined}
-            />
+          <div className="relative">
+            <Field label={t('serviceForm.customerPhone')} invalid={invalid('phone')}>
+              <TextInput
+                capitalize="none"
+                inputMode="tel"
+                className="font-mono placeholder:font-sans"
+                value={customerPhone}
+                onChange={(e) => {
+                  setCustomerPhone(e.target.value);
+                  setSuggestField('phone');
+                }}
+                {...comboProps('phone')}
+              />
+            </Field>
             {suggestField === 'phone' && suggestList}
           </div>
-        </FormRow>
-        <FormRow>
-          <Select
-            label={t('serviceForm.category')}
-            invalid={invalid('category')}
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            options={categories.map((c) => ({ value: c, label: c }))}
-            placeholder={t(categories.length ? 'serviceForm.categoryPh' : 'serviceForm.noCategory')}
+        </div>
+        <div className={row}>
+          <Field label={t('serviceForm.category')} invalid={invalid('category')}>
+            <SelectBox
+              value={category}
+              onValueChange={setCategory}
+              options={categories.map((c) => ({ value: c, label: c }))}
+              placeholder={t(categories.length ? 'serviceForm.categoryPh' : 'serviceForm.noCategory')}
+            />
+          </Field>
+          <Field label={t('serviceForm.device')} invalid={invalid('device')}>
+            <TextInput
+              capitalize="words"
+              placeholder={t('serviceForm.devicePh')}
+              value={device}
+              onChange={(e) => setDevice(e.target.value)}
+            />
+          </Field>
+        </div>
+        <Field label={t('serviceForm.serial')}>
+          <TextInput
+            capitalize="none"
+            className="font-mono placeholder:font-sans"
+            placeholder={t('serviceForm.serialPh')}
+            value={deviceSerial}
+            spellCheck={false}
+            onChange={(e) => setDeviceSerial(e.target.value)}
           />
-          <Input
-            label={t('serviceForm.device')}
-            invalid={invalid('device')}
-            placeholder={t('serviceForm.devicePh')}
-            value={device}
-            autoCapWords
-            onChange={(e) => setDevice(e.target.value)}
-          />
-        </FormRow>
-        <Input
-          label={t('serviceForm.serial')}
-          placeholder={t('serviceForm.serialPh')}
-          value={deviceSerial}
-          noAutoCap
-          spellCheck={false}
-          onChange={(e) => setDeviceSerial(e.target.value)}
-        />
-        <Input
-          label={t('serviceForm.complaint')}
-          placeholder={t('serviceForm.complaintPh')}
-          value={complaint}
-          onChange={(e) => setComplaint(e.target.value)}
-        />
-        {complaintTemplates.length > 0 && (
-          <div className={styles.chips}>
-            <span className={styles.chipsLabel}>{t('serviceForm.complaintQuick')}</span>
-            {complaintTemplates.map((tpl) => (
-              <button
-                type="button"
-                key={tpl}
-                className={styles.chip}
-                onClick={() => appendToField(complaint, tpl, setComplaint)}
-              >
-                <Icon name="plus" aria-hidden /> {tpl}
-              </button>
-            ))}
-          </div>
-        )}
-        <Input
-          label={t('serviceForm.accessories')}
-          placeholder={t('serviceForm.accessoriesPh')}
-          value={accessories}
-          onChange={(e) => setAccessories(e.target.value)}
-        />
-        {accessoryTemplates.length > 0 && (
-          <div className={styles.chips}>
-            <span className={styles.chipsLabel}>{t('serviceForm.accessoriesQuick')}</span>
-            {accessoryTemplates.map((tpl) => (
-              <button
-                type="button"
-                key={tpl}
-                className={styles.chip}
-                onClick={() => appendToField(accessories, tpl, setAccessories)}
-              >
-                <Icon name="plus" aria-hidden /> {tpl}
-              </button>
-            ))}
-          </div>
-        )}
-        <Input
-          label={t('serviceForm.condition')}
-          placeholder={t('serviceForm.conditionPh')}
-          value={deviceCondition}
-          onChange={(e) => setDeviceCondition(e.target.value)}
-        />
-        <div className={styles.chips}>
-          <span className={styles.chipsLabel}>{t('serviceForm.conditionQuick')}</span>
-          {CONDITION_CHIPS.map((k) => (
-            <button
-              type="button"
-              key={k}
-              className={styles.chip}
-              onClick={() => appendToField(deviceCondition, t(k), setDeviceCondition)}
-            >
-              <Icon name="plus" aria-hidden /> {t(k)}
-            </button>
-          ))}
+        </Field>
+        <div>
+          <Field label={t('serviceForm.complaint')}>
+            <TextInput
+              placeholder={t('serviceForm.complaintPh')}
+              value={complaint}
+              onChange={(e) => setComplaint(e.target.value)}
+            />
+          </Field>
+          {complaintTemplates.length > 0 &&
+            quickChips(t('serviceForm.complaintQuick'), complaintTemplates, (tpl) =>
+              appendToField(complaint, tpl, setComplaint),
+            )}
+        </div>
+        <div>
+          <Field label={t('serviceForm.accessories')}>
+            <TextInput
+              placeholder={t('serviceForm.accessoriesPh')}
+              value={accessories}
+              onChange={(e) => setAccessories(e.target.value)}
+            />
+          </Field>
+          {accessoryTemplates.length > 0 &&
+            quickChips(t('serviceForm.accessoriesQuick'), accessoryTemplates, (tpl) =>
+              appendToField(accessories, tpl, setAccessories),
+            )}
+        </div>
+        <div>
+          <Field label={t('serviceForm.condition')}>
+            <TextInput
+              placeholder={t('serviceForm.conditionPh')}
+              value={deviceCondition}
+              onChange={(e) => setDeviceCondition(e.target.value)}
+            />
+          </Field>
+          {quickChips(
+            t('serviceForm.conditionQuick'),
+            CONDITION_CHIPS.map((k) => t(k)),
+            (text) => appendToField(deviceCondition, text, setDeviceCondition),
+          )}
         </div>
         {/* Kunci layar: tidak ditawarkan lagi setelah unit diambil (sudah dihapus server). */}
         {!editing?.pickedUp && (
-          <FormRow>
-            <Select
-              label={t('serviceForm.lockKind')}
-              value={lockKind}
-              onChange={(e) => {
-                setLockKind(e.target.value as ScreenLockKind | '');
-                setLockSecret('');
-              }}
-              options={[
-                { value: '', label: t('serviceForm.lockNone') },
-                { value: 'pin', label: t('serviceForm.lock_pin') },
-                { value: 'pola', label: t('serviceForm.lock_pola') },
-                { value: 'sandi', label: t('serviceForm.lock_sandi') },
-              ]}
-            />
-            {lockKind && (
-              <Input
-                label={t('serviceForm.lockValue')}
-                invalid={invalid('lock')}
-                value={lockSecret}
-                onChange={(e) => setLockSecret(e.target.value)}
-                inputMode={lockKind === 'sandi' ? 'text' : 'numeric'}
-                autoComplete="off"
-                spellCheck={false}
-                noAutoCap
-                maxLength={64}
-                data-1p-ignore
-                data-lpignore="true"
-                placeholder={
-                  editing?.secretKind === lockKind
-                    ? t('serviceForm.lockKeep')
-                    : lockKind === 'pola'
-                      ? t('serviceForm.lockPolaPh')
-                      : ''
-                }
-                hint={t('serviceForm.lockHint')}
+          <div className={row}>
+            <Field label={t('serviceForm.lockKind')}>
+              <SelectBox
+                value={lockKind}
+                onValueChange={(v) => {
+                  setLockKind(v as ScreenLockKind | '');
+                  setLockSecret('');
+                }}
+                options={[
+                  { value: '', label: t('serviceForm.lockNone') },
+                  { value: 'pin', label: t('serviceForm.lock_pin') },
+                  { value: 'pola', label: t('serviceForm.lock_pola') },
+                  { value: 'sandi', label: t('serviceForm.lock_sandi') },
+                ]}
               />
+            </Field>
+            {lockKind && (
+              <Field label={t('serviceForm.lockValue')} invalid={invalid('lock')} hint={t('serviceForm.lockHint')}>
+                <TextInput
+                  capitalize="none"
+                  className="font-mono placeholder:font-sans"
+                  value={lockSecret}
+                  onChange={(e) => setLockSecret(e.target.value)}
+                  inputMode={lockKind === 'sandi' ? 'text' : 'numeric'}
+                  autoComplete="off"
+                  spellCheck={false}
+                  maxLength={64}
+                  data-1p-ignore
+                  data-lpignore="true"
+                  placeholder={
+                    editing?.secretKind === lockKind
+                      ? t('serviceForm.lockKeep')
+                      : lockKind === 'pola'
+                        ? t('serviceForm.lockPolaPh')
+                        : ''
+                  }
+                />
+              </Field>
             )}
-          </FormRow>
+          </div>
         )}
-        <FormRow>
-          <Select
-            label={t('serviceForm.technician')}
-            value={technicianId}
-            onChange={(e) => setTechnicianId(e.target.value)}
-            options={technicianOptions}
-          />
-          <Input
-            label={t('serviceForm.estimate')}
-            placeholder="150.000"
-            value={estimateCost}
-            onChange={(e) => setEstimateCost(fmtRpInput(e.target.value))}
-          />
-        </FormRow>
-      </FormFields>
+        <div className={row}>
+          <Field label={t('serviceForm.technician')}>
+            <SelectBox value={technicianId} onValueChange={setTechnicianId} options={technicianOptions} />
+          </Field>
+          <Field label={t('serviceForm.estimate')}>
+            <TextInput
+              capitalize="none"
+              inputMode="numeric"
+              className="font-mono tabular-nums placeholder:font-sans"
+              placeholder="150.000"
+              value={estimateCost}
+              onChange={(e) => setEstimateCost(fmtRpInput(e.target.value))}
+            />
+          </Field>
+        </div>
       </form>
-    </Modal>
+    </FormDialog>
   );
 }

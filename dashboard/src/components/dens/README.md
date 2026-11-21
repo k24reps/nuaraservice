@@ -4,6 +4,21 @@ Disalin dari dens-ui v0.2.0 (https://github.com/dendense/dens-ui, commit 4e8c4c2
 
 Komponen tambahan yang bukan dari dens-ui (ditulis mengikuti pola shadcn/ui, MIT): `popover`, `sheet`, `drawer` (vaul), `command` (cmdk), `combobox`, `sonner`.
 
+Tambahan Nuara (bukan dari dens-ui; tiap berkas menyebutnya di komentar kepala). Sebagian adalah pengganti komponen FixMaster di `components/ui/` dengan API yang sama, supaya halaman yang dipindah tinggal mengganti impor:
+
+| Berkas | Isi | Pengganti FixMaster |
+|---|---|---|
+| `field.tsx` | `Field` (label + petunjuk/galat tertaut, `invalid`), `FormMessage` | `FormFields`/`FormError` |
+| `password-input.tsx`, `password-strength.tsx` | password dengan tombol tampil/sembunyi, kekuatan password | `Input revealable`, `PasswordStrength` |
+| `text-input.tsx` | `TextInput`: kapitalisasi otomatis, ikon depan, tombol hapus isi | `Input` |
+| `select-box.tsx` | `SelectBox`: Select dari daftar opsi, opsi bernilai "" diizinkan | `Select`, `<select>` |
+| `form-dialog.tsx` | `FormDialog`: jendela form, lembar bawah di <=640px, fokus awal `data-autofocus` | `Modal` (form) |
+| `confirm-dialog.tsx` | `ConfirmDialog` | `ConfirmDialog` |
+| `summary-strip.tsx` | `SummaryStrip`: strip ringkasan halaman | `PageSummary` |
+| `filter-chips.tsx` | `FilterChips`: chip saring berjumlah, baris geser berpudar | `CategoryChips` |
+| `empty-state.tsx` | `EmptyState` | `EmptyState` |
+| `whatsapp-icon.tsx` | logo WhatsApp (Phosphor, MIT); lucide tak memuat logo merek | ikon `whatsapp` |
+
 Folder ini sengaja bukan `components/ui/`: komponen FixMaster di sana bernama `Button.tsx`, sedangkan dens-ui `button.tsx`; di Windows dan macOS keduanya berkas yang sama.
 
 ## Lisensi dens-ui

@@ -29,7 +29,7 @@ import { writeFileSync } from 'node:fs';
 const BASE = process.env.BASE_URL || 'http://localhost:5183';
 // ZOOM=1.25 menguji Pembesaran aplikasi (properti CSS `zoom` di :root),
 // bukan zoom browser. Keduanya mengubah ruang layout, tapi hanya container
-// query yang mengikuti — lihat ServicesPage.module.css.
+// query yang mengikuti — lihat TABLE_AT di features/services/ServicesPage.tsx.
 const ZOOM = Number(process.env.ZOOM || 1);
 const ZOOM_LEVELS = [0.9, 1, 1.1, 1.25, 1.5];
 if (!ZOOM_LEVELS.includes(ZOOM)) {

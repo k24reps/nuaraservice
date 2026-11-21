@@ -13,6 +13,57 @@ Catatan keputusan desain penting + bug nyata yang ditemukan saat verifikasi.
 
 ## Keputusan desain
 
+### Daftar tiket Servis dan form Servis Baru pindah ke dens-ui (L-48, 21 Nov 2026)
+`ServicesPage` dan `ServiceModal` (form Servis Baru/Ubah, P17.1) ditulis ulang dengan Tailwind +
+dens-ui; dua CSS Module-nya (±1.200 baris) dihapus. Logika tidak berubah: jendela 31 hari + arsip,
+saringan, urutan per kolom, ingatan daftar (saringan, batas, gulir), aksi cepat sparepart dan
+modal dadakan, tanda ambil, pintasan "N", draf Servis Baru, saran pelanggan, kunci layar. Modal
+lain yang dibuka dari daftar (status, kirim WA/nota, tiket jadi, pemilih sparepart) tetap FixMaster
+sampai L-49.
+- **Kartu di <=1024px, daftar baris di atasnya** (P17.3, DBD 4; FixMaster: kartu hanya di
+  <=720px). `CARDS_QUERY` sama dengan laci sidebar; kartu `auto-fill` satu atau dua kolom.
+  Media query karena ini selera per perangkat; yang menjaga muat/tidak muat tetap container query.
+- **Mekanisme daftar baris dipertahankan, ditulis sebagai kelas Tailwind.** Wadah `@container/svc`;
+  lajur segmen `--row-cols` dari kolom yang diaktifkan toko; judul kolom tampil di wadah
+  >=1156px (5 segmen) atau >=1056px (<=4 segmen), ambang dari jumlah lantai lajur seperti dulu
+  (`TABLE_AT`); di wadah <861px biaya dan aksi turun ke baris kedua; <521px hanya identitas tiket.
+  Kelas tiap ambang ditulis utuh di `TABLE_AT`/`ROW_*` karena Tailwind hanya membuat kelas yang
+  tertulis. `servicesTableWidth.test.ts` ditulis ulang untuk membaca kelas itu dengan jaminan
+  yang sama (ambang >= lantai, nomor tiket/HP utuh, lencana status muat di lajurnya, aria, ingatan
+  daftar) dan diuji dengan mutasi; ditambah tes `@source` dan kapitalisasi form.
+- **`@source` per berkas.** `features/services` masih memuat halaman FixMaster (detail, modal
+  L-49), jadi hanya `ServicesPage.tsx` dan `ServiceModal.tsx` yang dipindai Tailwind.
+- **Lencana status dari `STATUS_BADGE`** (peta DBD; Lunas hijau seperti Selesai, P17.2). Spine
+  warna di tepi baris dan kartu (motif FixMaster) tidak dibawa; `STATUS_TONE` tetap untuk halaman
+  lama (pemilih sparepart masih memakainya).
+- **Komponen pengganti FixMaster dengan API sama** di `components/dens/` (README di sana):
+  `SummaryStrip` (`PageSummary`), `FilterChips` (`CategoryChips`, tepi pudar lewat utilitas
+  `scroll-fade-x` di app.css), `TextInput` (`Input`: kapitalisasi, ikon, tombol hapus + Esc),
+  `SelectBox` (Radix menolak opsi bernilai "", jadi "tidak dipilih" diberi penanda internal),
+  `FormDialog`, `ConfirmDialog`, `EmptyState`, `WhatsAppIcon` (Phosphor; lucide tak memuat logo
+  merek). `Field` mendapat `invalid` (kolom ditandai, pesan di puncak form) dan `FormMessage`
+  menggulir dirinya ke pandangan, seperti `FormError` lama.
+- **Fokus awal dialog lewat `data-autofocus`.** `autoFocus` React memindahkan fokus ke kolom
+  sebelum Radix mencatat pemicunya, sehingga saat ditutup fokus kembali ke kolom yang sudah hilang
+  (body). `FormDialog` mencegah fokus bawaan Radix dan memfokuskan elemen bertanda itu.
+- **Fokus kembali ke pemicu jendela.** Radix hanya mengembalikan fokus ke `<DialogTrigger>`; jendela
+  yang dibuka dari state (tombol biasa, pintasan "N") menjatuhkan fokus ke body saat ditutup.
+  `DialogContent` (dens) kini mencatat elemen yang fokus saat jendela dibuka lewat anak
+  `CaptureFocus`: anak Content dipasang setiap kali jendela dibuka, dan layout effect-nya berjalan
+  sebelum Radix memindahkan fokus. (Mencatatnya di `DialogContent` sendiri tidak cukup: komponen
+  itu sudah terpasang sejak halaman dimuat.) Dikunci `dialog.test.tsx`.
+- **Positif palsu probe baru: `.sr-only`.** Teks khusus pembaca layar di halaman dens-ui memakai
+  `sr-only`, bukan `fm-visually-hidden`; saring juga saat membaca laporan clipped.
+- **Gerbang lantai 12px `audit-zoom` gagal sejak L-47 (utang, belum diperbaiki).** Kerangka dens-ui
+  memakai teks 10-11px (label "Dashboard" sidebar, chip zoom, angka lencana menu, menu bawah),
+  FixMaster 12px. Probe hanya mencatat teks TERKECIL per halaman, jadi satu label 10,5px menutupi
+  sisanya: memperbaiki satu label tidak membuat gerbang lolos. Pelajaran: baca baris `TEXT<12`
+  dan angka "pelanggaran lantai 12px" di akhir log, bukan hanya membandingkan log dengan langkah
+  sebelumnya (log L-47 dan L-46 sama-sama "sama" padahal gerbangnya merah).
+- Verifikasi: 12 ukuran layar diukur (tanpa luberan, isi tak terpotong, >= 44px di layar sentuh),
+  probe sama dengan L-58 kecuali baris chip yang memang digeser, `audit-contrast` bersih, 11
+  halaman lain + detail tiket + isi panel tiga modal L-49 sama per piksel, impeccable 0 temuan, 1142 tes.
+
 ### Layar masuk, PIN, dan wizard pindah ke dens-ui (L-58, 21 Nov 2026)
 Masuk/daftar/lupa password (`AuthPage`), password baru (`ResetPasswordPage`), PIN karyawan
 (`PinLogin`), dan wizard toko (`Wizard`) ditulis ulang dengan dens-ui; tiga CSS Module-nya dan

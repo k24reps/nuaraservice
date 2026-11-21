@@ -36,6 +36,51 @@
 @custom-variant phone (@media (max-width: 720px));
 @custom-variant compact (@media (max-width: 640px));
 
+/* Baris yang digeser ke samping (chip saring): isi di luar tepi memudar,
+   tanda baris itu bisa digeser. Dua panjang terdaftar dianimasikan oleh
+   guliran baris itu sendiri: kiri muncul setelah digeser, kanan hilang di
+   ujung. Tanpa luapan, timeline tak aktif dan nilai dasarnya (0) berarti tanpa
+   pudar. Disalin dari CatalogControls.module.css FixMaster. */
+@property --fade-x-l {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+@property --fade-x-r {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+@keyframes fade-x-edge {
+  0% {
+    --fade-x-l: 0px;
+    --fade-x-r: 2rem;
+  }
+  6% {
+    --fade-x-l: 2rem;
+  }
+  94% {
+    --fade-x-r: 2rem;
+  }
+  100% {
+    --fade-x-l: 2rem;
+    --fade-x-r: 0px;
+  }
+}
+@utility scroll-fade-x {
+  @supports (animation-timeline: scroll()) {
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      black var(--fade-x-l),
+      black calc(100% - var(--fade-x-r)),
+      transparent
+    );
+    animation: fade-x-edge linear both;
+    animation-timeline: scroll(self inline);
+  }
+}
+
 /* Kelas Tailwind hanya dibuat dari folder ini. Kata seperti "hidden" atau
    "grid" di kode FixMaster tidak boleh melahirkan utilitas yang mengalahkan
    kelas global lama. Tambahkan folder halaman saat halamannya dipindah. */
@@ -45,3 +90,8 @@
 @source "../features/auth";
 @source "../features/onboarding";
 @source "../dev";
+/* Servis dipindah per berkas (L-48 daftar + form, L-49 detail + modal): folder
+   yang sama masih memuat halaman FixMaster, jadi hanya berkas yang sudah
+   dipindah yang dipindai. */
+@source "../features/services/ServicesPage.tsx";
+@source "../features/services/ServiceModal.tsx";

@@ -26,12 +26,25 @@ function DialogContent({
   className,
   children,
   showCloseButton = true,
+  onCloseAutoFocus,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & { showCloseButton?: boolean }) {
+  // Nuara: Radix hanya mengembalikan fokus ke <DialogTrigger>. Jendela yang
+  // dibuka dari state (tombol biasa, pintasan "N") kehilangan fokus ke body saat
+  // ditutup. Elemen yang fokus saat jendela dibuka dicatat oleh CaptureFocus.
+  const returnTo = React.useRef<HTMLElement | null>(null)
   return (
     <DialogPortal>
       <DialogOverlay />
       <DialogPrimitive.Content
+        onCloseAutoFocus={(e) => {
+          onCloseAutoFocus?.(e)
+          if (e.defaultPrevented) return
+          const target = returnTo.current
+          if (!target?.isConnected || target === document.body) return
+          e.preventDefault()
+          target.focus()
+        }}
         data-slot="dialog-content"
         className={cn(
           "fixed left-1/2 top-1/2 z-50 grid w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 gap-5 rounded-3xl bg-card p-6 text-card-foreground shadow-raised ring-1 ring-border/60 outline-none data-[state=open]:animate-pop-in data-[state=closed]:animate-pop-out",
@@ -39,6 +52,7 @@ function DialogContent({
         )}
         {...props}
       >
+        <CaptureFocus intoRef={returnTo} />
         {children}
         {showCloseButton && (
           <DialogPrimitive.Close
@@ -52,6 +66,18 @@ function DialogContent({
       </DialogPrimitive.Content>
     </DialogPortal>
   )
+}
+
+/*
+ * Anak Content dipasang setiap kali jendela dibuka (Content sendiri tidak),
+ * dan layout effect-nya berjalan sebelum Radix memindahkan fokus ke dalam
+ * jendela (effect biasa), jadi yang tercatat adalah pemicunya.
+ */
+function CaptureFocus({ intoRef }: { intoRef: React.RefObject<HTMLElement | null> }) {
+  React.useLayoutEffect(() => {
+    intoRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+  }, [intoRef])
+  return null
 }
 
 function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {

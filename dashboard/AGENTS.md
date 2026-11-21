@@ -61,8 +61,13 @@ tetap relevan, tetapi bagian merek, harga, dan infrastruktur FixMaster tidak ber
   Halaman yang belum dipindah tetap memakai CSS Modules.
 - **Tiga syarat halaman yang dipindah** (tanpa ini kelas Tailwind tidak terbentuk atau gaya
   lama merembes): (1) elemen akarnya diberi atribut `data-nu`; (2) foldernya ditambah ke daftar
-  `@source` di `src/styles/app.css`; (3) foto per piksel halaman lain + probe `audit-*` sama
-  dengan sebelum langkah.
+  `@source` di `src/styles/app.css`, atau berkasnya saja bila folder itu masih memuat halaman
+  FixMaster (mis. `features/services` sampai L-49); (3) foto per piksel halaman lain + probe
+  `audit-*` sama dengan sebelum langkah.
+- **Pengganti komponen FixMaster** sudah ada di `src/components/dens/` dengan API yang sama
+  (`SummaryStrip`, `FilterChips`, `TextInput`, `SelectBox`, `FormDialog`, `ConfirmDialog`,
+  `EmptyState`, `Field`/`FormMessage`; daftar di README folder itu). Pakai itu sebelum membuat
+  yang baru. Fokus awal jendela lewat `data-autofocus`, bukan `autoFocus` (lihat form-dialog.tsx).
 - **Arsitektur CSS Fase B** (`src/styles/app.css`): layer `theme` < `legacy` (global.css) <
   `nu-base` (reset dens-ui) < `utilities`; CSS Module tidak berlayer dan selalu menang.
   Preflight Tailwind sengaja TIDAK global (`dens-base.css`, terbatas ke `[data-slot]`/`[data-nu]`):
@@ -149,9 +154,10 @@ Selisih yang tersisa harus bisa dijelaskan (jam, kursor berkedip). Bila "sebelum
 `server.fs.allow` ke `node_modules` asli; tanpa itu React jadi ganda dan font gagal dimuat
 (vault, Decisions L-58).
 
-Laporan ditulis ke `scripts/shots/{zoom,mobile}-report.json`. Saring tiga positif palsu
-sebelum menyimpulkan: `caption._srOnly`, `span.fm-visually-hidden`, dan elemen `text.` di dalam
-SVG. **Ukur DOM rect, jangan membaca screenshot terkompresi.**
+Laporan ditulis ke `scripts/shots/{zoom,mobile}-report.json`. Saring empat positif palsu
+sebelum menyimpulkan: `caption._srOnly`, `span.fm-visually-hidden`, `.sr-only` (teks khusus
+pembaca layar di halaman dens-ui), dan elemen `text.` di dalam SVG. **Ukur DOM rect, jangan
+membaca screenshot terkompresi.**
 
 ## 6. Pemeliharaan dokumen (bagian dari "selesai")
 

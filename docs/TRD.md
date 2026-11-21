@@ -1,6 +1,6 @@
 # TRD (Technical Requirements Document) - Nuara Dashboard
 
-> Versi: 0.6 | Diperbarui: 2026-11-21 | Merujuk: PRD.md, IPD.md, `dashboard/AGENTS.md`
+> Versi: 0.7 | Diperbarui: 2026-11-21 | Merujuk: PRD.md, IPD.md, `dashboard/AGENTS.md`
 <!-- Proyek existing: landing page statis di root repo tetap apa adanya. Dashboard ada di folder dashboard/.
 Versi 0.2 (Next.js + Drizzle, dibangun dari nol) dibatalkan 2026-11-21 (wawancara P13): dasar kode diganti salinan FixMaster. Isi versi 0.2 ada di riwayat git (commit 215e799). -->
 
@@ -51,7 +51,7 @@ dashboard/
   AGENTS.md CLAUDE.md     # aturan agent untuk kode dashboard
   src/
     app/                  # router, AuthGate, WorkspaceGate, guard peran
-    components/           # layout (Sidebar, Topbar, MobileBottomNav), ui/ (FixMaster), dens/ (dens-ui)
+    components/           # layout (Sidebar, Topbar, MobileBottomNav), ui/ (FixMaster), dens/ (dens-ui + pengganti komponen FixMaster)
     features/<fitur>/     # halaman per fitur (services, pos, customers, finance, ...)
     lib/business/         # logika domain murni + tes
     data/                 # repository, adapter Supabase/IndexedDB, tipe entity

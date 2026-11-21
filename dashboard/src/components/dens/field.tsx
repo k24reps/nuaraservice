@@ -13,6 +13,7 @@ function Field({
   label,
   hint,
   error,
+  invalid,
   id: idProp,
   className,
   children,
@@ -20,6 +21,8 @@ function Field({
   label?: React.ReactNode
   hint?: React.ReactNode
   error?: React.ReactNode
+  /** Tandai kolom salah tanpa pesan di bawahnya (pesannya di FormMessage puncak form). */
+  invalid?: boolean
   id?: string
   className?: string
   children: React.ReactElement<Record<string, unknown>>
@@ -35,7 +38,7 @@ function Field({
       {label && <Label htmlFor={id}>{label}</Label>}
       {React.cloneElement(children, {
         id,
-        "aria-invalid": error ? true : undefined,
+        "aria-invalid": error || invalid ? true : undefined,
         "aria-describedby": describedBy,
       })}
       {error ? (
@@ -51,11 +54,22 @@ function Field({
   )
 }
 
-/** Pesan galat untuk satu form (di luar kolom tertentu), diumumkan pembaca layar. */
+/**
+ * Pesan galat untuk satu form (di luar kolom tertentu), diumumkan pembaca layar.
+ * Digulir ke pandangan saat muncul: di form panjang tombol Simpan ada di bawah,
+ * dan pesan di puncak yang tak terlihat membuat tombolnya terasa tak berbuat apa-apa.
+ */
 function FormMessage({ className, children }: { className?: string; children?: React.ReactNode }) {
+  const ref = React.useRef<HTMLParagraphElement>(null)
+  React.useEffect(() => {
+    if (!children) return
+    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
+    ref.current?.scrollIntoView?.({ block: "nearest", behavior: reduce ? "auto" : "smooth" })
+  }, [children])
   if (!children) return null
   return (
     <p
+      ref={ref}
       role="alert"
       data-slot="form-message"
       className={cn("rounded-lg bg-destructive-soft px-3 py-2 text-sm text-destructive", className)}

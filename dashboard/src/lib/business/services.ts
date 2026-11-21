@@ -559,6 +559,25 @@ export const STATUS_LABELS: Record<ServiceStatus, string> = {
  */
 export type StatusTone = 'neutral' | 'info' | 'warning' | 'accent' | 'success' | 'danger';
 
+/**
+ * Varian lencana dens-ui per status untuk halaman yang sudah dipindah (DBD
+ * bagian 3): tahap berjalan biru, Konfirmasi Biaya amber, Tunggu Sparepart
+ * kuning, Selesai dan Lunas hijau (P17.2), Dibatalkan merah muda. Halaman
+ * FixMaster yang belum dipindah tetap memakai STATUS_TONE di bawah.
+ */
+export type StatusBadge = 'info' | 'highlight' | 'warning' | 'success' | 'destructive-soft';
+
+export const STATUS_BADGE: Record<ServiceStatus, StatusBadge> = {
+  diterima: 'info',
+  diagnosa: 'info',
+  konfirmasi: 'highlight',
+  tunggu: 'warning',
+  pengerjaan: 'info',
+  selesai: 'success',
+  lunas: 'success',
+  batal: 'destructive-soft',
+};
+
 export const STATUS_TONE: Record<ServiceStatus, StatusTone> = {
   diterima: 'neutral',
   diagnosa: 'info',

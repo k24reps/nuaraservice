@@ -246,7 +246,8 @@ for (const theme of ['light']) {
     ['Servis-UpdateStatus', async () => {
       await page.getByRole('link', { name: /^Servis/ }).first().click();
       await page.waitForTimeout(900);
-      await page.locator('[class*="statusBtn"]', { hasNotText: /lunas|dibatalkan/i }).first().click();
+      // Lencana status di daftar (dens-ui sejak L-48): tombol "Ubah status <no>: <status>".
+      await page.locator('button[aria-label^="Ubah status"]', { hasNotText: /lunas|dibatalkan/i }).first().click();
     }],
     ['Servis-UpdateStatus-Selesai', () => page.getByRole('radio', { name: 'Selesai', exact: true }).click()],
     ['Servis-UpdateStatus-Batal', () => page.getByRole('radio', { name: 'Dibatalkan', exact: true }).click()],

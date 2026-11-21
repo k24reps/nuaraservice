@@ -30,7 +30,7 @@ import { create } from 'zustand';
  * ditulis sebagai `@container`, karena container query mengukur elemen dalam
  * koordinat layout yang sudah ter-zoom (terverifikasi: di zoom 0.8 container
  * benar melaporkan MUAT saat media query masih melaporkan SEMPIT).
- * Lihat ServicesPage.module.css untuk contoh breakpoint yang memerlukan itu.
+ * Lihat TABLE_AT di features/services/ServicesPage.tsx untuk contoh breakpoint yang memerlukan itu.
  */
 
 export const ZOOM_LEVELS = [0.9, 1, 1.1, 1.25, 1.5] as const;
