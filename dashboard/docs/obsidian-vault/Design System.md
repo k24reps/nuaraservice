@@ -272,7 +272,8 @@ hangat tetapi tidak menyiratkan fitur AI yang tidak dimiliki produk.
   finansial/operasional serius tetap disampaikan oleh copy serta komponen data.
 - **Register motion**: gerak hanya dipakai di momen brand besar seperti CTA landing.
   Auth memakai VOLT statis karena login/daftar/reset adalah product surface yang menuntut
-  fokus. Copy statusnya harus mengikuti mode; jangan menyuruh “masuk” ketika pengguna
+  fokus. _(Nuara Dashboard: VOLT dibuang dari layar masuk/daftar/reset/PIN/wizard di L-58;
+  `Mascot` tinggal dipakai Dashboard sampai L-53.)_ Copy statusnya harus mengikuti mode; jangan menyuruh “masuk” ketika pengguna
   sedang membuat akun atau memulihkan password.
 
 ### Guardrail landing yang dapat diakses (28 Agu 2026)

@@ -34,16 +34,25 @@ const DevSandbox = import.meta.env.DEV
 const ComponentShowcase = import.meta.env.DEV
   ? lazyChunk(() => import('./dev/ComponentShowcase').then((m) => ({ default: m.ComponentShowcase })))
   : null;
+// Pratinjau layar masuk/daftar/PIN/reset/wizard tanpa Supabase (L-58); juga hanya di dev.
+const AuthPreview = import.meta.env.DEV
+  ? lazyChunk(() => import('./dev/AuthPreview').then((m) => ({ default: m.AuthPreview })))
+  : null;
 
 export function App() {
   const path = typeof window !== 'undefined' ? window.location.pathname : '';
   const sandbox = DevSandbox !== null && path === '/demo';
   const showcase = ComponentShowcase !== null && path === '/dev/komponen';
+  const authPreview = AuthPreview !== null && path === '/dev/layar';
 
   return (
     <ErrorBoundary root>
       <QueryClientProvider client={queryClient}>
-        {showcase && ComponentShowcase ? (
+        {authPreview && AuthPreview ? (
+          <Suspense fallback={null}>
+            <AuthPreview />
+          </Suspense>
+        ) : showcase && ComponentShowcase ? (
           <Suspense fallback={null}>
             <ComponentShowcase />
           </Suspense>

@@ -13,6 +13,48 @@ Catatan keputusan desain penting + bug nyata yang ditemukan saat verifikasi.
 
 ## Keputusan desain
 
+### Layar masuk, PIN, dan wizard pindah ke dens-ui (L-58, 21 Nov 2026)
+Masuk/daftar/lupa password (`AuthPage`), password baru (`ResetPasswordPage`), PIN karyawan
+(`PinLogin`), dan wizard toko (`Wizard`) ditulis ulang dengan dens-ui; tiga CSS Module-nya dan
+`components/ui/PasswordStrength` dihapus. Logika (validasi, Supabase Auth, `verifyPin`, kunci
+percobaan PIN, langkah wizard) tidak berubah.
+- **Satu kartu di tengah** (P16.1) lewat `features/auth/AuthShell.tsx`: logo + "Nuara Service"
+  di atas kartu `max-w-md`. Panel merek, maskot VOLT, rail diagnostik, tab mode, tombol kembali,
+  dan pencatatan funnel daftar (bagian SaaS) dibuang; 26 kunci i18n ikut dihapus. Kalimat
+  persetujuan yang menautkan /terms dan /privacy dibuang (P16.2), halamannya sudah tidak ada.
+- **Komponen form baru** di `components/dens/` (tambahan Nuara, bukan bagian dens-ui):
+  `Field` memasang `id`, `aria-invalid`, dan `aria-describedby` ke satu anak lewat
+  `cloneElement`, jadi anaknya harus meneruskan atribut itu ke `<input>` (jangan bungkus
+  `InputGroup`: id jatuh ke `<div>`); `FormMessage` (`role="alert"`) untuk galat satu form;
+  `PasswordInput` (tombol tampil/sembunyi `aria-pressed`); `PasswordStrength` (skor dari
+  `lib/business/password.ts`). Dikunci `features/auth/authForm.test.tsx` (diuji dengan mutasi).
+- **Pratinjau `/dev/layar?layar=masuk|daftar|lupa|pin|reset|reset-form|wizard`**
+  (`src/dev/AuthPreview.tsx`, hanya dev server): layar masuk dan PIN hanya tampil di mode
+  server, jadi tanpa ini tidak bisa difoto lokal. `ResetPasswordPage` menerima `initialPhase`
+  khusus untuk pratinjau ini (tidak ada tautan reset di dev). `audit-contrast` kini ikut
+  memeriksa empat layar ini.
+- **Garis stepper menimpa lingkaran aktif.** Garis tiap langkah ditarik dari tengah langkah
+  sebelumnya (`right-1/2 w-full`), dan elemen langkah berikutnya muncul belakangan di DOM, jadi
+  garisnya tergambar di atas separuh lingkaran sebelumnya. Lingkaran diberi `z-[1]`.
+- **Tautan teks pendek kurang dari 44px.** "Daftar"/"Masuk" sudah `min-h-11` di layar sentuh
+  tetapi lebarnya 40px; ditambah `pointer-coarse:min-w-11`.
+- **Jebakan ukur: foto `fullPage` mematikan `pointer: coarse`.** Di emulasi iPhone, sesudah
+  `page.screenshot({ fullPage: true })` halaman yang lebih tinggi dari layar kehilangan media
+  `pointer: coarse` sampai navigasi berikutnya, jadi semua kontrol terbaca 40px. Ukur DOM
+  SEBELUM foto, atau di putaran terpisah tanpa foto. Wizard (klik "Lanjut" tanpa navigasi)
+  paling kena.
+- **Jebakan pembanding per piksel: worktree dengan `node_modules` di-symlink.** (1) Dua dev
+  server berbagi `node_modules/.vite` dan saling menimpa optimasi dependensi, hasilnya React
+  ganda ("Invalid hook call") di server yang satunya; (2) font fontsource disajikan lewat
+  `/@fs/` dari luar root worktree dan ditolak, jadi baseline memakai font cadangan dan semua
+  halaman tampak berbeda ~11 ribu piksel. Untuk baseline: `cacheDir` sendiri dan
+  `server.fs.allow` berisi folder `node_modules` asli di vite.config worktree, lalu cek
+  `document.fonts` sebelum membandingkan.
+- Verifikasi: foto 1280px dan iPhone 13 (masuk, daftar, lupa, PIN, tautan tidak valid, form
+  password baru, wizard 6 langkah) tanpa error JS dan tanpa luberan; semua kontrol >= 44px di
+  layar sentuh; `audit-contrast` 0 gagal; 8 halaman lama sama per piksel (selisih <= derau);
+  log `audit-mobile`/`audit-zoom` identik dengan L-47; detektor impeccable 0 temuan; 1136 tes.
+
 ### Kerangka aplikasi pindah ke dens-ui (L-47, 21 Nov 2026)
 Sidebar, topbar, navigasi bawah ponsel + menu Lainnya, splash, dan stepper zoom ditulis ulang
 dengan Tailwind + dens-ui; CSS Module-nya (±1.600 baris) dihapus. Isi halaman tetap FixMaster

@@ -215,33 +215,6 @@ export const en: Dictionary = {
   'serviceDelete.blockedClaim': 'This ticket has a warranty claim, so it cannot be deleted.',
 
   // ---------- Auth / session ----------
-  'authPage.brandTagline':
-    'The digital workbench for gadget & electronics repair businesses.',
-  'authPage.brandSub':
-    'Service tickets, parts, customers, cash, and margins work in one connected flow.',
-  'authPage.voltLabel': 'VOLT // Terminal ready',
-  'authPage.volt.loginReady': 'Bench ready. Sign in to continue.',
-  'authPage.volt.loginDetail':
-    'Continue your shop’s service, stock, and margin flow from the same bench.',
-  'authPage.volt.signupReady': 'A new bench is ready to calibrate.',
-  'authPage.volt.signupDetail':
-    'Create an account to set up your shop’s service, stock, and margin flow.',
-  'authPage.volt.resetReady': 'The recovery channel is ready.',
-  'authPage.volt.resetDetail':
-    'Enter your account email to receive a password reset link.',
-  'authPage.rail.service': 'SERVICE',
-  'authPage.rail.serviceValue': 'READY',
-  'authPage.rail.stock': 'STOCK',
-  'authPage.rail.stockValue': 'CONNECTED',
-  'authPage.rail.margin': 'MARGIN',
-  'authPage.rail.marginValue': 'CALCULATED',
-  'authPage.brandFoot': 'PRECISION ELECTRONICS BENCH',
-  'authPage.back': 'Home',
-  'authPage.backHome': 'Back',
-  'authPage.terminal': 'Access Terminal',
-  'authPage.mode.login': 'Sign in',
-  'authPage.mode.signup': 'Register',
-  'authPage.mode.reset': 'Reset',
   'authPage.login.heading': 'Sign in to Nuara Dashboard',
   'authPage.login.hint': 'Continue from where your bench left off.',
   'authPage.login.cta': 'Sign in',
@@ -262,10 +235,6 @@ export const en: Dictionary = {
   'authPage.confirmError': 'Does not match the password above yet',
   'authPage.confirmMatch': '✓ Passwords match',
   'authPage.processing': 'Processing…',
-  'authPage.consentPrefix': 'By registering, you agree to the',
-  'authPage.terms': 'Terms & Conditions',
-  'authPage.consentAnd': 'and',
-  'authPage.privacy': 'Privacy Policy',
   'authPage.forgotPassword': 'Forgot password?',
   'authPage.noAccount': 'Invited to join?',
   'authPage.register': 'Register',

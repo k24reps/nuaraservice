@@ -42,4 +42,6 @@
 @source "../components/dens";
 @source "../components/layout";
 @source "../app";
+@source "../features/auth";
+@source "../features/onboarding";
 @source "../dev";

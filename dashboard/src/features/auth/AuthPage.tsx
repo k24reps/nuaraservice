@@ -1,79 +1,32 @@
-import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Button, Input, Icon, Mascot, PasswordStrength } from '@/components/ui';
-import { FormError } from '@/components/ui/Form';
+import { useState } from 'react';
+import { Button } from '@/components/dens/button';
+import { Field, FormMessage } from '@/components/dens/field';
+import { Input } from '@/components/dens/input';
+import { PasswordInput } from '@/components/dens/password-input';
+import { PasswordStrength } from '@/components/dens/password-strength';
 import { useT, type TranslationKey } from '@/i18n';
 import { useAuthStore } from '@/stores/auth';
 import { toast } from '@/stores/toast';
-import { trackEvent } from '@/lib/analytics';
-import type { AuthSource, PublicAuthMode, SignupPlan } from './auth-intent';
-import styles from './AuthPage.module.css';
+import type { PublicAuthMode } from './auth-intent';
+import { AuthShell } from './AuthShell';
 
 type Mode = 'login' | 'signup' | 'reset';
 
 interface AuthPageProps {
-  /** Return to the marketing landing page (cloud signed-out front door). */
-  onBack?: () => void;
   initialMode?: PublicAuthMode;
-  signupPlan?: SignupPlan;
-  source?: AuthSource;
 }
 
-const TITLES: Record<Mode, {
-  heading: TranslationKey;
-  hint: TranslationKey;
-  cta: TranslationKey;
-  tag: TranslationKey;
-  voltReady: TranslationKey;
-  voltDetail: TranslationKey;
-}> = {
-  login: {
-    heading: 'authPage.login.heading',
-    hint: 'authPage.login.hint',
-    cta: 'authPage.login.cta',
-    tag: 'authPage.mode.login',
-    voltReady: 'authPage.volt.loginReady',
-    voltDetail: 'authPage.volt.loginDetail',
-  },
-  signup: {
-    heading: 'authPage.signup.heading',
-    hint: 'authPage.signup.hint',
-    cta: 'authPage.signup.cta',
-    tag: 'authPage.mode.signup',
-    voltReady: 'authPage.volt.signupReady',
-    voltDetail: 'authPage.volt.signupDetail',
-  },
-  reset: {
-    heading: 'authPage.reset.heading',
-    hint: 'authPage.reset.hint',
-    cta: 'authPage.reset.cta',
-    tag: 'authPage.mode.reset',
-    voltReady: 'authPage.volt.resetReady',
-    voltDetail: 'authPage.volt.resetDetail',
-  },
+const TITLES: Record<Mode, { heading: TranslationKey; hint: TranslationKey; cta: TranslationKey }> = {
+  login: { heading: 'authPage.login.heading', hint: 'authPage.login.hint', cta: 'authPage.login.cta' },
+  signup: { heading: 'authPage.signup.heading', hint: 'authPage.signup.hint', cta: 'authPage.signup.cta' },
+  reset: { heading: 'authPage.reset.heading', hint: 'authPage.reset.hint', cta: 'authPage.reset.cta' },
 };
 
-// Live readout lines on the brand rail — bench "self-test" flavor.
-const RAIL = [
-  { k: 'authPage.rail.service', v: 'authPage.rail.serviceValue', led: 'ledOk' },
-  { k: 'authPage.rail.stock', v: 'authPage.rail.stockValue', led: 'ledOk' },
-  { k: 'authPage.rail.margin', v: 'authPage.rail.marginValue', led: 'ledLive' },
-] as const;
-
 /**
- * Cloud account auth screen (Supabase Auth). Shown only in cloud mode, before
- * the workspace boots. Toggles between login, signup, and password-reset.
- *
- * Signature treatment: an "access terminal" on the bench. Left panel carries
- * the FixMaster identity + a live diagnostic rail; right panel is a screwed-down
- * faceplate with a power LED, mono labels, and the auth form.
+ * Masuk, daftar (staf yang diundang, lihat AuthGate), dan lupa password lewat
+ * Supabase Auth. Hanya tampil di mode server, sebelum data toko dimuat.
  */
-export function AuthPage({
-  onBack,
-  initialMode = 'login',
-  signupPlan,
-  source = 'direct',
-}: AuthPageProps = {}) {
+export function AuthPage({ initialMode = 'login' }: AuthPageProps = {}) {
   const t = useT();
   const signIn = useAuthStore((s) => s.signIn);
   const signUp = useAuthStore((s) => s.signUp);
@@ -85,21 +38,11 @@ export function AuthPage({
   const [confirm, setConfirm] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  const signupStartTracked = useRef(false);
-
-  useEffect(() => {
-    if (mode !== 'signup' || signupStartTracked.current) return;
-    signupStartTracked.current = true;
-    trackEvent('signup_started', {
-      source,
-      plan: signupPlan ?? 'unselected',
-    });
-  }, [mode, signupPlan, source]);
 
   const title = TITLES[mode];
 
-  // Live match readout: hanya setelah user mulai mengetik konfirmasi, supaya
-  // field kosong tidak langsung tampak "salah".
+  // Kecocokan konfirmasi baru tampil setelah user mulai mengetiknya, supaya
+  // kolom kosong tidak langsung tampak "salah".
   const confirmMatch = confirm ? password === confirm : null;
 
   const validate = (): string | null => {
@@ -120,7 +63,7 @@ export function AuthPage({
   };
 
   const submit = async () => {
-    if (busy) return; // Enter bypasses the disabled button → guard double-submit.
+    if (busy) return; // Enter bisa melewati tombol yang nonaktif: cegah kirim ganda.
     const v = validate();
     if (v) {
       setError(v);
@@ -146,203 +89,116 @@ export function AuthPage({
         return;
       }
       if (mode === 'signup') {
-        trackEvent('signup_completed', {
-          source,
-          plan: signupPlan ?? 'unselected',
-          method: 'email',
-        });
-        // Email confirmation is disabled on this project, so the account is
-        // active immediately — send the user straight to login (no inbox step).
+        // Konfirmasi email nonaktif di proyek ini, jadi akun langsung aktif:
+        // kembali ke form masuk tanpa langkah kotak masuk.
         toast.success(t('authPage.toast.accountCreated'));
         changeMode('login');
         setPassword('');
         setConfirm('');
       }
-      // On login success, the auth store listener flips status → app boots.
+      // Masuk berhasil: listener auth store mengubah status dan aplikasi terbuka.
     } finally {
       setBusy(false);
     }
   };
 
-  const onKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') void submit();
-  };
+  const reveal = { showLabel: t('authPage.showPassword'), hideLabel: t('authPage.hidePassword') };
+  const linkClass =
+    'font-semibold text-primary underline-offset-4 outline-none hover:underline focus-visible:rounded focus-visible:ring-2 focus-visible:ring-ring pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:min-w-11 pointer-coarse:items-center pointer-coarse:justify-center';
 
   return (
-    <div className={styles.overlay}>
-      <div className={styles.shell}>
-        {/* ---------- Brand panel: bench identity + diagnostic rail ---------- */}
-        <aside className={styles.brandPanel} aria-hidden>
-          <span className={styles.grid} />
-          <div className={styles.brandTop}>
-            <span className={styles.brandLogo}>
-              <img src="/logo-mark.png" alt="" width="44" height="44" />
-            </span>
-            <span className={styles.brandWord}>Nuara Service</span>
-          </div>
+    <AuthShell>
+      <h1 className="text-2xl font-semibold leading-tight tracking-[-0.02em]">{t(title.heading)}</h1>
+      <p className="mt-1.5 text-sm text-muted-foreground">{t(title.hint)}</p>
 
-          <div className={styles.voltModule}>
-            <span className={styles.voltTrace} />
-            <Mascot variant="full" size={112} animated={false} />
-            <div className={styles.voltCopy}>
-              <span>{t('authPage.voltLabel')}</span>
-              <strong>{t(title.voltReady)}</strong>
-              <small>{t(title.voltDetail)}</small>
-            </div>
-          </div>
+      <form
+        className="mt-6 grid gap-4"
+        noValidate
+        onSubmit={(e) => {
+          e.preventDefault();
+          void submit();
+        }}
+      >
+        <Field label={t('authPage.email')}>
+          <Input
+            type="email"
+            name="email"
+            placeholder={t('authPage.emailPlaceholder')}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            autoComplete="email"
+            autoCapitalize="none"
+            spellCheck={false}
+          />
+        </Field>
 
-          <div className={styles.brandBody}>
-            <h2 className={styles.brandTagline}>
-              {t('authPage.brandTagline')}
-            </h2>
-            <p className={styles.brandSub}>
-              {t('authPage.brandSub')}
-            </p>
-          </div>
-
-          <ul className={styles.rail}>
-            {RAIL.map((r) => (
-              <li key={r.k} className={styles.railRow}>
-                <span className={[styles.railLed, styles[r.led]].join(' ')} />
-                <span className={styles.railKey}>{t(r.k)}</span>
-                <span className={styles.railDots} />
-                <span className={styles.railVal}>{t(r.v)}</span>
-              </li>
-            ))}
-          </ul>
-
-          <div className={styles.brandFoot}>{t('authPage.brandFoot')}</div>
-        </aside>
-
-        {/* ---------- Form panel: access terminal faceplate ---------- */}
-        <main className={styles.formPanel}>
-          <span className={[styles.screw, styles.screwTL].join(' ')} aria-hidden />
-          <span className={[styles.screw, styles.screwTR].join(' ')} aria-hidden />
-          <span className={[styles.screw, styles.screwBL].join(' ')} aria-hidden />
-          <span className={[styles.screw, styles.screwBR].join(' ')} aria-hidden />
-
-          <div className={styles.mobileBrand}>
-            <span className={styles.brandLogo}>
-              <img src="/logo-mark.png" alt="" width="44" height="44" />
-            </span>
-            Nuara Service
-          </div>
-
-          <div className={styles.mobileVolt} aria-hidden>
-            <Mascot variant="face" size={44} animated={false} />
-            <span>
-              <small>{t('authPage.voltLabel')}</small>
-              <strong>{t(title.voltReady)}</strong>
-            </span>
-          </div>
-
-          <div className={styles.terminalTop}>
-            {onBack && (
-              <button type="button" className={styles.backBtn} onClick={onBack} aria-label={t('authPage.backHome')}>
-                <Icon name="arrow-left" aria-hidden /> {t('authPage.back')}
-              </button>
-            )}
-            <span className={[styles.led, styles.ledLive].join(' ')} aria-hidden />
-            <span className={styles.terminalLabel}>{t('authPage.terminal')}</span>
-            <span className={styles.modeTag}>{t(title.tag)}</span>
-          </div>
-
-          <h1 className={styles.heading}>{t(title.heading)}</h1>
-          <p className={styles.hint}>{t(title.hint)}</p>
-
-          <div className={styles.fields} onKeyDown={onKeyDown}>
-            <Input
-              noAutoCap
-              type="email"
-              name="email"
-              label={t('authPage.email')}
-              placeholder={t('authPage.emailPlaceholder')}
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              iconLeft={<Icon name="envelope" aria-hidden />}
-              autoComplete="email"
+        {mode !== 'reset' && (
+          <Field label={t('authPage.password')}>
+            <PasswordInput
+              {...reveal}
+              name="password"
+              placeholder={t('authPage.passwordPlaceholder')}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
             />
+          </Field>
+        )}
 
-            {mode !== 'reset' && (
-              <Input
-                noAutoCap
-                revealable
-                type="password"
-                name="password"
-                label={t('authPage.password')}
-                placeholder={t('authPage.passwordPlaceholder')}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-                revealLabels={{ show: t('authPage.showPassword'), hide: t('authPage.hidePassword') }}
-              />
-            )}
+        {mode === 'signup' && <PasswordStrength password={password} />}
 
-            {mode === 'signup' && <PasswordStrength password={password} />}
+        {mode === 'signup' && (
+          <Field
+            label={t('authPage.confirmPassword')}
+            error={confirmMatch === false ? t('authPage.confirmError') : undefined}
+            hint={confirmMatch === true ? t('authPage.confirmMatch') : undefined}
+          >
+            <PasswordInput
+              {...reveal}
+              name="confirm"
+              placeholder={t('authPage.confirmPlaceholder')}
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+              autoComplete="new-password"
+            />
+          </Field>
+        )}
 
-            {mode === 'signup' && (
-              <Input
-                noAutoCap
-                revealable
-                type="password"
-                name="confirm"
-                label={t('authPage.confirmPassword')}
-                placeholder={t('authPage.confirmPlaceholder')}
-                value={confirm}
-                onChange={(e) => setConfirm(e.target.value)}
-                autoComplete="new-password"
-                revealLabels={{ show: t('authPage.showPassword'), hide: t('authPage.hidePassword') }}
-                error={confirmMatch === false ? t('authPage.confirmError') : undefined}
-                hint={confirmMatch === true ? t('authPage.confirmMatch') : undefined}
-              />
-            )}
+        <FormMessage>{error}</FormMessage>
 
-            <FormError>{error}</FormError>
+        <Button type="submit" size="lg" className="w-full" disabled={busy}>
+          {busy ? t('authPage.processing') : t(title.cta)}
+        </Button>
+      </form>
 
-            <Button fullWidth onClick={() => void submit()} disabled={busy}>
-              {busy ? t('authPage.processing') : t(title.cta)}
-            </Button>
-
-            {mode === 'signup' && (
-              <p className={styles.consent}>
-                {t('authPage.consentPrefix')}{' '}
-                <Link to="/terms" className={styles.consentLink}>{t('authPage.terms')}</Link>{' '}
-                {t('authPage.consentAnd')}{' '}
-                <Link to="/privacy" className={styles.consentLink}>{t('authPage.privacy')}</Link>.
-              </p>
-            )}
-          </div>
-
-          <div className={styles.links}>
-            {mode === 'login' && (
-              <>
-                <button type="button" className={styles.link} onClick={() => changeMode('reset')}>
-                  {t('authPage.forgotPassword')}
-                </button>
-                <span className={styles.linkRow}>
-                  {t('authPage.noAccount')}{' '}
-                  <button type="button" className={styles.linkStrong} onClick={() => changeMode('signup')}>
-                    {t('authPage.register')}
-                  </button>
-                </span>
-              </>
-            )}
-            {mode === 'signup' && (
-              <span className={styles.linkRow}>
-                {t('authPage.haveAccount')}{' '}
-                <button type="button" className={styles.linkStrong} onClick={() => changeMode('login')}>
-                  {t('authPage.signIn')}
-                </button>
-              </span>
-            )}
-            {mode === 'reset' && (
-              <button type="button" className={styles.link} onClick={() => changeMode('login')}>
-                {t('authPage.backToSignIn')}
+      <div className="mt-5 flex flex-col items-center gap-2 text-sm">
+        {mode === 'login' && (
+          <>
+            <button type="button" className={linkClass} onClick={() => changeMode('reset')}>
+              {t('authPage.forgotPassword')}
+            </button>
+            <span className="text-muted-foreground">
+              {t('authPage.noAccount')}{' '}
+              <button type="button" className={linkClass} onClick={() => changeMode('signup')}>
+                {t('authPage.register')}
               </button>
-            )}
-          </div>
-        </main>
+            </span>
+          </>
+        )}
+        {mode === 'signup' && (
+          <span className="text-muted-foreground">
+            {t('authPage.haveAccount')}{' '}
+            <button type="button" className={linkClass} onClick={() => changeMode('login')}>
+              {t('authPage.signIn')}
+            </button>
+          </span>
+        )}
+        {mode === 'reset' && (
+          <button type="button" className={linkClass} onClick={() => changeMode('login')}>
+            {t('authPage.backToSignIn')}
+          </button>
+        )}
       </div>
-    </div>
+    </AuthShell>
   );
 }

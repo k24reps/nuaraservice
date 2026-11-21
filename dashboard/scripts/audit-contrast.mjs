@@ -151,11 +151,17 @@ const scan = () => {
 };
 
 // Nuara Dashboard: landing FixMaster sudah dibuang (L-43). `/` di dev server
-// tanpa Supabase merender wizard toko; /dev/komponen = katalog dens-ui (L-46).
+// tanpa Supabase merender wizard toko; /dev/komponen = katalog dens-ui (L-46);
+// /dev/layar = layar masuk, daftar, PIN, dan password baru (L-58), yang di
+// mode lokal tidak pernah tampil.
 const routes = [
   ['/demo', 'demo-dashboard'],
   ['/', 'wizard'],
   ['/dev/komponen', 'komponen-dens'],
+  ['/dev/layar?layar=masuk', 'layar-masuk'],
+  ['/dev/layar?layar=daftar', 'layar-daftar'],
+  ['/dev/layar?layar=pin', 'layar-pin'],
+  ['/dev/layar?layar=reset-form', 'layar-password-baru'],
 ];
 
 let total = 0;

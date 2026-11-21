@@ -1,6 +1,6 @@
 # IPD (Implementation Plan Document) - Nuara Dashboard
 
-> Versi: 0.5 | Diperbarui: 2026-11-21 | Merujuk: PRD, TRD, AFD, DBD, `dashboard/AGENTS.md`
+> Versi: 0.6 | Diperbarui: 2026-11-21 | Merujuk: PRD, TRD, AFD, DBD, `dashboard/AGENTS.md`
 <!-- Versi 0.2 (42 langkah Next.js dari nol) dibatalkan 2026-11-21 (wawancara P13). Langkahnya disimpan di bagian Arsip dengan tanda [DIBATALKAN]; rujukan kriteria F-xx di sana tetap berguna untuk daftar selisih. -->
 
 ## Cara memakai
@@ -56,8 +56,13 @@ Aturan bersama: satu langkah = satu kelompok halaman dipindah utuh, CSS Module l
   - Kerjakan: Sidebar (rail lipat, laci tablet, lencana jumlah, pemilih cabang `DropdownMenu`), Topbar (menu akun `DropdownMenu`, status sinkron, chip zoom; tombol tema dan lonceng dicopot), navigasi bawah + menu Lainnya (laci vaul), splash, stepper zoom; tema gelap dimatikan untuk seluruh aplikasi (store tema dihapus, `data-theme="light"`); toast sonner (`AppToaster`, portal ke body); target sentuh 44px di komponen dens-ui (`pointer-coarse:`); varian breakpoint `drawer`/`narrow`/`phone`/`compact` di app.css dengan kueri sama persis CSS lama; ikon menu lucide (`navIcons.ts`). Ukuran kerangka (`--sidebar-width`, `--topbar-height`, `--mobile-nav-height`) dan breakpoint lama dipertahankan.
   - Selesai jika: kerangka tampil di desktop, tablet, ponsel tanpa error JS dan tanpa luberan; laci `inert` saat tertutup; Esc di menu cabang tidak menutup laci; target sentuh >= 44px di layar sentuh; probe `audit-*` dan `audit-contrast` bersih; tes, lint, build lolos.
   - Hasil 2026-11-21: lihat Catatan L-47.
-- [ ] **L-58 Layar masuk, daftar, reset password, PIN karyawan, wizard toko**
+- [x] **L-58 Layar masuk, daftar, reset password, PIN karyawan, wizard toko**
   - Dipecah dari L-47 (P15.1). Termasuk membuang maskot VOLT, rail diagnostik, dan teks "Precision Electronics Bench" dari halaman masuk; menyesuaikan teks yang ikut komponen baru.
+  - Rujukan: DBD 3, 5; wawancara P16
+  - Keputusan pra-langkah (P16): satu kartu di tengah dengan logo dan "Nuara Service", tanpa teks promosi baru (P16.1); kalimat persetujuan yang menautkan /terms dan /privacy dibuang (P16.2).
+  - Kerjakan: `AuthPage` (masuk, daftar, lupa password), `ResetPasswordPage`, `PinLogin`, `Wizard` ditulis ulang dengan dens-ui di bingkai `AuthShell`; komponen `Field`/`FormMessage`, `PasswordInput`, `PasswordStrength` di `components/dens/`; CSS Module ketiganya dan `components/ui/PasswordStrength` dihapus; pratinjau dev `/dev/layar`. Logika auth, PIN, dan wizard tidak berubah.
+  - Selesai jika: semua layar tampil di desktop dan ponsel tanpa error JS dan tanpa luberan; kontrol >= 44px di layar sentuh; `audit-contrast` bersih termasuk layar masuk; halaman lain sama per piksel; probe `audit-*` sama dengan L-47; tes, lint, build lolos.
+  - Hasil 2026-11-21: lihat Catatan L-58.
 - [ ] **L-48 Servis: daftar tiket**
 - [ ] **L-49 Servis: detail tiket dan modal-modalnya** (status, estimasi, sparepart, garansi, notifikasi WA, cetak)
 - [ ] **L-50 Kasir & Stok**
@@ -134,6 +139,11 @@ Awal, dari pemeriksaan kode 2026-11-21; dilengkapi di L-45. Kolom Keputusan diis
 - 2026-11-21 - L-47 - Toast sonner awalnya tertutup laci vaul: `#root` memakai `isolation: isolate`, sedangkan laci dan dialog Radix berada di portal body. `AppToaster` dirender lewat portal ke body, sama seperti toast FixMaster dulu.
 - 2026-11-21 - L-47 - Putaran verifikasi menemukan tiga hal yang langsung diperbaiki: (1) gerbang `audit-contrast` diam-diam melewati teks berwarna `oklab()` dari opasitas Tailwind (11 label menu sidebar); pengurai warnanya kini lewat canvas, hasil 0 dilewati, 0 gagal; (2) tautan "Lewati ke isi halaman" 36px, kini 44px; (3) area sentuh checkbox/radio 42px karena `::after` diukur dari padding box, kini 44px. Probe `audit-zoom` sama dengan L-46 setelah positif palsu disaring; `audit-mobile` hanya berbeda di temuan tautan lewati tersebut (daftar temuan kecil dipotong 6 entri, jadi "Sewa" di Laporan sempat tergeser, bukan hilang).
 - 2026-11-21 - L-47 - Isi halaman yang belum dipindah sengaja tetap FixMaster (font Inter/Space Grotesk, kartu lama) di atas latar Nuara; hanya kerangka yang memakai `data-nu`. Label "Panel navigasi" di atas judul menu Lainnya dibuang (impeccable: tanpa label kecil di atas judul).
+- 2026-11-21 - L-58 - Hasil: foto 1280px dan iPhone 13 (masuk, daftar, lupa password, PIN, tautan reset tidak valid, form password baru, wizard 6 langkah) tanpa error JS dan tanpa luberan; semua tombol, isian, dan tautan >= 44px di layar sentuh; `audit-contrast` 0 gagal termasuk empat layar baru di `/dev/layar`; 8 halaman lama sama per piksel dengan L-47 (selisih tidak melebihi derau jam); log `audit-mobile` dan `audit-zoom` identik dengan L-47; detektor impeccable 0 temuan; 1136 tes / 85 berkas, lint, build lolos.
+- 2026-11-21 - L-58 - Putaran verifikasi menemukan dua hal yang langsung diperbaiki: garis stepper wizard tergambar di atas lingkaran langkah aktif (lingkaran kini `z-[1]`), dan tautan "Daftar"/"Masuk" hanya 40px lebarnya di layar sentuh (kini min 44px). Juga terukur jebakan alat: foto `fullPage` di emulasi ponsel mematikan `pointer: coarse` sampai navigasi berikutnya, jadi target sentuh harus diukur sebelum foto (dicatat di `dashboard/AGENTS.md` 5).
+- 2026-11-21 - L-58 - Ikut dibuang dari layar masuk: panel merek, maskot VOLT, rail diagnostik, tab mode, tombol kembali ke landing, pencatatan funnel daftar (bagian SaaS), dan 26 kunci i18n yang tidak terpakai lagi. Teks yang tampil selain itu tidak berubah; teks yang menyapa "Anda" (mis. "Pengaturan awal toko Anda", "Masukkan password baru untuk akun Anda") tetap, masuk G-07. Masuk tetap email + password dan daftar lewat undangan (G-02).
+- 2026-11-21 - L-58 - `ResetPasswordPage` mendapat prop `initialPhase` yang hanya dipakai pratinjau `/dev/layar` (tidak ada tautan reset di dev server). `audit-contrast.mjs` kini memeriksa layar masuk, daftar, PIN, dan password baru.
+- 2026-11-21 - L-58 - Utang lama, bukan dari L-58: build mencetak peringatan chunk `react-vendor` 601,8 kB (batas 600 kB di `vite.config.ts`). Ukurannya sama persis di commit L-47 (diukur dengan build worktree). Ditangani saat bersih-bersih L-56 atau bila batasnya perlu disesuaikan.
 
 ## Arsip: rencana Next.js (dibatalkan 2026-11-21)
 Langkah di bawah tidak dikerjakan. Disimpan karena rujukan kriteria F-xx dan keputusan di dalamnya dipakai untuk L-45.

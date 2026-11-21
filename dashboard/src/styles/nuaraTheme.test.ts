@@ -54,6 +54,14 @@ const TEXT: [fg: string, bg: string][] = [
   ['destructive', 'card'],
   ['destructive', 'destructive-soft'],
   ['sidebar-foreground', 'sidebar'],
+  // L-58: label kekuatan password dan kriteria yang terpenuhi (teks 12px di kartu).
+  ['warning-foreground', 'card'],
+  ['success-foreground', 'card'],
+  // L-58: kartu pengguna PIN terpilih/hover, dan baris tim/wallet wizard (bg-surface).
+  ['foreground', 'sidebar-accent'],
+  ['muted-foreground', 'sidebar-accent'],
+  ['muted-foreground', 'accent'],
+  ['muted-foreground', 'surface'],
   ['sidebar-primary-foreground', 'sidebar-primary'],
   ['sidebar-accent-foreground', 'sidebar-accent'],
   ['rail-foreground', 'rail'],

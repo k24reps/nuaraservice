@@ -4,7 +4,6 @@ export { Badge } from './Badge';
 export { StatCard } from './StatCard';
 export { PageSummary, type PageSummaryItem, type PageSummaryTone } from './PageSummary';
 export { Input } from './Input';
-export { PasswordStrength } from './PasswordStrength';
 export { Textarea } from './Textarea';
 export { Select } from './Select';
 export { Modal } from './Modal';

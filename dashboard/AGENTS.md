@@ -119,10 +119,14 @@ npm run test:integration  # RLS/RPC ke staging (butuh .env.test.local)
 > `tsc -b` hanya mencakup `src`. Periksa berkas tes baru dengan tsconfig sementara:
 > `extends` app, `include: ["tests","src"]`, `types: ["node","vite/client"]`.
 
-Untuk perubahan UI: foto render asli via Playwright, jangan menebak. Di **dev server** ada dua
+Untuk perubahan UI: foto render asli via Playwright, jangan menebak. Di **dev server** ada tiga
 harness (tidak ada di build produksi): `/demo` = aplikasi berisi data contoh
-(`src/dev/DevSandbox.tsx`, dipakai skrip `scripts/shoot-*.mjs` dan probe di bawah) dan
-`/dev/komponen` = katalog komponen dens-ui (`src/dev/ComponentShowcase.tsx`).
+(`src/dev/DevSandbox.tsx`, dipakai skrip `scripts/shoot-*.mjs` dan probe di bawah),
+`/dev/komponen` = katalog komponen dens-ui (`src/dev/ComponentShowcase.tsx`), dan
+`/dev/layar?layar=masuk|daftar|lupa|pin|reset|reset-form|wizard` = layar sebelum aplikasi
+(`src/dev/AuthPreview.tsx`), yang di mode lokal tidak pernah tampil.
+Di emulasi ponsel, ukur DOM **sebelum** `screenshot({ fullPage: true })`: sesudahnya media
+`pointer: coarse` hilang sampai navigasi berikutnya dan target sentuh terbaca 40px.
 Di container cloud, versi browser bawaan `@playwright/test` tidak terpasang: jalankan skrip
 audit dengan `PW_CHROMIUM=/opt/pw-browsers/chromium`. Folder `scripts/shots/` di-gitignore;
 buat dulu bila belum ada.
@@ -131,7 +135,7 @@ buat dulu bila belum ada.
 BASE_URL=http://localhost:5173 node scripts/audit-mobile.mjs   # 5 lebar ponsel x 13 halaman
 BASE_URL=http://localhost:5173 node scripts/audit-zoom.mjs     # 11 lebar desktop x 13 halaman
 node scripts/audit-tokens.mjs                                  # gerbang token FixMaster
-BASE_URL=http://localhost:5173 node scripts/audit-contrast.mjs  # kontras DOM: /demo, wizard, /dev/komponen
+BASE_URL=http://localhost:5173 node scripts/audit-contrast.mjs  # kontras DOM: /demo, wizard, /dev/komponen, /dev/layar
 ```
 
 Kontras tema Nuara diuji `src/styles/nuaraTheme.test.ts` (ikut `npm run test`): tambahkan
@@ -140,7 +144,10 @@ pasangan baru di sana saat komponen memakai kombinasi warna baru.
 Langkah Fase B juga wajib membuktikan halaman lain tidak berubah dengan **foto per piksel**:
 foto halaman lama sebelum dan sesudah (sama viewport, tema, dan `reducedMotion`), bandingkan
 dengan `compare -metric AE -fuzz 2%` (ImageMagick), dan ukur derau dengan dua foto sebelum.
-Selisih yang tersisa harus bisa dijelaskan (jam, kursor berkedip).
+Selisih yang tersisa harus bisa dijelaskan (jam, kursor berkedip). Bila "sebelum" diambil dari
+`git worktree` dengan `node_modules` di-symlink, beri vite.config worktree `cacheDir` sendiri dan
+`server.fs.allow` ke `node_modules` asli; tanpa itu React jadi ganda dan font gagal dimuat
+(vault, Decisions L-58).
 
 Laporan ditulis ke `scripts/shots/{zoom,mobile}-report.json`. Saring tiga positif palsu
 sebelum menyimpulkan: `caption._srOnly`, `span.fm-visually-hidden`, dan elemen `text.` di dalam

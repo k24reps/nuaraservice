@@ -1,6 +1,6 @@
 # DBD (Design & Brand Document) - Nuara Dashboard
 
-> Versi: 0.3 | Diperbarui: 2026-11-21 | Merujuk: PRD.md, AFD.md, DESIGN.md (landing page)
+> Versi: 0.4 | Diperbarui: 2026-11-21 | Merujuk: PRD.md, AFD.md, DESIGN.md (landing page)
 <!-- Dokumen desain visual. Skema database ada di BSD, bukan di sini. Eksekusi visual memakai skill impeccable (CLAUDE.md); token di sini adalah kontraknya. -->
 
 > [!note] Sejak 2026-11-21 (wawancara P13.3)
@@ -101,7 +101,7 @@ Dark mode: tidak (P9.5, ditegaskan P14.1). Sejak L-47 seluruh aplikasi hanya tem
 - Kepadatan sedang: baris tabel 48px (10-15 tiket per layar laptop 768px tinggi); target sentuh minimal 44px di layar sentuh (pointer kasar, P15.3): tombol, isian, dan item menu dens-ui naik ke 44px, checkbox/radio/switch mendapat area sentuh 44px tanpa membesar tampilannya; di perangkat bermouse kontrol tetap 40px.
 
 ## 3. Komponen
-Sumber: `dashboard/src/components/dens/` (dens-ui v0.2.0 + tambahan pola shadcn: popover, sheet, drawer, command, combobox, sonner). Katalog hidup di dev server: `/dev/komponen`. Badge tahap memakai varian dens-ui: info (Diterima, Diagnosa, Pengerjaan, Dikembalikan), highlight (Konfirmasi biaya), warning (Tunggu part), success (Selesai, Diambil), destructive-soft (Dibatalkan).
+Sumber: `dashboard/src/components/dens/` (dens-ui v0.2.0 + tambahan pola shadcn: popover, sheet, drawer, command, combobox, sonner). Tambahan Nuara di folder yang sama: `Field` + `FormMessage` (label terlihat, petunjuk, dan galat yang ditautkan ke kolomnya, bagian 5), `PasswordInput` (tombol tampil/sembunyi), `PasswordStrength`. Katalog hidup di dev server: `/dev/komponen`; layar sebelum aplikasi di `/dev/layar`. Layar masuk, daftar, password baru, dan PIN memakai satu kartu di tengah (maks 448px) di bawah logo dan nama toko, tanpa panel merek (P16.1). Badge tahap memakai varian dens-ui: info (Diterima, Diagnosa, Pengerjaan, Dikembalikan), highlight (Konfirmasi biaya), warning (Tunggu part), success (Selesai, Diambil), destructive-soft (Dibatalkan).
 
 | Komponen | Varian | State wajib | Dipakai di layar |
 |---|---|---|---|

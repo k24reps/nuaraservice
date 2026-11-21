@@ -216,32 +216,6 @@ export const id = {
   'serviceDelete.blockedClaim': 'Tiket ini punya klaim garansi, jadi tidak bisa dihapus.',
 
   // ---------- Auth / session ----------
-  'authPage.brandTagline': 'Meja kerja digital untuk usaha reparasi gadget & elektronik.',
-  'authPage.brandSub':
-    'Tiket servis, stok sparepart, pelanggan, kas, dan margin bekerja dalam satu alur.',
-  'authPage.voltLabel': 'VOLT // Terminal siap',
-  'authPage.volt.loginReady': 'Bench siap. Silakan masuk.',
-  'authPage.volt.loginDetail':
-    'Lanjutkan alur servis, stok, dan margin toko dari meja yang sama.',
-  'authPage.volt.signupReady': 'Bench baru siap dikalibrasi.',
-  'authPage.volt.signupDetail':
-    'Buat akun untuk menyiapkan alur servis, stok, dan margin toko.',
-  'authPage.volt.resetReady': 'Jalur pemulihan siap digunakan.',
-  'authPage.volt.resetDetail':
-    'Masukkan email akun untuk menerima tautan pengaturan ulang.',
-  'authPage.rail.service': 'SERVIS',
-  'authPage.rail.serviceValue': 'SIAP',
-  'authPage.rail.stock': 'STOK',
-  'authPage.rail.stockValue': 'TERHUBUNG',
-  'authPage.rail.margin': 'MARGIN',
-  'authPage.rail.marginValue': 'TERHITUNG',
-  'authPage.brandFoot': 'PRECISION ELECTRONICS BENCH',
-  'authPage.back': 'Beranda',
-  'authPage.backHome': 'Kembali',
-  'authPage.terminal': 'Terminal Akses',
-  'authPage.mode.login': 'Masuk',
-  'authPage.mode.signup': 'Daftar',
-  'authPage.mode.reset': 'Reset',
   'authPage.login.heading': 'Masuk ke Nuara Dashboard',
   'authPage.login.hint': 'Lanjutkan pekerjaan dari meja terakhir.',
   'authPage.login.cta': 'Masuk',
@@ -262,10 +236,6 @@ export const id = {
   'authPage.confirmError': 'Belum cocok dengan password di atas',
   'authPage.confirmMatch': '✓ Password cocok',
   'authPage.processing': 'Memproses…',
-  'authPage.consentPrefix': 'Dengan mendaftar, Anda menyetujui',
-  'authPage.terms': 'Syarat & Ketentuan',
-  'authPage.consentAnd': 'dan',
-  'authPage.privacy': 'Kebijakan Privasi',
   'authPage.forgotPassword': 'Lupa password?',
   'authPage.noAccount': 'Sudah diundang?',
   'authPage.register': 'Daftar',

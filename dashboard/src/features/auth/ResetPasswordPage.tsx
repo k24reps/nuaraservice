@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Input, Icon, PasswordStrength } from '@/components/ui';
-import { FormError } from '@/components/ui/Form';
+import { Button } from '@/components/dens/button';
+import { Field, FormMessage } from '@/components/dens/field';
+import { PasswordInput } from '@/components/dens/password-input';
+import { PasswordStrength } from '@/components/dens/password-strength';
 import { getSupabase, authUpdatePassword } from '@/data/supabase-client';
 import { toast } from '@/stores/toast';
-import styles from './AuthPage.module.css';
+import { AuthShell } from './AuthShell';
 
-type Phase = 'checking' | 'ready' | 'no-session' | 'done';
+export type ResetPhase = 'checking' | 'ready' | 'no-session' | 'done';
 
 /**
  * Password recovery screen — the landing target of the reset email link
@@ -15,14 +17,17 @@ type Phase = 'checking' | 'ready' | 'no-session' | 'done';
  * authorizes updateUser({ password }). This is a PUBLIC route (outside AuthGate)
  * so it renders regardless of the normal signed-in/out flow.
  *
- * Reuses the AuthPage "access terminal faceplate" styling for visual continuity.
+ * Memakai bingkai yang sama dengan halaman masuk (AuthShell).
  */
-export function ResetPasswordPage() {
+export function ResetPasswordPage({ initialPhase }: { initialPhase?: ResetPhase } = {}) {
   const navigate = useNavigate();
 
   // No Supabase client → no recovery possible; start in the invalid-link state
   // (computed lazily so the effect below never setStates synchronously).
-  const [phase, setPhase] = useState<Phase>(() => (getSupabase() ? 'checking' : 'no-session'));
+  // `initialPhase` hanya dipakai pratinjau dev (/dev/layar), yang tidak punya tautan reset.
+  const [phase, setPhase] = useState<ResetPhase>(
+    () => initialPhase ?? (getSupabase() ? 'checking' : 'no-session'),
+  );
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [error, setError] = useState('');
@@ -33,7 +38,7 @@ export function ResetPasswordPage() {
   // we also probe getSession in case the event fired before mount.
   useEffect(() => {
     const c = getSupabase();
-    if (!c) return;
+    if (!c || initialPhase) return;
     let settled = false;
     const markReady = () => {
       settled = true;
@@ -57,7 +62,7 @@ export function ResetPasswordPage() {
       sub.subscription.unsubscribe();
       window.clearTimeout(timer);
     };
-  }, []);
+  }, [initialPhase]);
 
   const validate = (): string | null => {
     if (password.length < 8) return 'Password minimal 8 karakter';
@@ -92,114 +97,83 @@ export function ResetPasswordPage() {
     }
   };
 
-  const onKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') void submit();
-  };
+  const reveal = { showLabel: 'Tampilkan password', hideLabel: 'Sembunyikan password' };
 
   return (
-    <div className={styles.overlay}>
-      <div className={styles.shell}>
-        {/* ---------- Brand panel ---------- */}
-        <aside className={styles.brandPanel} aria-hidden>
-          <span className={styles.grid} />
-          <div className={styles.brandTop}>
-            <span className={styles.brandLogo}>
-              <Icon name="screwdriver-wrench" aria-hidden />
-            </span>
-            <span className={styles.brandWord}>Nuara Service</span>
-          </div>
-          <div className={styles.brandBody}>
-            <h2 className={styles.brandTagline}>Setel ulang kunci akses meja kerjamu.</h2>
-            <p className={styles.brandSub}>
-              Buat password baru untuk akun Nuara Dashboard, lalu lanjut bekerja.
-            </p>
-          </div>
-          <div className={styles.brandFoot}>PRECISION ELECTRONICS BENCH</div>
-        </aside>
+    <AuthShell>
+      <h1 className="text-2xl font-semibold leading-tight tracking-[-0.02em]">Password Baru</h1>
 
-        {/* ---------- Form panel: faceplate ---------- */}
-        <main className={styles.formPanel}>
-          <span className={[styles.screw, styles.screwTL].join(' ')} aria-hidden />
-          <span className={[styles.screw, styles.screwTR].join(' ')} aria-hidden />
-          <span className={[styles.screw, styles.screwBL].join(' ')} aria-hidden />
-          <span className={[styles.screw, styles.screwBR].join(' ')} aria-hidden />
+      {phase === 'checking' && (
+        <p role="status" className="mt-1.5 text-sm text-muted-foreground">
+          Memeriksa tautan reset…
+        </p>
+      )}
 
-          <div className={styles.terminalTop}>
-            <span
-              className={[styles.led, phase === 'no-session' ? styles.ledFault : styles.ledLive].join(' ')}
-              aria-hidden
-            />
-            <span className={styles.terminalLabel}>Terminal Akses</span>
-            <span className={styles.modeTag}>reset</span>
-          </div>
+      {phase === 'no-session' && (
+        <>
+          <p className="mt-1.5 text-sm text-muted-foreground">
+            Tautan reset tidak valid atau sudah kedaluwarsa. Minta tautan baru dari halaman masuk.
+          </p>
+          <Button
+            size="lg"
+            className="mt-6 w-full"
+            onClick={() => navigate('/?auth=login&source=reset_password', { replace: true })}
+          >
+            Kembali ke Masuk
+          </Button>
+        </>
+      )}
 
-          <h1 className={styles.heading}>Password Baru</h1>
+      {phase === 'done' && (
+        <p role="status" className="mt-1.5 text-sm text-muted-foreground">
+          Password diperbarui. Mengarahkan ke aplikasi…
+        </p>
+      )}
 
-          {phase === 'checking' && (
-            <p className={styles.hint}>Memeriksa tautan reset…</p>
-          )}
-
-          {phase === 'no-session' && (
-            <>
-              <p className={styles.hint}>
-                Tautan reset tidak valid atau sudah kedaluwarsa. Minta tautan baru dari halaman masuk.
-              </p>
-              <div className={styles.fields}>
-                <Button
-                  fullWidth
-                  onClick={() =>
-                    navigate('/?auth=login&source=reset_password', { replace: true })
-                  }
-                >
-                  Kembali ke Masuk
-                </Button>
-              </div>
-            </>
-          )}
-
-          {phase === 'done' && (
-            <p className={styles.hint}>Password diperbarui. Mengarahkan ke aplikasi…</p>
-          )}
-
-          {phase === 'ready' && (
-            <>
-              <p className={styles.hint}>Masukkan password baru untuk akun Anda.</p>
-              <div className={styles.fields} onKeyDown={onKeyDown}>
-                <Input
-                  noAutoCap
-                  revealable
-                  type="password"
-                  name="password"
-                  label="Password Baru"
-                  placeholder="Minimal 8 karakter"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  autoComplete="new-password"
-                  autoFocus
-                />
-                <PasswordStrength password={password} />
-                <Input
-                  noAutoCap
-                  revealable
-                  type="password"
-                  name="confirm"
-                  label="Konfirmasi Password"
-                  placeholder="Ulangi password"
-                  value={confirm}
-                  onChange={(e) => setConfirm(e.target.value)}
-                  autoComplete="new-password"
-                  error={confirm && password !== confirm ? 'Belum cocok dengan password di atas' : undefined}
-                  hint={confirm && password === confirm ? '✓ Password cocok' : undefined}
-                />
-                <FormError>{error}</FormError>
-                <Button fullWidth onClick={() => void submit()} disabled={busy}>
-                  {busy ? 'Menyimpan…' : 'Simpan Password'}
-                </Button>
-              </div>
-            </>
-          )}
-        </main>
-      </div>
-    </div>
+      {phase === 'ready' && (
+        <>
+          <p className="mt-1.5 text-sm text-muted-foreground">Masukkan password baru untuk akun Anda.</p>
+          <form
+            className="mt-6 grid gap-4"
+            noValidate
+            onSubmit={(e) => {
+              e.preventDefault();
+              void submit();
+            }}
+          >
+            <Field label="Password Baru">
+              <PasswordInput
+                {...reveal}
+                name="password"
+                placeholder="Minimal 8 karakter"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="new-password"
+                autoFocus
+              />
+            </Field>
+            <PasswordStrength password={password} />
+            <Field
+              label="Konfirmasi Password"
+              error={confirm && password !== confirm ? 'Belum cocok dengan password di atas' : undefined}
+              hint={confirm && password === confirm ? '✓ Password cocok' : undefined}
+            >
+              <PasswordInput
+                {...reveal}
+                name="confirm"
+                placeholder="Ulangi password"
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+                autoComplete="new-password"
+              />
+            </Field>
+            <FormMessage>{error}</FormMessage>
+            <Button type="submit" size="lg" className="w-full" disabled={busy}>
+              {busy ? 'Menyimpan…' : 'Simpan Password'}
+            </Button>
+          </form>
+        </>
+      )}
+    </AuthShell>
   );
 }

@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
-import { Button, Icon } from '@/components/ui';
+import { Button } from '@/components/dens/button';
+import { cn } from '@/lib/utils';
+import { AuthShell } from './AuthShell';
 import { verifyPin, needsRehash, hashPin } from '@/lib/pin';
 import { repository } from '@/data';
 import {
@@ -15,7 +17,6 @@ import { useSessionStore } from '@/stores/session';
 import { logActivity } from '@/lib/activity';
 import { toast } from '@/stores/toast';
 import type { Employee } from '@/data/types';
-import styles from './PinLogin.module.css';
 
 const ROLE_LABEL: Record<string, string> = {
   owner: 'Owner',
@@ -106,72 +107,77 @@ export function PinLogin() {
   };
 
   return (
-    <div className={styles.overlay}>
-      <div className={styles.card}>
-        <div className={styles.terminalLabel}>
-          <span className={styles.statusLed} aria-hidden />
-          EMPLOYEE ACCESS TERMINAL
-          <span>PIN / 4 DIGIT</span>
-        </div>
-        <div className={styles.logo}>
-          <span className={styles.logoMark}>
-            <Icon name="screwdriver-wrench" aria-hidden />
-          </span>
-        </div>
-        <h2 className={styles.shopName}>{org?.name ?? 'Nuara Service'}</h2>
-        <p className={styles.hint}>Pilih pengguna & masukkan PIN</p>
+    <AuthShell title={org?.name ?? 'Nuara Service'}>
+      <h1 className="text-xl font-semibold leading-tight tracking-[-0.015em]">Pilih pengguna & masukkan PIN</h1>
 
-        <div className={styles.userGrid}>
-          {employees.map((e) => (
+      <div role="group" aria-label="Pengguna" className="mt-6 grid grid-cols-2 gap-2 compact:grid-cols-1">
+        {employees.map((e) => {
+          const active = selectedId === e.id;
+          return (
             <button
               key={e.id}
-              className={[styles.userChip, selectedId === e.id ? styles.userActive : ''].join(' ')}
+              type="button"
+              aria-pressed={active}
               onClick={() => {
                 setSelectedId(e.id);
                 setError('');
                 reset();
               }}
+              className={cn(
+                'flex min-h-14 items-center gap-3 rounded-xl p-2 pr-3 text-left ring-1 ring-border/70 outline-none transition-colors duration-150 hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring',
+                active && 'bg-sidebar-accent ring-2 ring-primary/50',
+              )}
             >
-              <span className={styles.userAvatar}>{e.name.charAt(0).toUpperCase()}</span>
-              <span className={styles.userMeta}>
-                <strong>{e.name}</strong>
-                <small>{ROLE_LABEL[e.role]}</small>
+              <span
+                aria-hidden
+                className="grid size-9 shrink-0 place-items-center rounded-full bg-primary text-sm font-semibold text-primary-foreground"
+              >
+                {e.name.charAt(0).toUpperCase()}
+              </span>
+              <span className="flex min-w-0 flex-col">
+                <strong className="truncate text-sm font-semibold">{e.name}</strong>
+                <small className="text-xs text-muted-foreground">{ROLE_LABEL[e.role]}</small>
               </span>
             </button>
-          ))}
-        </div>
-
-        <div className={styles.pinGroup}>
-          {pin.map((d, i) => (
-            <input
-              key={i}
-              ref={(el) => {
-                inputsRef.current[i] = el;
-              }}
-              className={[styles.pinInput, error ? styles.pinError : ''].join(' ')}
-              type="password"
-              inputMode="numeric"
-              maxLength={1}
-              value={d}
-              disabled={locked}
-              onChange={(e) => handleDigit(i, e.target.value)}
-              onKeyDown={(e) => handleKey(i, e)}
-              aria-label={`Digit PIN ${i + 1}`}
-            />
-          ))}
-        </div>
-
-        {error && (
-          <p className={styles.error}>
-            {error}
-            {locked && lockLeft > 0 && <strong> ({lockLeft}s)</strong>}
-          </p>
-        )}
-
-        <Button fullWidth onClick={() => void submit(pin.join(''))} disabled={locked}>
-          Masuk
-        </Button>
+          );
+        })}
       </div>
-    </div>
+
+      <div className="mt-6 flex justify-center gap-3" role="group" aria-label="PIN">
+        {pin.map((d, i) => (
+          <input
+            key={i}
+            ref={(el) => {
+              inputsRef.current[i] = el;
+            }}
+            className={cn(
+              'size-14 rounded-xl border border-input bg-card text-center font-mono text-2xl font-semibold shadow-[inset_0_1px_2px_rgb(6_32_54/0.04)] outline-none transition-[border-color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/20 disabled:cursor-not-allowed disabled:opacity-50',
+              error && 'border-destructive',
+            )}
+            type="password"
+            inputMode="numeric"
+            autoComplete="off"
+            maxLength={1}
+            value={d}
+            disabled={locked}
+            aria-invalid={error ? true : undefined}
+            onChange={(e) => handleDigit(i, e.target.value)}
+            onKeyDown={(e) => handleKey(i, e)}
+            aria-label={`Digit PIN ${i + 1}`}
+          />
+        ))}
+      </div>
+
+      {error && (
+        <p role="alert" className="mt-4 text-center text-sm text-destructive">
+          {error}
+          {locked && lockLeft > 0 && <strong className="font-mono tabular-nums"> ({lockLeft}s)</strong>}
+        </p>
+      )}
+
+      <Button size="lg" className="mt-6 w-full" onClick={() => void submit(pin.join(''))} disabled={locked}>
+        Masuk
+      </Button>
+    </AuthShell>
   );
 }
