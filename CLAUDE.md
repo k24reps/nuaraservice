@@ -28,7 +28,7 @@ Baca sebelum bekerja. Jangan menebak jika dokumen tidak menjelaskan; tanyakan le
 | Dokumen | Isi | Baca saat |
 |---|---|---|
 | `docs/PRD.md` | Product Requirements: fitur (F-xx), kriteria (F-xx.n), peran, istilah, scope | Selalu |
-| `docs/IPD.md` | Implementation Plan: langkah (L-xx) + status, Daftar Selisih PRD vs FixMaster (G-xx) | Menentukan tugas berikutnya |
+| `docs/IPD.md` | Implementation Plan: langkah (L-xx) + status, Daftar Selisih PRD vs FixMaster (G-xx), Keputusan Menunggu Pemilik (K-xx) | Menentukan tugas berikutnya |
 | `docs/TRD.md` | Technical Requirements: stack, struktur folder, env, perintah | Menulis kode apa pun |
 | `dashboard/AGENTS.md` | Konvensi kode, verifikasi, probe UI, vault teknis | Menulis kode apa pun |
 | `docs/AFD.md` | App Flow: layar target (S-xx), alur, teks pesan | Mengerjakan UI/alur |

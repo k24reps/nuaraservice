@@ -1,6 +1,6 @@
 # IPD (Implementation Plan Document) - Nuara Dashboard
 
-> Versi: 0.7 | Diperbarui: 2026-11-21 | Merujuk: PRD, TRD, AFD, DBD, `dashboard/AGENTS.md`
+> Versi: 0.8 | Diperbarui: 2026-11-22 | Merujuk: PRD, TRD, AFD, DBD, `dashboard/AGENTS.md`
 <!-- Versi 0.2 (42 langkah Next.js dari nol) dibatalkan 2026-11-21 (wawancara P13). Langkahnya disimpan di bagian Arsip dengan tanda [DIBATALKAN]; rujukan kriteria F-xx di sana tetap berguna untuk daftar selisih. -->
 
 ## Cara memakai
@@ -11,12 +11,13 @@
 - Jangan mengerjakan fitur di luar langkah yang aktif. Selisih PRD hanya dikerjakan lewat langkah Fase C setelah diputuskan Pemilik.
 - Semua perintah dijalankan dari folder `dashboard/` (TRD bagian 7). Langkah UI memakai skill impeccable untuk eksekusi visual.
 - Fakta bisnis (nama staf, akun kas, saldo, durasi garansi, S&K, link ulasan, lokasi) ditanyakan ke Pemilik, tidak dikarang.
+- Hal yang belum diputuskan Pemilik dicatat di bagian "Keputusan Menunggu Pemilik" (G-xx dan K-xx), termasuk rekomendasi yang dipakai sementara agar pekerjaan bisa lanjut. Butir yang sudah dijawab dipindah ke log wawancara dan ditandai "diputuskan" di sini.
 
 ## Ringkasan Fase
 | Fase | Tujuan | Langkah |
 |---|---|---|
 | A | Salinan FixMaster jalan sebagai Nuara Dashboard | L-43, L-44, L-45 |
-| B | UI dipindah ke dens-ui dengan warna Nuara, per halaman | L-46, L-47, L-58, L-48 s.d. L-56 |
+| B | UI dipindah ke dens-ui dengan warna Nuara, per halaman | L-46, L-47, L-58, L-48, L-49, L-59, L-60, L-50 s.d. L-56 |
 | C | Selisih PRD yang diputuskan Pemilik | ditentukan dari L-45 |
 | D | Rilis dan berhenti memakai FixMaster | L-57 |
 
@@ -69,7 +70,12 @@ Aturan bersama: satu langkah = satu kelompok halaman dipindah utuh, CSS Module l
   - Kerjakan: `ServicesPage` dan `ServiceModal` ditulis ulang dengan dens-ui, CSS Module keduanya dihapus; mekanisme daftar baris (container query, ambang tabel dari lantai lajur, lajur aksi 44px di layar sentuh) dipertahankan sebagai kelas Tailwind; komponen pengganti FixMaster di `components/dens/` (`SummaryStrip`, `FilterChips`, `TextInput`, `SelectBox`, `FormDialog`, `ConfirmDialog`, `EmptyState`); `@source` per berkas karena folder Servis masih memuat halaman FixMaster; `servicesTableWidth.test.ts` ditulis ulang. Logika daftar dan form tidak berubah.
   - Selesai jika: daftar dan form tampil di desktop, tablet, ponsel tanpa error JS dan tanpa luberan; judul kolom tampil hanya bila semua lajur muat; kontrol >= 44px di layar sentuh; fokus kembali ke pemicu saat form ditutup; probe `audit-*` (bawaan, pita tablet, zoom 1,25, Padat) tanpa temuan baru selain yang dijelaskan; `audit-contrast` bersih; halaman lain sama per piksel; tes, lint, build lolos.
   - Hasil 2026-11-21: lihat Catatan L-48.
-- [ ] **L-49 Servis: detail tiket dan modal-modalnya** (status, estimasi, sparepart, garansi, notifikasi WA, tiket jadi, cetak; form Servis Baru/Ubah sudah di L-48)
+- [x] **L-49 Servis: detail tiket**
+  - Dipecah 2026-11-22 (K-08): modal Servis pindah ke L-59 dan L-60. Cakupan: `ServiceDetailPage` (kepala tiket, tahap, pelanggan + QR lacak, penerimaan unit, sparepart + modal dadakan, biaya, log, bar aksi + panel "Lainnya", konfirmasi ambil/hapus) dan `ScreenLockReadout`. Tata letak FixMaster dipertahankan (K-09); label "REPAIR TICKET" dan cap status diganti lencana status (K-10).
+  - Selesai jika: detail tampil di desktop, tablet, ponsel tanpa error JS dan tanpa luberan; kontrol >= 44px di layar sentuh; bar aksi selebar isi halaman (juga saat sidebar dilipat); probe `audit-*` dan `audit-contrast` bersih; halaman lain sama per piksel; tes, lint, build lolos.
+  - Hasil 2026-11-22: lihat Catatan L-49.
+- [ ] **L-59 Servis: modal Ubah Status dan Tiket Jadi** (`StatusModal`, `TicketDoneModal`; estimasi, biaya final, pembayaran, garansi, batal + refund)
+- [ ] **L-60 Servis: modal kirim WA/nota, pemilih sparepart, garansi sparepart, klaim garansi** (`NotifyModal`, `SparepartPickerModal`, `PartWarrantyModal` + `PartWarrantyFields`, `WarrantyClaimModal`); sesudahnya seluruh folder `features/services` masuk `@source`
 - [ ] **L-50 Kasir & Stok**
 - [ ] **L-51 Pelanggan dan Supplier**
 - [ ] **L-52 Keuangan**
@@ -102,6 +108,30 @@ Awal, dari pemeriksaan kode 2026-11-21; dilengkapi di L-45. Kolom Keputusan diis
 | G-09 | Satu workshop (P3.3) | Pemilih cabang/outlet tampil di sidebar | |
 | G-10 | Absensi: radius tetap 100 m, di luar radius ditolak, GPS ditolak tetap boleh dengan tanda (F-10) | Geofence per outlet, radius diatur Pemilik (perilaku GPS ditolak perlu dicek) | |
 | G-11 | Lonceng notifikasi di header dan layar Notifikasi S-20 (AFD bagian 1; kejadian dari F-02, F-03, F-07) | Lonceng FixMaster tanpa fungsi dengan titik merah tetap; disembunyikan sejak L-47 (P15.4) | |
+| G-12 | Navigasi (AFD 2, DBD 3-4): sidebar 240px di >=1024px; di bawahnya 4 tab bawah (Beranda, Tiket, Absen, Lainnya); menu per peran (Admin: Beranda, Tiket, Pelanggan, Stok, Jual, Kas, Absensi; Teknisi: Beranda, Tiket, Absensi) | Kerangka FixMaster dipertahankan di L-47: sidebar 278px di >1024px, laci (tanpa tab bawah) di 721-1024px, 5 tab bawah di <=720px (Beranda, Servis, Kasir, Pelanggan, Lainnya); akses menu per peran mengikuti FixMaster (perlu dicek di L-45) | |
+| G-13 | Isi template ditulis Pemilik (F-16.1): teks pesan WA Diterima, Selesai, Diambil; daftar keluhan per jenis perangkat; kelengkapan; S&K; teks pemberitahuan privasi | Isi bawaan FixMaster yang belum dikonfirmasi Pemilik: 6 template WA (diterima, konfirmasi, tunggu, selesai, diambil, batal) yang menyapa "Anda"; satu daftar keluhan untuk semua perangkat; S&K bawaan dengan batas pengambilan 60 hari | |
+
+## Keputusan Menunggu Pemilik
+Dikumpulkan 2026-11-22 dari log wawancara, catatan IPD, dan langkah L-43 s.d. L-48. Butir di sini belum dijawab Pemilik; kolom "Sementara" adalah yang berlaku sampai ada jawaban. Saat dijawab, catat jawabannya di log wawancara, lalu tulis "diputuskan YYYY-MM-DD (Pxx)" di kolom Sementara.
+
+**Selisih PRD (G-01 s.d. G-13, tabel di atas).** Belum ada yang diputuskan. Sesuai P13.6 diputuskan setelah Fase B, sesudah L-45 melengkapi daftarnya. Sampai itu aplikasi berperilaku seperti FixMaster.
+
+**Keputusan lain (K-xx).**
+
+| ID | Hal | Asal | Sementara | Rekomendasi | Dibutuhkan sebelum |
+|---|---|---|---|---|---|
+| K-01 | Teks kerangka 10-11px (label "Dashboard" sidebar, chip zoom, angka lencana menu, label menu bawah) membuat gerbang lantai 12px `audit-zoom` gagal di semua halaman | Regresi L-47, ditemukan di L-48 | Dibiarkan | Langkah kecil tersendiri: naikkan ke 12px, ukur menu bawah di layar 320px | L-56 (paling lambat) |
+| K-02 | Koneksi langsung Supabase hanya IPv6, bisa gagal dari jaringan tanpa IPv6 (audit S1, "skip dulu") | Wawancara 2026-11-04 (A4); langkah tujuannya (L-03, L-32) ikut batal di P13 | Belum dicek | Cek saat L-44 dari mesin Pemilik; pakai session pooler bila gagal. Backup FixMaster berjalan lewat Edge Function `auto-backup`, bukan GitHub Actions, jadi risikonya lebih kecil dari rencana lama | L-44 |
+| K-03 | RawBT versi gratis dilaporkan menambah catatan di hasil cetak (audit S9, "skip dulu") | Wawancara 2026-11-04 (A12); langkah tujuannya (L-17) batal di P13 | Belum diuji | Uji dengan printer asli; bila ada catatan, putuskan bayar RawBT atau terima | L-57 |
+| K-04 | Template email Supabase Auth (undangan staf, reset password) | L-43: template FixMaster dibuang | Template bawaan Supabase (bahasa Inggris) | Tulis teks Indonesia di AFD lalu pasang di dashboard Supabase | L-44 |
+| K-05 | Nilai bisnis yang belum diberikan (PRD 9): nama akun staf, akun kas + saldo awal, garansi awal jasa dan sparepart, S&K, teks pemberitahuan privasi, link ulasan Google, titik lokasi workshop, toleransi terlambat, ukuran printer | PRD 9, sejak 2026-11-02 | Kosong; tidak dikarang | Diisi Pemilik di Pengaturan | L-57 |
+| K-06 | Hari mulai memakai Nuara Dashboard dan tanggal berhenti FixMaster (PRD 3: paling lama 1 bulan) | PRD 3 | Belum ditentukan | Tentukan setelah uji satu tiket nyata | L-57 |
+| K-07 | Kunci penyimpanan browser `fixmaster-*` dan penanda backup `app: 'fixmaster'` tidak diganti nama | Keputusan agen di L-43 (tidak tampil ke pengguna; dipakai tes dan skrip) | Tetap `fixmaster-*` | Biarkan; mengganti hanya menghapus pengaturan tampilan yang tersimpan di tiap perangkat sekali | Tidak mendesak |
+| K-08 | Pemecahan L-49 (detail tiket + 7 modal, sekitar 3.600 baris kode + 1.960 baris CSS, tiga kali L-48) | Rencana L-49, 2026-11-22 | Dipecah: L-49 detail tiket, L-59 Ubah Status + Tiket Jadi, L-60 modal lain | Dipecah; IPD sudah mengizinkan pemecahan dengan nomor baru (Risiko Jadwal) | Sudah berlaku |
+| K-09 | Tata letak detail tiket: DBD 4 menulis dua kolom (info + aksi di kiri, riwayat di kanan) | L-49 | Susunan FixMaster: kepala tiket, tahap, kisi kartu (pelanggan, penerimaan, sparepart, biaya, log), bar aksi menempel di bawah | Pertahankan FixMaster sampai Fase C; isinya sama, hanya urutan | Fase C |
+| K-10 | Label "REPAIR TICKET" (bahasa Inggris) dan cap status miring di kepala tiket (motif FixMaster) | L-49 | Dibuang; status tampil sebagai lencana tahap seperti di daftar | Buang | Sudah berlaku |
+
+**Menunggu tindakan Pemilik (bukan keputusan).** L-44: membuat proyek Supabase tes milik Nuara (region Singapura), proyek Vercel kedua, dan DNS `app.nuaraservice.my.id`; mendaftar sebagai Pemilik dan mengundang satu akun uji. Tes integrasi belum pernah dijalankan sampai proyek itu ada.
 
 ## Definition of Done (berlaku untuk tiap langkah)
 - Sesuai spesifikasi di dokumen yang dirujuk
@@ -151,8 +181,10 @@ Awal, dari pemeriksaan kode 2026-11-21; dilengkapi di L-45. Kolom Keputusan diis
 - 2026-11-21 - L-58 - Utang lama, bukan dari L-58: build mencetak peringatan chunk `react-vendor` 601,8 kB (batas 600 kB di `vite.config.ts`). Ukurannya sama persis di commit L-47 (diukur dengan build worktree). Ditangani saat bersih-bersih L-56 atau bila batasnya perlu disesuaikan.
 - 2026-11-21 - L-48 - Hasil: daftar Servis diukur di 12 ukuran (1920 sampai 1025 desktop, tablet sentuh 1366/1024/834/744, iPhone 13, 320px) tanpa luberan, tanpa elemen keluar dari barisnya, nomor tiket dan nomor HP tidak terpotong, lencana status di dalam lajurnya, kontrol >= 44px di layar sentuh; judul kolom tampil di 1920 dan 1440 (wadah 1082px, empat segmen), tersembunyi di 1366 ke bawah, sama dengan FixMaster. Form Servis Baru: galat di puncak + kolom ditandai, saran pelanggan dengan panah + Enter, draf tersimpan saat ditutup, fokus kembali ke tombol pembuka, lembar dari bawah di ponsel. Konfirmasi "Unit belum lunas", pintasan "N", dan klik baris tetap berfungsi. `audit-contrast` bersih (termasuk form dan modal status); detektor impeccable 0 temuan; probe dibandingkan dengan L-58 di versi lama yang berjalan berdampingan: `audit-zoom` bawaan, zoom 1,25, dan Padat identik, `audit-mobile` hanya berbeda di panjang geser baris chip status (baris yang memang bisa digeser), pita tablet kehilangan satu temuan lama (chip status di 1025px tak perlu digeser lagi); 11 halaman lain + detail tiket sama per piksel (selisih hanya di wilayah derau jam/animasi), modal status, kirim WA, dan pemilih sparepart yang dibuka dari daftar sama per piksel di dalam panelnya; 1142 tes / 86 berkas, lint, build lolos.
 - 2026-11-21 - L-48 - Putaran verifikasi menemukan dua hal yang langsung diperbaiki: (1) setelah form ditutup fokus jatuh ke body, karena Radix hanya mengembalikan fokus ke `DialogTrigger`; `DialogContent` kini mencatat elemen yang fokus saat jendela dibuka dan mengembalikan fokus ke sana (dikunci `dialog.test.tsx`, diuji dengan mutasi); (2) judul kolom dan angka di tombol filter 11px, di bawah gerbang lantai 12px `audit-zoom`, kini 12px. `audit-contrast.mjs` mencari tombol status lewat nama aksesibelnya, bukan kelas CSS Module lama.
-- 2026-11-21 - L-48 - Utang dari L-47, belum diperbaiki (di luar L-48, mengubah kerangka di semua halaman): gerbang lantai 12px `audit-zoom` gagal di semua halaman sejak L-47. Kerangka dens-ui memakai teks 10-11px (label "Dashboard" sidebar 10,5px, chip zoom topbar, angka lencana menu, label dan angka menu bawah ponsel), padahal FixMaster memakai 12px di tempat yang sama. Probe hanya melaporkan teks terkecil per halaman, jadi yang terlihat hanya label 10,5px (143 baris di zoom 100%). Catatan L-47 yang menyebut probe zoom "sama dengan L-46" keliru untuk gerbang ini.
+- 2026-11-21 - L-48 - Utang dari L-47 (K-01), belum diperbaiki (di luar L-48, mengubah kerangka di semua halaman): gerbang lantai 12px `audit-zoom` gagal di semua halaman sejak L-47. Kerangka dens-ui memakai teks 10-11px (label "Dashboard" sidebar 10,5px, chip zoom topbar, angka lencana menu, label dan angka menu bawah ponsel), padahal FixMaster memakai 12px di tempat yang sama. Probe hanya melaporkan teks terkecil per halaman, jadi yang terlihat hanya label 10,5px (143 baris di zoom 100%). Catatan L-47 yang menyebut probe zoom "sama dengan L-46" keliru untuk gerbang ini.
 - 2026-11-21 - L-48 - Spine warna di tepi baris dan kartu tiket (motif FixMaster) tidak dibawa; warna status hanya di lencana (`STATUS_BADGE`). Modal yang dibuka dari daftar (status, kirim WA/nota, tiket jadi, pemilih sparepart) masih FixMaster sampai L-49; isi panelnya sama per piksel dengan sebelum L-48 (yang berbeda hanya latar halaman di luar sudut panel).
+- 2026-11-22 - L-49 - Hasil: detail tiket diukur di 12 ukuran (1920 sampai 1025, tablet sentuh 1024/834, iPhone 13, 320px) x 8 tiket demo tanpa luberan, tanpa isi keluar dari panelnya, kontrol >= 44px di layar sentuh, bilah aksi satu baris dan selebar kolom isi (juga saat sidebar dilipat). Konfirmasi hapus tiket, panel "Lainnya", dan form modal dadakan berfungsi; fokus kembali ke pemicunya. `audit-contrast` bersih; log `audit-mobile` dan `audit-zoom` identik dengan L-48; 12 halaman lain (termasuk daftar Servis) sama per piksel dengan L-48 (selisih hanya di wilayah derau, plus 3 piksel anti-alias ikon menu aktif); modal status, kirim WA, dan pemilih sparepart yang dibuka dari detail identik di dalam panelnya; impeccable 0 temuan; 1147 tes / 86 berkas, lint, build lolos.
+- 2026-11-22 - L-49 - Bilah aksi detail tiket dulu `fixed` dengan tepi kiri selebar sidebar dan bergeser lewat kelas `.collapsed` yang tidak lagi dipasang kerangka sejak L-47, jadi salah tempat saat sidebar dilipat (regresi L-47 yang belum tercatat). Kini `sticky` di dalam kolom isi. Ambang lipat aksi sekunder ke "Lainnya" ikut jumlah aksi (52/56/64rem), karena satu ambang 760px membuat bilah dua baris di tablet dan di tiket Selesai yang belum diambil.
 
 ## Arsip: rencana Next.js (dibatalkan 2026-11-21)
 Langkah di bawah tidak dikerjakan. Disimpan karena rujukan kriteria F-xx dan keputusan di dalamnya dipakai untuk L-45.

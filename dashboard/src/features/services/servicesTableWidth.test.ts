@@ -4,7 +4,6 @@ import modalTsxRaw from './ServiceModal.tsx?raw';
 import detailTsxRaw from './ServiceDetailPage.tsx?raw';
 import pickerTsxRaw from './SparepartPickerModal.tsx?raw';
 import pickerCssRaw from './SparepartPickerModal.module.css?raw';
-import detailCssRaw from './ServiceDetailPage.module.css?raw';
 import appCssRaw from '../../styles/app.css?raw';
 import themeRaw from '../../styles/nuara-theme.css?raw';
 import { STATUS_BADGE } from '@/lib/business/services';
@@ -17,7 +16,6 @@ const modalTsx = lf(modalTsxRaw);
 const detailTsx = lf(detailTsxRaw);
 const pickerTsx = lf(pickerTsxRaw);
 const pickerCss = lf(pickerCssRaw);
-const detailCss = lf(detailCssRaw);
 const appCss = lf(appCssRaw);
 const theme = lf(themeRaw);
 
@@ -253,13 +251,6 @@ describe('tampilan Daftar servis', () => {
     expect(pickerCss).not.toMatch(/#[0-9a-f]{3,8}\b/i);
   });
 
-  it('kartu biaya di detail tiket berbingkai 1px (tanpa tepi kiri tebal) dan angka besar memakai token', () => {
-    const notice = detailCss.slice(detailCss.indexOf('.costNotice {'));
-    const noticeBody = notice.slice(0, notice.indexOf('}'));
-    expect(noticeBody).not.toContain('border-left-width');
-    expect(detailCss).not.toMatch(/font-size:\s*3rem/);
-    expect(detailCss).toMatch(/\.nfCode \{[^}]*font-size: var\(--text-3xl\);/);
-  });
 
   it('status ambil dan tertahan satu zona di lajur status, titiknya tak terjepit', () => {
     const device = tsx.slice(tsx.indexOf('data-seg="device"'), tsx.indexOf('data-seg="notes"'));
@@ -434,5 +425,58 @@ describe('form Servis Baru (L-48)', () => {
 
   it('isian rupiah, nomor, dan kunci layar memakai huruf mono; placeholdernya tidak', () => {
     expect(modalTsx.match(/font-mono[^"]*placeholder:font-sans/g)).toHaveLength(4);
+  });
+});
+
+describe('detail tiket (L-49)', () => {
+  it('kelas detail tiket dibuat: berkasnya ada di @source, akarnya data-nu', () => {
+    expect(appCss).toContain('@source "../features/services/ServiceDetailPage.tsx";');
+    expect(appCss).toContain('@source "../features/services/ScreenLockReadout.tsx";');
+    expect(detailTsx).toContain('<div data-nu className="@container/detail');
+    expect(detailTsx).not.toContain('styles.');
+  });
+
+  it('pemberitahuan biaya berbingkai di keempat sisi (bukan tepi kiri tebal) dan 404 memakai skala teks tema', () => {
+    const notice = detailTsx.slice(detailTsx.indexOf('{costStale && costLocked && ('));
+    const noticeBox = notice.slice(0, notice.indexOf('role="status"'));
+    expect(noticeBox).toContain('ring-1');
+    expect(noticeBox).not.toMatch(/border-l-|border-left/);
+    expect(detailTsx).toContain('<span className="font-mono text-3xl font-semibold">404</span>');
+  });
+
+  it('yang menjaga muat/tidak muat memakai container query: tahap, kolom, baris sparepart, bilah aksi', () => {
+    // Tahap tersusun ke bawah di wadah sempit, kolom jadi dua hanya bila halaman cukup lebar.
+    expect(detailTsx).toContain("cn(panel, '@container/trav')");
+    expect(detailTsx).toContain('@max-[36rem]/trav:grid-cols-1');
+    expect(detailTsx).toContain('grid gap-4 @min-[44rem]/detail:grid-cols-2');
+    // Baris sparepart: enam lajur butuh ±470px (terukur di FixMaster).
+    expect(detailTsx).toContain('@container/bom');
+    expect(detailTsx).toContain('@max-[470px]/bom:flex');
+    // Aksi sekunder pindah ke "Lainnya" bila bilahnya sempit, bukan bila layarnya sempit.
+    // Ambangnya ikut jumlah aksi sekunder, supaya bilah tetap satu baris.
+    expect(detailTsx).toContain("place === 'bar' && !a.primary && barFold.hide");
+    expect(detailTsx).toContain("className={cn('hidden', barFold.more)}");
+    for (const rem of ['64rem', '56rem', '52rem']) {
+      expect(detailTsx).toContain(`{ hide: '@max-[${rem}]/bar:hidden', more: '@max-[${rem}]/bar:inline-flex' }`);
+    }
+    expect(detailTsx).not.toMatch(/@media|useMediaQuery/);
+  });
+
+  it('bilah aksi menempel selebar kolom isi (sticky), bukan fixed dengan tepi kiri = lebar sidebar', () => {
+    // Fixed + left: var(--sidebar-width) salah tempat saat sidebar dilipat (tak ada lagi kelas .collapsed).
+    expect(detailTsx).toContain('@container/bar sticky bottom-0');
+    expect(detailTsx).not.toContain('fixed bottom-0');
+    expect(detailTsx).not.toContain('--sidebar-width');
+  });
+
+  it('satu daftar aksi untuk bilah dan panel "Lainnya"', () => {
+    expect(detailTsx).toContain("{actions.map((a) => renderAction(a, 'bar'))}");
+    expect(detailTsx).toContain("{secondaryActions.map((a) => renderAction(a, 'sheet', () => setMoreOpen(false)))}");
+  });
+
+  it('status di kepala tiket memakai peta lencana yang sama dengan daftar; cap dan label REPAIR TICKET dibuang (K-10)', () => {
+    expect(detailTsx).toContain('<Badge variant={STATUS_BADGE[service.status]}');
+    expect(detailTsx).not.toContain('REPAIR TICKET');
+    expect(detailTsx).not.toContain('STATUS_TONE');
   });
 });

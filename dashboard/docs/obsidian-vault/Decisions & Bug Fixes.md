@@ -13,6 +13,31 @@ Catatan keputusan desain penting + bug nyata yang ditemukan saat verifikasi.
 
 ## Keputusan desain
 
+### Detail tiket pindah ke dens-ui (L-49, 22 Nov 2026)
+`ServiceDetailPage` dan `ScreenLockReadout` ditulis ulang dengan Tailwind + dens-ui;
+`ServiceDetailPage.module.css` (983 baris) dihapus. Logika tidak berubah (sparepart + stok,
+modal dadakan + kas, ambil unit, hapus tiket bersih, salin tautan lacak, QR). L-49 lama dipecah
+(K-08): modal Ubah Status + Tiket Jadi pindah ke L-59, modal lain ke L-60; selama itu modal
+FixMaster yang dibuka dari detail tampil sama per piksel di dalam panelnya.
+- **Susunan FixMaster dipertahankan** (K-09): kepala tiket, tahap, kisi kartu, bilah aksi.
+  Label "REPAIR TICKET" dan cap status miring dibuang; status memakai `STATUS_BADGE` (K-10).
+- **Bilah aksi `sticky`, bukan `fixed`.** Versi FixMaster `position: fixed; left:
+  var(--sidebar-width)` dan menggeser diri lewat kelas global `.collapsed`, yang tidak lagi
+  dipasang kerangka sejak L-47: saat sidebar dilipat bilahnya mulai 200px terlalu ke kanan.
+  `sticky bottom-0` di akhir kolom isi selalu selebar isi, tanpa tahu lebar sidebar.
+- **Ambang lipat aksi ikut jumlah aksi.** Aksi sekunder pindah ke "Lainnya" bila bilah lebih
+  sempit dari kebutuhannya: 52rem untuk <=3 aksi sekunder, 56rem untuk 4, 64rem untuk >=5
+  (container query `bar`). Satu ambang 760px (FixMaster) membuat bilah dua baris di tablet 834px
+  dan di 1280px untuk tiket Selesai yang belum diambil (6 aksi). Diukur: 12 ukuran x 8 tiket demo,
+  bilah selalu satu baris.
+- Yang menjaga muat/tidak muat kini container query: tahap (tersusun ke bawah di wadah <36rem),
+  kolom kartu (dua kolom di wadah >=44rem), baris sparepart (<470px, ambang FixMaster), form
+  modal dadakan. FixMaster memakai media query 760px dan 520px.
+- Verifikasi: tanpa luberan dan tanpa isi keluar panel di 12 ukuran x 8 tiket; kontrol >= 44px
+  di layar sentuh; fokus kembali ke pemicu setelah konfirmasi hapus dan panel "Lainnya";
+  `audit-contrast` bersih; 12 halaman lain (termasuk daftar Servis) dan modal status, kirim WA,
+  pemilih sparepart dari detail sama per piksel; impeccable 0 temuan; 1147 tes.
+
 ### Daftar tiket Servis dan form Servis Baru pindah ke dens-ui (L-48, 21 Nov 2026)
 `ServicesPage` dan `ServiceModal` (form Servis Baru/Ubah, P17.1) ditulis ulang dengan Tailwind +
 dens-ui; dua CSS Module-nya (±1.200 baris) dihapus. Logika tidak berubah: jendela 31 hari + arsip,

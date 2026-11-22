@@ -1,5 +1,24 @@
-import { EmptyValue } from '@/components/ui/EmptyValue';
 import { useMemo, useState } from 'react';
+import {
+  ArrowLeft,
+  ArrowRight,
+  Banknote,
+  Check,
+  CircleCheck,
+  Cpu,
+  Ellipsis,
+  Info,
+  Link2,
+  LoaderCircle,
+  Package,
+  PackageOpen,
+  Pencil,
+  Plus,
+  Printer,
+  ShieldCheck,
+  Trash2,
+  type LucideIcon,
+} from 'lucide-react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCollection, invalidateCollection } from '@/hooks/useCollection';
@@ -36,10 +55,19 @@ import {
 import { applyBalance } from '@/lib/business/finance';
 import { localDateStr } from '@/lib/time';
 import { newId } from '@/lib/id';
-import { fmtRpInput, parseRpInput } from '@/lib/format';
+import { EMPTY_VALUE, fmtRpInput, parseRpInput } from '@/lib/format';
+import { cn } from '@/lib/utils';
 import { logActivity } from '@/lib/activity';
 import { getLastExpenseWallet, setLastExpenseWallet } from '@/config/orgConfig';
-import { Button, ConfirmDialog, Icon, Input, LoadState, Modal, Select, type IconName } from '@/components/ui';
+import { LoadState } from '@/components/ui';
+import { Badge } from '@/components/dens/badge';
+import { Button } from '@/components/dens/button';
+import { ConfirmDialog } from '@/components/dens/confirm-dialog';
+import { Field } from '@/components/dens/field';
+import { FormDialog } from '@/components/dens/form-dialog';
+import { SelectBox } from '@/components/dens/select-box';
+import { TextInput } from '@/components/dens/text-input';
+import { WhatsAppIcon } from '@/components/dens/whatsapp-icon';
 import { ServiceModal } from './ServiceModal';
 import { StatusModal } from './StatusModal';
 import { NotifyModal } from './NotifyModal';
@@ -50,16 +78,15 @@ import { WarrantyClaimModal } from './WarrantyClaimModal';
 import { SparepartPickerModal } from './SparepartPickerModal';
 import { PartWarrantyModal } from './PartWarrantyModal';
 import type { ServiceHistoryEntry, ServiceStatus, ServiceSparepart } from '@/data/types';
-import styles from './ServiceDetailPage.module.css';
 import { interpolate } from '@/lib/business/notify';
 import { PICKUP_NOTE, UNPICK_NOTE, serviceDeleteBlocker } from '@/lib/business/services';
-import { historyKind, STATUS_TONE } from '@/lib/business/services';
+import { historyKind, STATUS_BADGE } from '@/lib/business/services';
 import { qrSvg } from '@/lib/qr';
 
 /** Linear "job traveler" stages (cancel handled separately). */
 interface TicketAction {
   key: string;
-  icon: IconName;
+  icon: LucideIcon;
   label: string;
   primary?: boolean;
   active?: boolean;
@@ -157,11 +184,11 @@ export function ServiceDetailPage() {
       );
     }
     return (
-      <div className={styles.notFound}>
-        <span className={styles.nfCode}>404</span>
-        <p>{t('serviceDetail.notFound')}</p>
-        <Button variant="secondary" onClick={() => navigate('/services')}>
-          <Icon name="arrow-left" aria-hidden /> {t('serviceDetail.backToList')}
+      <div data-nu className="flex flex-col items-center gap-4 px-6 py-16 text-center">
+        <span className="font-mono text-3xl font-semibold">404</span>
+        <p className="text-muted-foreground">{t('serviceDetail.notFound')}</p>
+        <Button variant="outline" onClick={() => navigate('/services')}>
+          <ArrowLeft aria-hidden /> {t('serviceDetail.backToList')}
         </Button>
       </div>
     );
@@ -532,15 +559,15 @@ export function ServiceDetailPage() {
   // Satu daftar aksi untuk bilah bawah DAN panel "Lainnya" di ponsel, supaya
   // syarat tampil tiap aksi tidak ditulis dua kali.
   const actions: TicketAction[] = [
-    { key: 'edit', icon: 'pen', label: t('serviceDetail.edit'), onClick: () => setEditOpen(true) },
+    { key: 'edit', icon: Pencil, label: t('serviceDetail.edit'), onClick: () => setEditOpen(true) },
     ...(org
-      ? [{ key: 'print', icon: 'print' as const, label: t('serviceDetail.printReceipt'), onClick: servicePrint.print }]
+      ? [{ key: 'print', icon: Printer, label: t('serviceDetail.printReceipt'), onClick: servicePrint.print }]
       : []),
     ...(isManager && (isAwaitingPickup(service) || service.pickedUp)
       ? [
           {
             key: 'pickup',
-            icon: (service.pickedUp ? 'circle-check' : 'box') as IconName,
+            icon: service.pickedUp ? CircleCheck : Package,
             label: service.pickedUp
               ? t('serviceDetail.pickedUp')
               : service.status === 'lunas'
@@ -553,78 +580,123 @@ export function ServiceDetailPage() {
         ]
       : []),
     ...(claimable
-      ? [{ key: 'claim', icon: 'shield-halved' as const, label: t('serviceDetail.claimWarranty'), primary: service.pickedUp, onClick: () => setClaimOpen(true) }]
+      ? [{ key: 'claim', icon: ShieldCheck, label: t('serviceDetail.claimWarranty'), primary: service.pickedUp, onClick: () => setClaimOpen(true) }]
       : []),
     ...(openClaim
-      ? [{ key: 'open-claim', icon: 'shield-halved' as const, label: interpolate(t('serviceDetail.claimRunning'), { no: openClaim.serviceNo }), to: `/services/${openClaim.id}` }]
+      ? [{ key: 'open-claim', icon: ShieldCheck, label: interpolate(t('serviceDetail.claimRunning'), { no: openClaim.serviceNo }), to: `/services/${openClaim.id}` }]
       : []),
     ...(!isTerminal(service.status)
       ? [
           onlyDp
-            ? { key: 'status', icon: 'money-bill-wave' as const, label: t('serviceDetail.receiveDp'), primary: true, onClick: () => openStatus() }
-            : { key: 'status', icon: 'arrow-right' as const, iconRight: true, label: t('serviceDetail.updateStatus'), primary: !canHandover, onClick: () => openStatus() },
+            ? { key: 'status', icon: Banknote, label: t('serviceDetail.receiveDp'), primary: true, onClick: () => openStatus() }
+            : { key: 'status', icon: ArrowRight, iconRight: true, label: t('serviceDetail.updateStatus'), primary: !canHandover, onClick: () => openStatus() },
         ]
       : []),
     // Selesai → pelanggan datang: lunasi + tandai diambil dalam satu alur, lalu
     // panel serah unit (nota, WA). Dulu empat langkah dan berakhir di toast.
     ...(canHandover
-      ? [{ key: 'handover', icon: 'box-open' as const, label: t('serviceDetail.handover'), primary: true, onClick: () => openStatus(true) }]
+      ? [{ key: 'handover', icon: PackageOpen, label: t('serviceDetail.handover'), primary: true, onClick: () => openStatus(true) }]
       : []),
     ...(service.status === 'lunas' && isManager
-      ? [{ key: 'correct', icon: 'pen' as const, label: t('serviceDetail.correctCost'), onClick: () => openStatus() }]
+      ? [{ key: 'correct', icon: Pencil, label: t('serviceDetail.correctCost'), onClick: () => openStatus() }]
       : []),
     // Hapus permanen: owner saja, dan hanya tiket bersih (0101). Tombolnya
     // tetap tampil untuk tiket yang belum bersih; ketukan menjelaskan alasannya.
     ...(isOwner && service.status !== 'lunas'
-      ? [{ key: 'delete', icon: 'trash' as const, label: t('serviceDelete.button'), onClick: requestDelete }]
+      ? [{ key: 'delete', icon: Trash2, label: t('serviceDelete.button'), onClick: requestDelete }]
       : []),
   ];
   const secondaryActions = actions.filter((a) => !a.primary);
-  const renderAction = (a: TicketAction, className: string, after?: () => void) => {
-    const cls = [className, a.active ? styles.pickedActive : ''].join(' ');
+  // Lebar bilah yang dibutuhkan bergantung pada jumlah aksi (label 90-150px).
+  // Di bawah ambangnya aksi sekunder pindah ke "Lainnya", supaya bilah tetap
+  // satu baris. Kelas ditulis utuh karena Tailwind hanya membuat kelas yang tertulis.
+  const barFold =
+    secondaryActions.length >= 5
+      ? { hide: '@max-[64rem]/bar:hidden', more: '@max-[64rem]/bar:inline-flex' }
+      : secondaryActions.length === 4
+        ? { hide: '@max-[56rem]/bar:hidden', more: '@max-[56rem]/bar:inline-flex' }
+        : { hide: '@max-[52rem]/bar:hidden', more: '@max-[52rem]/bar:inline-flex' };
+  // Satu bentuk tombol untuk bilah bawah dan panel "Lainnya". Di bilah bawah aksi
+  // sekunder disembunyikan bila bilahnya sempit (container query `bar`), dan
+  // tombol "Lainnya" menggantikannya; dulu Ubah, Cetak Nota, Koreksi Biaya lenyap
+  // di ponsel pemilik.
+  const renderAction = (a: TicketAction, place: 'bar' | 'sheet', after?: () => void) => {
+    const Glyph = a.icon;
     const content = a.iconRight ? (
       <>
-        {a.label} <Icon name={a.icon} aria-hidden />
+        {a.label} <Glyph aria-hidden />
       </>
     ) : (
       <>
-        <Icon name={a.icon} aria-hidden /> {a.label}
+        <Glyph aria-hidden /> {a.label}
       </>
     );
+    const className = cn(
+      place === 'sheet' && 'h-auto min-h-11 w-full justify-start whitespace-normal py-2.5 text-left',
+      place === 'bar' && !a.primary && barFold.hide,
+      // Bilah sempit (ponsel): tombol tetap sebaris, labelnya boleh dua baris.
+      place === 'bar' &&
+        '@max-[30rem]/bar:h-auto @max-[30rem]/bar:min-h-11 @max-[30rem]/bar:whitespace-normal @max-[30rem]/bar:py-2 @max-[30rem]/bar:text-center @max-[30rem]/bar:leading-tight',
+      a.active && 'border-success-foreground/40 bg-success text-success-foreground hover:bg-success',
+    );
+    const variant = place === 'bar' && a.primary ? 'default' : 'outline';
     return a.to ? (
-      <Link key={a.key} className={cls} to={a.to} onClick={after}>
-        {content}
-      </Link>
+      <Button key={a.key} asChild variant={variant} className={className}>
+        <Link to={a.to} onClick={after}>
+          {content}
+        </Link>
+      </Button>
     ) : (
-      <button
+      <Button
         key={a.key}
-        className={cls}
+        variant={variant}
+        className={className}
         onClick={() => {
           after?.();
           a.onClick?.();
         }}
       >
         {content}
-      </button>
+      </Button>
     );
   };
 
+  // Isi sel yang memang kosong: mata melihat tanda pisah, pembaca layar mendengar "kosong".
+  const emptyValue = (
+    <>
+      <span aria-hidden="true">{EMPTY_VALUE}</span>
+      <span className="sr-only">{t('common.emptyValue')}</span>
+    </>
+  );
+  const panel = 'min-w-0 rounded-2xl bg-card p-5 text-card-foreground shadow-panel ring-1 ring-border/60 compact:p-4';
+  const panelTitle = 'mb-4 border-b border-border/70 pb-3 font-mono text-xs font-medium uppercase tracking-[0.06em] text-muted-foreground';
+  const metaDot = <span aria-hidden className="size-1 shrink-0 rounded-full bg-muted-foreground/50" />;
+  const costRow = 'flex items-baseline justify-between gap-3 text-sm';
+  const money = 'font-mono tabular-nums';
+
   return (
-    <div className={styles.page}>
-      {/* Back link */}
-      <Link to="/services" className={styles.back}>
-        <Icon name="arrow-left" aria-hidden /> {t('nav.services')}
+    <div data-nu className="@container/detail flex flex-col gap-4">
+      <Link
+        to="/services"
+        className="inline-flex w-fit items-center gap-2 text-sm text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:rounded focus-visible:ring-2 focus-visible:ring-ring pointer-coarse:min-h-11 [&_svg]:size-4"
+      >
+        <ArrowLeft aria-hidden /> {t('nav.services')}
       </Link>
 
       {service.warrantyClaimOf && (
-        <div className={styles.claimBanner}>
-          <Icon name="shield-halved" aria-hidden />
+        <div className="flex items-start gap-2.5 rounded-2xl bg-highlight-soft px-4 py-3 text-sm text-foreground ring-1 ring-highlight/40 [&>svg]:mt-0.5 [&>svg]:size-4 [&>svg]:shrink-0">
+          <ShieldCheck aria-hidden />
           <span>
             {t('serviceDetail.claimBanner')} <strong>{t('serviceDetail.claimBannerStrong')}</strong>
             {originTicket ? (
               <>
                 {' '}{t('serviceDetail.claimFrom')}{' '}
-                <Link to={`/services/${originTicket.id}`}>{originTicket.serviceNo}</Link>
+                <Link
+                  to={`/services/${originTicket.id}`}
+                  className="font-mono font-semibold underline underline-offset-4 hover:text-primary"
+                >
+                  {originTicket.serviceNo}
+                </Link>
               </>
             ) : (
               t('serviceDetail.claimOriginMissing')
@@ -646,66 +718,78 @@ export function ServiceDetailPage() {
         </div>
       )}
 
-      <div className={styles.sheet}>
-        {/* ---------- Ticket Head ---------- */}
-        <header className={styles.head}>
-          <div className={styles.headMain}>
-            <div className={styles.codeRow}>
-              <span className={styles.code}>{service.serviceNo}</span>
-              <span className={styles.codeMeta}>REPAIR TICKET</span>
-            </div>
-            {/* h2: judul halaman (h1) ada di Topbar. */}
-            <h2 className={styles.device}>{service.device}</h2>
-            <p className={styles.deviceMeta}>
-              <span className={styles.cat}>{service.category}</span>
-              <span className={styles.dot} />
-              {fmtDate(service.createdAt)}
-              {service.technicianName && (
-                <>
-                  <span className={styles.dot} />
-                  {t('serviceDetail.technician')} <strong>{service.technicianName}</strong>
-                </>
+      {/* ---------- Kepala tiket ---------- */}
+      <header className={cn(panel, 'flex flex-col gap-2')}>
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+          <span className="font-mono text-lg font-semibold tracking-tight">{service.serviceNo}</span>
+          <Badge variant={STATUS_BADGE[service.status]} className="px-3 py-1 text-sm">
+            {t(`statusLabel.${service.status}`)}
+          </Badge>
+        </div>
+        {/* h2: judul halaman (h1) ada di Topbar. */}
+        <h2 className="text-2xl font-semibold leading-tight tracking-[-0.02em] [overflow-wrap:anywhere]">
+          {service.device}
+        </h2>
+        <p className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-sm text-muted-foreground">
+          <Badge variant="outline" className="font-medium">
+            {service.category}
+          </Badge>
+          {metaDot}
+          {fmtDate(service.createdAt)}
+          {service.technicianName && (
+            <>
+              {metaDot}
+              <span>
+                {t('serviceDetail.technician')} <strong className="font-semibold text-foreground">{service.technicianName}</strong>
+              </span>
+            </>
+          )}
+          {service.warrantyServiceUntil ? (
+            <>
+              {metaDot}
+              {interpolate(t('serviceDetail.serviceWarranty'), { date: fmtDate(service.warrantyServiceUntil) })}
+            </>
+          ) : (
+            warrantyDecided(service) && (
+              <>
+                {metaDot}
+                {t('serviceDetail.noServiceWarranty')}
+              </>
+            )
+          )}
+          {service.warrantyPartsUntil && (
+            <>
+              {metaDot}
+              {interpolate(t('serviceDetail.partWarranty'), { date: fmtDate(service.warrantyPartsUntil) })}
+            </>
+          )}
+          {metaDot}
+          {service.pickedUp ? (
+            <span className="inline-flex items-center gap-1.5 [&_svg]:size-3.5">
+              <CircleCheck aria-hidden /> {t('serviceDetail.pickedUp')}
+              {service.pickedUpAt ? ` · ${fmtDate(service.pickedUpAt)}` : ''}
+            </span>
+          ) : (
+            <span
+              className={cn(
+                'inline-flex items-center gap-1.5 [&_svg]:size-3.5',
+                isAwaitingPickup(service) && 'font-semibold text-foreground',
               )}
-              {service.warrantyServiceUntil ? (
-                <>
-                  <span className={styles.dot} />
-                  {interpolate(t('serviceDetail.serviceWarranty'), { date: fmtDate(service.warrantyServiceUntil) })}
-                </>
-              ) : (
-                warrantyDecided(service) && (
-                  <>
-                    <span className={styles.dot} />
-                    {t('serviceDetail.noServiceWarranty')}
-                  </>
-                )
-              )}
-              {service.warrantyPartsUntil && (
-                <>
-                  <span className={styles.dot} />
-                  {interpolate(t('serviceDetail.partWarranty'), { date: fmtDate(service.warrantyPartsUntil) })}
-                </>
-              )}
-              <span className={styles.dot} />
-              {service.pickedUp ? (
-                <span className={styles.pickedUp}>
-                  <Icon name="circle-check" aria-hidden /> {t('serviceDetail.pickedUp')}
-                  {service.pickedUpAt ? ` · ${fmtDate(service.pickedUpAt)}` : ''}
-                </span>
-              ) : (
-                <span className={styles.notPicked} data-ready={isAwaitingPickup(service) || undefined}>
-                  <Icon name="box" aria-hidden /> {t('serviceDetail.notPickedUp')}
-                </span>
-              )}
-            </p>
-          </div>
-          <div className={styles.stamp} data-tone={STATUS_TONE[service.status]}>
-            <span className={styles.stampInner}>{t(`statusLabel.${service.status}`)}</span>
-          </div>
-        </header>
+            >
+              {/* Titik amber: unit siap diambil menuntut perhatian. */}
+              {isAwaitingPickup(service) && <span aria-hidden className="size-2 shrink-0 rounded-full bg-highlight" />}
+              <Package aria-hidden /> {t('serviceDetail.notPickedUp')}
+            </span>
+          )}
+        </p>
+      </header>
 
-        {/* ---------- Traveler Strip ---------- */}
-        {!cancelled && (
-          <section className={styles.traveler}>
+      {/* ---------- Tahap ---------- */}
+      {!cancelled && (
+        <section className={cn(panel, '@container/trav')} aria-label={t('common.status')}>
+          {/* Tujuh tahap berjajar bila wadahnya muat; di wadah sempit (container
+              query, jadi zoom aplikasi ikut dihitung) tersusun ke bawah. */}
+          <ol className="m-0 grid list-none grid-cols-7 gap-1 p-0 @max-[36rem]/trav:grid-cols-1 @max-[36rem]/trav:gap-0.5">
             {TRAVELER.map((stage, i) => {
               const at = stageAt(stage);
               // Hanya tahap yang benar-benar tercatat di riwayat yang dicentang.
@@ -717,162 +801,171 @@ export function ServiceDetailPage() {
               const skipped = passed && !at;
               const current = i === currentIndex;
               return (
-                <div
+                <li
                   key={stage}
-                  className={[
-                    styles.stage,
-                    done ? styles.stageDone : '',
-                    skipped ? styles.stageSkipped : '',
-                    current ? styles.stageCurrent : '',
-                  ].join(' ')}
+                  aria-current={current ? 'step' : undefined}
+                  className="relative flex min-w-0 flex-col items-center gap-1.5 text-center @max-[36rem]/trav:flex-row @max-[36rem]/trav:gap-3 @max-[36rem]/trav:py-1 @max-[36rem]/trav:text-left"
                 >
-                  <div className={styles.stageNode}>
-                    {done ? <Icon name="check" aria-hidden /> : <span>{i + 1}</span>}
-                  </div>
-                  <div className={styles.stageInfo}>
-                    <span className={styles.stageLabel}>{t(`status.${stage}`)}</span>
-                    <span className={styles.stageAt}>{at ?? (skipped ? t('serviceDetail.skipped') : <EmptyValue />)}</span>
-                  </div>
-                  {i < TRAVELER.length - 1 && <span className={styles.connector} />}
-                </div>
+                  {i > 0 && (
+                    <span
+                      aria-hidden
+                      className={cn(
+                        'absolute right-1/2 top-4 h-0.5 w-full -translate-y-1/2 @max-[36rem]/trav:hidden',
+                        done || current ? 'bg-primary' : 'bg-border',
+                      )}
+                    />
+                  )}
+                  {/* z-[1]: garis milik tahap berikutnya muncul belakangan di DOM dan melintasi separuh lingkaran ini. */}
+                  <span
+                    className={cn(
+                      'relative z-[1] grid size-8 shrink-0 place-items-center rounded-full font-mono text-xs font-semibold [&_svg]:size-4',
+                      done && 'bg-primary text-primary-foreground',
+                      current && 'bg-highlight text-highlight-foreground',
+                      skipped && 'border border-dashed border-border bg-card text-muted-foreground',
+                      !done && !current && !skipped && 'bg-card text-muted-foreground ring-1 ring-border',
+                    )}
+                  >
+                    {done ? <Check aria-hidden /> : i + 1}
+                  </span>
+                  <span className="flex min-w-0 flex-col items-center gap-0.5 @max-[36rem]/trav:flex-row @max-[36rem]/trav:items-baseline @max-[36rem]/trav:gap-2">
+                    <span className={cn('text-xs', current ? 'font-semibold text-foreground' : 'font-medium text-foreground/80')}>
+                      {t(`status.${stage}`)}
+                    </span>
+                    <span className={cn('font-mono text-xs text-muted-foreground', skipped && 'italic')}>
+                      {at ?? (skipped ? t('serviceDetail.skipped') : emptyValue)}
+                    </span>
+                  </span>
+                </li>
               );
             })}
-          </section>
-        )}
+          </ol>
+        </section>
+      )}
 
-        {/* ---------- Customer stub + Intake ---------- */}
-        <section className={styles.cols}>
-          <div className={[styles.panel, styles.stub].join(' ')}>
-            <div className={styles.panelLabel}>{t('serviceDetail.customerLabel')}</div>
-            <div className={styles.stubName}>{service.customerName}</div>
-            <div className={styles.stubPhone}>{service.customerPhone || <EmptyValue />}</div>
-            <div className={styles.stubActions}>
-              <button className={styles.waBtn} onClick={() => setNotifyOpen(true)}>
-                <Icon name="whatsapp" aria-hidden /> WhatsApp
-              </button>
-              <button
-                className={styles.ghostBtn}
-                onClick={() => void copyTrackingLink()}
-              >
-                <Icon name="link" aria-hidden /> {t('serviceDetail.copyTracking')}
-              </button>
-            </div>
-            <div className={styles.qrRow}>
-              {/* QR sungguhan (dulu ikon yang tampak bisa dipindai tapi bukan kode):
-                  pelanggan memindainya dari layar untuk membuka halaman lacak. */}
-              <div
-                className={styles.qr}
-                role="img"
-                aria-label={t('serviceDetail.qrAria')}
-                dangerouslySetInnerHTML={{ __html: qrSvg(trackingLink, { size: 72, margin: 2 }) }}
-              />
-              <span className={styles.qrText}>{t('serviceDetail.qrText')}</span>
-            </div>
+      {/* Dua kolom selama halaman cukup lebar (container query). */}
+      <div className="grid gap-4 @min-[44rem]/detail:grid-cols-2">
+        {/* ---------- Pelanggan ---------- */}
+        <section className={panel}>
+          <h3 className={panelTitle}>{t('serviceDetail.customerLabel')}</h3>
+          <p className="text-lg font-semibold [overflow-wrap:anywhere]">{service.customerName}</p>
+          <p className="font-mono text-sm text-muted-foreground">{service.customerPhone || emptyValue}</p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" onClick={() => setNotifyOpen(true)}>
+              <WhatsAppIcon className="size-4" /> WhatsApp
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => void copyTrackingLink()}>
+              <Link2 aria-hidden /> {t('serviceDetail.copyTracking')}
+            </Button>
           </div>
-
-          <div className={styles.panel}>
-            <div className={styles.panelLabel}>{t('serviceDetail.intakeLabel')}</div>
-            <p className={styles.complaint}>{service.complaint || <EmptyValue />}</p>
-            <dl className={styles.specList}>
-              <div>
-                <dt>{t('serviceDetail.accessories')}</dt>
-                <dd>{service.accessories || <EmptyValue />}</dd>
-              </div>
-              <div>
-                <dt>{t('serviceDetail.category')}</dt>
-                <dd>{service.category}</dd>
-              </div>
-              {service.deviceSerial && (
-                <div>
-                  <dt>{t('serviceDetail.serial')}</dt>
-                  <dd className={styles.serial}>{service.deviceSerial}</dd>
-                </div>
-              )}
-              {service.deviceCondition && (
-                <div>
-                  <dt>{t('serviceDetail.condition')}</dt>
-                  <dd>{service.deviceCondition}</dd>
-                </div>
-              )}
-              {service.secretKind && (
-                <div>
-                  <dt>{t('serviceDetail.screenLock')}</dt>
-                  <dd>
-                    <ScreenLockReadout
-                      service={service}
-                      canView={isManager || (!!me && service.technicianId === me.id)}
-                    />
-                  </dd>
-                </div>
-              )}
-            </dl>
+          <div className="mt-4 flex items-center gap-3">
+            {/* QR sungguhan: pelanggan memindainya dari layar untuk membuka halaman lacak. */}
+            <div
+              className="size-[72px] shrink-0 rounded-lg bg-white p-0.5 ring-1 ring-border/70 [&_svg]:size-full"
+              role="img"
+              aria-label={t('serviceDetail.qrAria')}
+              dangerouslySetInnerHTML={{ __html: qrSvg(trackingLink, { size: 72, margin: 2 }) }}
+            />
+            <span className="text-xs text-muted-foreground">{t('serviceDetail.qrText')}</span>
           </div>
         </section>
 
-        {/* ---------- Sparepart BOM ---------- */}
-        <section className={styles.panel}>
-          <div className={styles.bomHead}>
-            <div className={styles.panelLabel}>{t('serviceDetail.partsLabel')}</div>
+        {/* ---------- Penerimaan unit ---------- */}
+        <section className={panel}>
+          <h3 className={panelTitle}>{t('serviceDetail.intakeLabel')}</h3>
+          <p className="mb-4 text-sm [overflow-wrap:anywhere]">{service.complaint || emptyValue}</p>
+          <dl className="m-0 grid gap-2.5 text-sm">
+            {[
+              [t('serviceDetail.accessories'), service.accessories || emptyValue, ''],
+              [t('serviceDetail.category'), service.category, ''],
+              ...(service.deviceSerial ? [[t('serviceDetail.serial'), service.deviceSerial, 'font-mono']] : []),
+              ...(service.deviceCondition ? [[t('serviceDetail.condition'), service.deviceCondition, '']] : []),
+            ].map(([label, value, cls], i) => (
+              <div key={i} className="flex items-baseline justify-between gap-4">
+                <dt className="shrink-0 text-muted-foreground">{label}</dt>
+                <dd className={cn('m-0 min-w-0 text-right font-medium [overflow-wrap:anywhere]', cls as string)}>{value}</dd>
+              </div>
+            ))}
+            {service.secretKind && (
+              <div className="flex items-baseline justify-between gap-4">
+                <dt className="shrink-0 text-muted-foreground">{t('serviceDetail.screenLock')}</dt>
+                <dd className="m-0 min-w-0 text-right">
+                  <ScreenLockReadout
+                    service={service}
+                    canView={isManager || (!!me && service.technicianId === me.id)}
+                  />
+                </dd>
+              </div>
+            )}
+          </dl>
+        </section>
+
+        {/* ---------- Sparepart ---------- */}
+        <section className={cn(panel, '@min-[44rem]/detail:col-span-2')}>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-border/70 pb-3">
+            <h3 className="font-mono text-xs font-medium uppercase tracking-[0.06em] text-muted-foreground">
+              {t('serviceDetail.partsLabel')}
+            </h3>
             {canAddParts && (
-              <div className={styles.bomActions}>
+              <div className="flex flex-wrap gap-2">
                 {/* Garansi per part ditetapkan saat Selesai; tombol ini untuk part
                     yang ditambahkan belakangan atau koreksi. */}
                 {warrantyDecided(service) && service.spareparts.length > 0 && (
-                  <button className={styles.bomAddBtn} onClick={() => setPartWarrantyOpen(true)}>
-                    <Icon name="shield-halved" aria-hidden /> {t('serviceDetail.partWarrantyBtn')}
-                  </button>
+                  <Button variant="outline" size="sm" onClick={() => setPartWarrantyOpen(true)}>
+                    <ShieldCheck aria-hidden /> {t('serviceDetail.partWarrantyBtn')}
+                  </Button>
                 )}
-                <button className={styles.bomAddBtn} onClick={() => setPickerOpen(true)}>
-                  <Icon name="plus" aria-hidden /> {t('serviceDetail.sparepart')}
-                </button>
+                <Button variant="outline" size="sm" onClick={() => setPickerOpen(true)}>
+                  <Plus aria-hidden /> {t('serviceDetail.sparepart')}
+                </Button>
                 {/* Modal Dadakan = pengeluaran kas: owner/admin saja (RLS & RPC 0087). */}
                 {isManager && (
-                  <button className={styles.bomAddBtn} onClick={openModalForm}>
-                    <Icon name="plus" aria-hidden /> {t('serviceDetail.extraCost')}
-                  </button>
+                  <Button variant="outline" size="sm" onClick={openModalForm}>
+                    <Plus aria-hidden /> {t('serviceDetail.extraCost')}
+                  </Button>
                 )}
               </div>
             )}
           </div>
 
           {modalFormOpen && (
-            <div className={styles.modalForm}>
-              <Input
-                label={t('serviceDetail.modalName')}
-                value={modalName}
-                onChange={(e) => setModalName(e.target.value)}
-                placeholder={t('serviceDetail.modalNamePh')}
-                autoFocus
-              />
-              <div className={styles.modalFormRow}>
-                <Input
-                  label={t('serviceDetail.modalAmount')}
-                  value={modalAmount}
-                  onChange={(e) => setModalAmount(fmtRpInput(e.target.value))}
-                  placeholder="250.000"
+            <div className="@container/mform mb-4 grid gap-3 rounded-xl bg-surface p-4 ring-1 ring-border/60">
+              <Field label={t('serviceDetail.modalName')}>
+                <TextInput
+                  value={modalName}
+                  onChange={(e) => setModalName(e.target.value)}
+                  placeholder={t('serviceDetail.modalNamePh')}
+                  autoFocus
                 />
-                <Select
-                  label={t('serviceDetail.fromWallet')}
-                  value={modalWalletId}
-                  onChange={(e) => setModalWalletId(e.target.value)}
-                  options={wallets.map((w) => ({ value: w.id, label: w.name }))}
-                />
+              </Field>
+              <div className="grid gap-3 @min-[30rem]/mform:grid-cols-2">
+                <Field label={t('serviceDetail.modalAmount')}>
+                  <TextInput
+                    capitalize="none"
+                    inputMode="numeric"
+                    className="font-mono tabular-nums placeholder:font-sans"
+                    value={modalAmount}
+                    onChange={(e) => setModalAmount(fmtRpInput(e.target.value))}
+                    placeholder="250.000"
+                  />
+                </Field>
+                <Field label={t('serviceDetail.fromWallet')}>
+                  <SelectBox
+                    value={modalWalletId}
+                    onValueChange={setModalWalletId}
+                    options={wallets.map((w) => ({ value: w.id, label: w.name }))}
+                  />
+                </Field>
               </div>
-              <p className={styles.modalHint}>
-                <Icon name="circle-info" aria-hidden />{' '}
-                {editIndex == null
-                  ? t('serviceDetail.modalAddHint')
-                  : t('serviceDetail.modalEditHint')}
+              <p className="flex items-center gap-1.5 text-xs text-muted-foreground [&_svg]:size-3.5 [&_svg]:shrink-0">
+                <Info aria-hidden />
+                {editIndex == null ? t('serviceDetail.modalAddHint') : t('serviceDetail.modalEditHint')}
               </p>
-              <div className={styles.modalFormBtns}>
-                <Button variant="secondary" size="sm" onClick={closeModalForm}>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" size="sm" onClick={closeModalForm}>
                   {t('common.cancel')}
                 </Button>
-                <Button
-                  size="sm"
-                  onClick={editIndex == null ? addManualModal : updateManualModal}
-                  loading={savingCost}
-                >
+                <Button size="sm" onClick={editIndex == null ? addManualModal : updateManualModal} disabled={savingCost}>
+                  {savingCost && <LoaderCircle aria-hidden className="animate-spin motion-reduce:animate-none" />}
                   {t(editIndex == null ? 'serviceDetail.saveModal' : 'serviceDetail.updateModal')}
                 </Button>
               </div>
@@ -880,20 +973,35 @@ export function ServiceDetailPage() {
           )}
 
           {service.spareparts.length === 0 ? (
-            <p className={styles.emptyParts}>{t('serviceDetail.noParts')}</p>
+            <p className="text-sm text-muted-foreground">{t('serviceDetail.noParts')}</p>
           ) : (
-            <div className={styles.bom}>
+            // Enam lajur butuh ±470px (ikon + jumlah + biaya + status + dua tombol);
+            // di wadah lebih sempit nama mengambil baris pertama, sisanya baris kedua.
+            <ul className="@container/bom m-0 flex list-none flex-col p-0">
               {service.spareparts.map((p, i) => {
                 const manual = p.kind === 'manual';
+                const state = manual
+                  ? { variant: 'secondary' as const, label: t('serviceDetail.stateCash') }
+                  : cancelled
+                    ? p.deducted
+                      ? { variant: 'secondary' as const, label: t('serviceDetail.stateUsed') }
+                      : { variant: 'secondary' as const, label: t('serviceDetail.stateReturned') }
+                    : p.deducted
+                      ? { variant: 'success' as const, label: t('serviceDetail.stateFitted') }
+                      : { variant: 'warning' as const, label: t('serviceDetail.stateWaiting') };
+                const Glyph = manual ? Banknote : Cpu;
                 return (
-                  <div key={`${p.itemId ?? 'm'}-${i}`} className={styles.bomRow}>
-                    <span className={styles.bomIcon}>
-                      <Icon name={manual ? 'money-bill-wave' : 'microchip'} aria-hidden />
+                  <li
+                    key={`${p.itemId ?? 'm'}-${i}`}
+                    className="grid grid-cols-[1.75rem_minmax(0,1fr)_auto_auto_auto_auto] items-center gap-3 border-b border-border/70 py-2.5 last:border-b-0 @max-[470px]/bom:flex @max-[470px]/bom:flex-wrap @max-[470px]/bom:gap-x-3 @max-[470px]/bom:gap-y-1.5"
+                  >
+                    <span className="grid size-7 place-items-center rounded-lg bg-secondary text-secondary-foreground [&_svg]:size-3.5">
+                      <Glyph aria-hidden />
                     </span>
-                    <span className={styles.bomName}>
+                    <span className="flex min-w-0 flex-col text-sm font-medium [overflow-wrap:anywhere] @max-[470px]/bom:flex-[1_1_calc(100%-2.5rem)]">
                       {p.name}
                       {warrantyDecided(service) && (
-                        <small className={styles.bomWarranty}>
+                        <small className="text-xs font-normal text-muted-foreground">
                           {p.warrantyDays == null
                             ? t('serviceDetail.warrantyUnset')
                             : p.warrantyUntil
@@ -902,171 +1010,180 @@ export function ServiceDetailPage() {
                         </small>
                       )}
                     </span>
-                    <span className={styles.bomQty}>{manual ? '' : `×${p.qty}`}</span>
-                    <span className={styles.bomCost}>
+                    <span className={cn(money, 'text-sm text-muted-foreground @max-[470px]/bom:ml-10')}>
+                      {manual ? '' : `×${p.qty}`}
+                    </span>
+                    <span className={cn(money, 'whitespace-nowrap text-sm font-semibold')}>
                       {manual ? fmtMoney(p.costPrice) : fmtMoney(p.sellPrice * p.qty)}
                     </span>
-                    <span
-                      className={[
-                        styles.bomState,
-                        manual ? styles.stateModal : p.deducted ? styles.stateOk : styles.stateWait,
-                      ].join(' ')}
-                    >
-                      {manual
-                        ? t('serviceDetail.stateCash')
-                        : cancelled
-                          ? p.deducted
-                            ? t('serviceDetail.stateUsed')
-                            : t('serviceDetail.stateReturned')
-                          : p.deducted
-                            ? t('serviceDetail.stateFitted')
-                            : t('serviceDetail.stateWaiting')}
+                    <Badge variant={state.variant} className="@max-[470px]/bom:mr-auto">
+                      {state.label}
+                    </Badge>
+                    {/* Satu sel untuk semua tombol baris, supaya baris tak pernah punya trek ketujuh. */}
+                    <span className="flex justify-end gap-0.5">
+                      {!cancelled && manual && isManager && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-muted-foreground hover:text-foreground"
+                          onClick={() => openEditModal(i)}
+                          title={t('serviceDetail.editModal')}
+                          aria-label={t('serviceDetail.editModal')}
+                        >
+                          <Pencil aria-hidden />
+                        </Button>
+                      )}
+                      {/* Part terpasang di tiket Lunas sudah dibayar: stoknya tak bisa kembali (0088). */}
+                      {!cancelled && !(manual && !isManager) && !(service.status === 'lunas' && !manual && p.deducted) && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-muted-foreground hover:bg-destructive-soft hover:text-destructive"
+                          onClick={() => setToRemove(i)}
+                          title={t('serviceDetail.removeLine')}
+                          aria-label={interpolate(t('serviceDetail.removeAria'), { name: p.name })}
+                        >
+                          <Trash2 aria-hidden />
+                        </Button>
+                      )}
                     </span>
-                    {/* Satu sel untuk semua tombol baris: 7 anak di grid 6 trek dulu
-                        menurunkan tombol hapus ke baris baru. */}
-                    <span className={styles.bomActions}>
-                    {!cancelled && manual && isManager && (
-                      <button
-                        className={styles.bomEdit}
-                        onClick={() => openEditModal(i)}
-                        title={t('serviceDetail.editModal')}
-                        aria-label={t('serviceDetail.editModal')}
-                      >
-                        <Icon name="pen" aria-hidden />
-                      </button>
-                    )}
-                    {/* Part terpasang di tiket Lunas sudah dibayar: stoknya tak bisa kembali (0088). */}
-                    {!cancelled && !(manual && !isManager) && !(service.status === 'lunas' && !manual && p.deducted) && (
-                      <button
-                        className={styles.bomDel}
-                        onClick={() => setToRemove(i)}
-                        title={t('serviceDetail.removeLine')}
-                        aria-label={interpolate(t('serviceDetail.removeAria'), { name: p.name })}
-                      >
-                        <Icon name="trash" aria-hidden />
-                      </button>
-                    )}
-                    </span>
-                  </div>
+                  </li>
                 );
               })}
+            </ul>
+          )}
+        </section>
+
+        {/* ---------- Biaya ---------- */}
+        <section className={panel}>
+          <h3 className={panelTitle}>{t('serviceDetail.costLabel')}</h3>
+          <dl className="m-0 grid gap-2">
+            <div className={costRow}>
+              <dt className="text-muted-foreground">{t('serviceDetail.estimate')}</dt>
+              <dd className={cn('m-0', money)}>{fmtMoney(service.estimateCost)}</dd>
+            </div>
+            <div className={costRow}>
+              <dt className="text-muted-foreground">{t('serviceDetail.finalCost')}</dt>
+              <dd className={cn('m-0', service.finalCost > 0 && money)}>
+                {service.finalCost > 0 ? fmtMoney(service.finalCost) : t('serviceDetail.notSet')}
+              </dd>
+            </div>
+            {service.downPayment > 0 && (
+              <div className={costRow}>
+                <dt className="text-muted-foreground">{t('serviceDetail.dpReceived')}</dt>
+                <dd className={cn('m-0 text-muted-foreground', money)}>− {fmtMoney(service.downPayment)}</dd>
+              </div>
+            )}
+            {cancelled && keptDp !== null && keptDp > 0 && (
+              <div className={costRow}>
+                <dt className="text-muted-foreground">{t('serviceDetail.dpKept')}</dt>
+                <dd className={cn('m-0', money)}>{fmtMoney(keptDp)}</dd>
+              </div>
+            )}
+            <div className={cn(costRow, 'mt-1 border-t border-border/70 pt-3 font-semibold')}>
+              <dt>{billingReadout.label}</dt>
+              <dd className={cn('m-0 text-base', money)}>{billingReadout.value}</dd>
+            </div>
+            {isOwner && (
+              <>
+                <div className={costRow}>
+                  <dt className="text-muted-foreground">{t('serviceDetail.modalTotal')}</dt>
+                  <dd className={cn('m-0 text-muted-foreground', money)}>− {fmtMoney(modalTotal)}</dd>
+                </div>
+                <div className={cn(costRow, 'font-semibold')} data-loss={profitKnown && profit < 0}>
+                  <dt>{t('serviceDetail.unitProfit')}</dt>
+                  <dd
+                    className={cn(
+                      'm-0',
+                      money,
+                      profitKnown && (profit < 0 ? 'text-warning-foreground' : 'text-success-foreground'),
+                    )}
+                  >
+                    {profitKnown ? fmtMoney(profit) : emptyValue}
+                  </dd>
+                </div>
+              </>
+            )}
+          </dl>
+          {costStale && costLocked && (
+            <div
+              className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl bg-warning px-3.5 py-3 text-sm text-warning-foreground ring-1 ring-warning-foreground/20"
+              role="status"
+            >
+              <span aria-hidden className="size-2 shrink-0 rounded-full bg-warning-foreground" />
+              <p className="min-w-0 flex-1">
+                {interpolate(t(service.status === 'lunas' ? 'serviceDetail.costStalePaid' : 'serviceDetail.costStale'), {
+                  amount: fmtMoney(service.finalCost),
+                })}
+              </p>
+              {isManager && (
+                <Button type="button" variant="outline" size="sm" onClick={() => openStatus()}>
+                  {t(service.status === 'lunas' ? 'serviceDetail.correctCost' : 'serviceDetail.reviseAtSettle')}
+                </Button>
+              )}
             </div>
           )}
         </section>
 
-        {/* ---------- Cost + Log ---------- */}
-        <section className={styles.cols}>
-          <div className={styles.panel}>
-            <div className={styles.panelLabel}>{t('serviceDetail.costLabel')}</div>
-            <dl className={styles.costList}>
-              <div>
-                <dt>{t('serviceDetail.estimate')}</dt>
-                <dd>{fmtMoney(service.estimateCost)}</dd>
-              </div>
-              <div>
-                <dt>{t('serviceDetail.finalCost')}</dt>
-                <dd>{service.finalCost > 0 ? fmtMoney(service.finalCost) : t('serviceDetail.notSet')}</dd>
-              </div>
-              {service.downPayment > 0 && (
-                <div>
-                  <dt>{t('serviceDetail.dpReceived')}</dt>
-                  <dd className={styles.dp}>− {fmtMoney(service.downPayment)}</dd>
+        {/* ---------- Log ---------- */}
+        <section className={panel}>
+          <h3 className={panelTitle}>{t('serviceDetail.logLabel')}</h3>
+          <ul className="m-0 grid list-none gap-4 p-0">
+            {log.map((l, i) => (
+              <li
+                key={i}
+                className="relative pl-5 before:absolute before:left-[3px] before:top-1.5 before:size-2 before:rounded-full before:bg-primary after:absolute after:bottom-[-1rem] after:left-[6px] after:top-4 after:w-px after:bg-border last:after:hidden data-[internal=true]:before:bg-muted-foreground/50"
+                data-internal={l.internal || undefined}
+              >
+                <div className="flex flex-wrap items-center gap-2">
+                  <strong className="text-sm font-semibold">{historyLabel(l)}</strong>
+                  {l.internal && <Badge variant="secondary">{t('serviceDetail.internal')}</Badge>}
                 </div>
-              )}
-              {cancelled && keptDp !== null && keptDp > 0 && (
-                <div>
-                  <dt>{t('serviceDetail.dpKept')}</dt>
-                  <dd>{fmtMoney(keptDp)}</dd>
-                </div>
-              )}
-              <div className={styles.costTotal}>
-                <dt>{billingReadout.label}</dt>
-                <dd>{billingReadout.value}</dd>
-              </div>
-              {isOwner && (
-                <>
-                  <div>
-                    <dt>{t('serviceDetail.modalTotal')}</dt>
-                    <dd className={styles.dp}>− {fmtMoney(modalTotal)}</dd>
-                  </div>
-                  <div className={styles.costProfit} data-loss={profitKnown && profit < 0}>
-                    <dt>{t('serviceDetail.unitProfit')}</dt>
-                    <dd>{profitKnown ? fmtMoney(profit) : <EmptyValue />}</dd>
-                  </div>
-                </>
-              )}
-            </dl>
-            {costStale && costLocked && (
-              <div className={styles.costNotice} role="status">
-                <span className={styles.costNoticeLed} aria-hidden />
-                <p>
-                  {interpolate(t(service.status === 'lunas' ? 'serviceDetail.costStalePaid' : 'serviceDetail.costStale'), {
-                    amount: fmtMoney(service.finalCost),
-                  })}
-                </p>
-                {isManager && (
-                  <button type="button" className={styles.bomAddBtn} onClick={() => openStatus()}>
-                    {t(service.status === 'lunas' ? 'serviceDetail.correctCost' : 'serviceDetail.reviseAtSettle')}
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-
-          <div className={styles.panel}>
-            <div className={styles.panelLabel}>{t('serviceDetail.logLabel')}</div>
-            <ul className={styles.log}>
-              {log.map((l, i) => (
-                <li key={i} className={[styles.logItem, l.internal ? styles.logInternal : ''].join(' ')}>
-                  <span className={styles.logDot} />
-                  <div>
-                    <div className={styles.logHead}>
-                      <strong>{historyLabel(l)}</strong>
-                      {l.internal && <span className={styles.internalTag}>{t('serviceDetail.internal')}</span>}
-                    </div>
-                    <span className={styles.logAt}>
-                      {fmtDateTime(l.at)} · {l.byName}
-                    </span>
-                    {l.note && <p className={styles.logNote}>{l.note}</p>}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
+                <span className="font-mono text-xs text-muted-foreground">
+                  {fmtDateTime(l.at)} · {l.byName}
+                </span>
+                {l.note && <p className="mt-1 text-sm [overflow-wrap:anywhere]">{l.note}</p>}
+              </li>
+            ))}
+          </ul>
         </section>
       </div>
 
-      {/* ---------- Sticky action bar ---------- */}
-      <div className={styles.actionBar}>
-        <div className={styles.actionInfo}>
-          <span className={styles.actionLabel}>{billingReadout.label}</span>
-          <span className={styles.actionValue}>{billingReadout.value}</span>
-        </div>
-        <div className={styles.actionBtns}>
-          {actions.map((a) => renderAction(a, a.primary ? styles.primaryBtn : styles.secondaryBtn))}
-          {/* Di ≤760px aksi sekunder disembunyikan demi ruang; dulu tanpa pengganti,
-              sehingga Edit, Cetak Nota, Koreksi Biaya lenyap di ponsel pemilik. */}
-          {secondaryActions.length > 0 && (
-            <button
-              className={[styles.secondaryBtn, styles.moreBtn].join(' ')}
-              onClick={() => setMoreOpen(true)}
-              aria-haspopup="dialog"
-            >
-              <Icon name="dots-three" aria-hidden /> {t('serviceDetail.more')}
-            </button>
-          )}
+      {/* ---------- Bilah aksi ----------
+          Menempel di dasar layar selebar kolom isi (sticky, bukan fixed): dulu
+          fixed dengan tepi kiri = lebar sidebar, sehingga salah tempat saat
+          sidebar dilipat. Sekunder disembunyikan bila bilahnya sempit. */}
+      <div className="@container/bar sticky bottom-0 z-(--z-sticky) mt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+        <div className="flex items-center justify-between gap-4 rounded-2xl bg-card/90 px-5 py-3 shadow-raised ring-1 ring-border/70 backdrop-blur-md compact:px-4">
+          <div className="flex min-w-0 shrink-0 flex-col">
+            <span className="text-xs font-medium text-muted-foreground">{billingReadout.label}</span>
+            <span className={cn(money, 'text-lg font-semibold leading-tight')}>{billingReadout.value}</span>
+          </div>
+          <div className="flex min-w-0 flex-wrap justify-end gap-2 @max-[30rem]/bar:flex-nowrap">
+            {actions.map((a) => renderAction(a, 'bar'))}
+            {secondaryActions.length > 0 && (
+              <Button
+                variant="outline"
+                className={cn('hidden', barFold.more)}
+                onClick={() => setMoreOpen(true)}
+                aria-haspopup="dialog"
+              >
+                <Ellipsis aria-hidden /> {t('serviceDetail.more')}
+              </Button>
+            )}
+          </div>
         </div>
       </div>
-      <Modal
+      <FormDialog
         open={moreOpen}
         onClose={() => setMoreOpen(false)}
         title={`${t('serviceDetail.moreTitle')} · ${service.serviceNo}`}
         size="sm"
       >
-        <div className={styles.sheetList}>
-          {secondaryActions.map((a) => renderAction(a, styles.sheetAction, () => setMoreOpen(false)))}
+        <div className="grid gap-2">
+          {secondaryActions.map((a) => renderAction(a, 'sheet', () => setMoreOpen(false)))}
         </div>
-      </Modal>
+      </FormDialog>
 
       {/* ---------- Modals ---------- */}
       <ServiceModal

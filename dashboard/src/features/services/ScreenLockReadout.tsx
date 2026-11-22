@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { readScreenLock } from '@/data/serviceSecret';
 import { useT } from '@/i18n';
 import type { Service } from '@/data/types';
-import styles from './ServiceDetailPage.module.css';
+import { Button } from '@/components/dens/button';
 
 /**
  * Kunci layar di detail tiket: tersamar sampai diminta, hilang sendiri setelah
@@ -28,14 +28,14 @@ export function ScreenLockReadout({ service, canView }: { service: Service; canV
 
   if (service.pickedUp || gone) {
     return (
-      <span className={styles.lockGone}>
+      <span className="text-sm text-muted-foreground">
         {kind} · {t(service.pickedUp ? 'serviceDetail.lockPurged' : 'serviceDetail.lockMissing')}
       </span>
     );
   }
   if (!canView) {
     return (
-      <span className={styles.lockGone}>
+      <span className="text-sm text-muted-foreground">
         {kind} · {t('serviceDetail.lockRestricted')}
       </span>
     );
@@ -56,19 +56,20 @@ export function ScreenLockReadout({ service, canView }: { service: Service; canV
   };
 
   return (
-    <span className={styles.lockRow}>
-      <span className={styles.lockValue}>
+    <span className="inline-flex flex-wrap items-center justify-end gap-2">
+      <span className="font-mono tabular-nums tracking-[0.04em] [overflow-wrap:anywhere]">
         {kind} {shown ?? '••••'}
       </span>
-      <button
+      <Button
         type="button"
-        className={styles.lockBtn}
+        variant="outline"
+        size="sm"
         onClick={() => (shown === null ? void reveal() : setShown(null))}
         disabled={busy}
       >
         {t(shown === null ? 'serviceDetail.lockShow' : 'serviceDetail.lockHide')}
-      </button>
-      {error && <span className={styles.lockError}>{error}</span>}
+      </Button>
+      {error && <span className="basis-full text-right text-xs text-destructive">{error}</span>}
     </span>
   );
 }
