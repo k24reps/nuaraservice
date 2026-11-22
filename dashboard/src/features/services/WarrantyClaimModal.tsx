@@ -1,5 +1,11 @@
 import { useState } from 'react';
-import { Modal, Input, Select, Button, FormFields, FormRow, FormError } from '@/components/ui';
+import { LoaderCircle } from 'lucide-react';
+import { Button } from '@/components/dens/button';
+import { Checkbox } from '@/components/dens/checkbox';
+import { Field, FormMessage } from '@/components/dens/field';
+import { FormDialog } from '@/components/dens/form-dialog';
+import { SelectBox } from '@/components/dens/select-box';
+import { TextInput } from '@/components/dens/text-input';
 import { useFormFault } from '@/hooks/useFormFault';
 import { repository } from '@/data';
 import { createWarrantyClaim } from '@/data/supabase-client';
@@ -198,84 +204,87 @@ export function WarrantyClaimModal({ open, onClose, origin, services, onSaved }:
     }
   };
 
+  // Kotak centang + teks: seluruh baris jadi label, area sentuh ikut membesar di layar sentuh.
+  const checkRow = 'flex min-h-9 cursor-pointer items-center gap-2.5 text-sm pointer-coarse:min-h-11';
+
   return (
-    <Modal
+    <FormDialog
       open={open}
       onClose={onClose}
       title={interpolate(t('warrantyClaim.title'), { no: origin.serviceNo })}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="outline" onClick={onClose}>
             {t('common.cancel')}
           </Button>
-          <Button onClick={save} loading={busy}>
+          <Button onClick={save} disabled={busy}>
+            {busy && <LoaderCircle aria-hidden className="animate-spin motion-reduce:animate-none" />}
             {t('warrantyClaim.create')}
           </Button>
         </>
       }
     >
-      <FormFields>
-        <FormError>{error}</FormError>
-        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-          {t('warrantyClaim.introA')} <strong>{t('warrantyClaim.introStrong')}</strong> {t('warrantyClaim.introB')}{' '}
-          <strong>{origin.device}</strong> ({origin.customerName}). {t('warrantyClaim.introC')}
+      <div className="@container/claim grid gap-4">
+        <FormMessage>{error}</FormMessage>
+        <p className="text-sm leading-relaxed text-muted-foreground">
+          {t('warrantyClaim.introA')} <strong className="text-foreground">{t('warrantyClaim.introStrong')}</strong>{' '}
+          {t('warrantyClaim.introB')} <strong className="text-foreground">{origin.device}</strong> ({origin.customerName}).{' '}
+          {t('warrantyClaim.introC')}
         </p>
-        <div role="group" aria-label={t('warrantyClaim.items')} style={{ display: 'grid', gap: 6 }}>
-          <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600 }}>{t('warrantyClaim.items')}</span>
+        <div role="group" aria-label={t('warrantyClaim.items')} className="grid gap-1">
+          <span className="text-sm font-semibold">{t('warrantyClaim.items')}</span>
           {items.map((item) => {
             const key = itemKey(item);
             return (
-              <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'var(--text-sm)' }}>
-                <input
-                  type="checkbox"
+              <label key={key} className={checkRow}>
+                <Checkbox
                   checked={picked.includes(key)}
-                  onChange={(e) =>
-                    setPicked((prev) => (e.target.checked ? [...prev, key] : prev.filter((k) => k !== key)))
+                  onCheckedChange={(checked) =>
+                    setPicked((prev) => (checked === true ? [...prev, key] : prev.filter((k) => k !== key)))
                   }
                 />
-                <span>{item.name}</span>
-                <span style={{ color: 'var(--text-secondary)' }}>
+                <span className="min-w-0 [overflow-wrap:anywhere]">{item.name}</span>
+                <span className="ml-auto shrink-0 text-xs text-muted-foreground">
                   {interpolate(t('warrantyClaim.until'), { date: fmtDate(item.until) })}
                 </span>
               </label>
             );
           })}
         </div>
-        <Input
-          label={t('warrantyClaim.complaint')}
-          invalid={invalid('complaint')}
-          value={complaint}
-          onChange={(e) => setComplaint(e.target.value)}
-          placeholder={t('warrantyClaim.complaintPh')}
-          autoFocus
-        />
-        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'var(--text-sm)' }}>
-          <input
-            type="checkbox"
-            checked={recordLoss}
-            onChange={(e) => setRecordLoss(e.target.checked)}
+        <Field label={t('warrantyClaim.complaint')} invalid={invalid('complaint')}>
+          <TextInput
+            value={complaint}
+            onChange={(e) => setComplaint(e.target.value)}
+            placeholder={t('warrantyClaim.complaintPh')}
+            data-autofocus
           />
+        </Field>
+        <label className={checkRow}>
+          <Checkbox checked={recordLoss} onCheckedChange={(checked) => setRecordLoss(checked === true)} />
           {t('warrantyClaim.recordLoss')}
         </label>
         {recordLoss && (
-          <FormRow>
-            <Input
-              label={t('warrantyClaim.lossAmount')}
-              invalid={invalid('loss')}
-              value={lossAmount}
-              onChange={(e) => setLossAmount(fmtRpInput(e.target.value))}
-              placeholder="100.000"
-            />
-            <Select
-              label={t('warrantyClaim.wallet')}
-              invalid={invalid('wallet')}
-              value={walletId}
-              onChange={(e) => setWalletId(e.target.value)}
-              options={wallets.map((w) => ({ value: w.id, label: w.name }))}
-            />
-          </FormRow>
+          <div className="grid gap-3 @min-[26rem]/claim:grid-cols-2">
+            <Field label={t('warrantyClaim.lossAmount')} invalid={invalid('loss')}>
+              <TextInput
+                capitalize="none"
+                inputMode="numeric"
+                className="font-mono tabular-nums placeholder:font-sans"
+                value={lossAmount}
+                onChange={(e) => setLossAmount(fmtRpInput(e.target.value))}
+                placeholder="100.000"
+              />
+            </Field>
+            <Field label={t('warrantyClaim.wallet')} invalid={invalid('wallet')}>
+              <SelectBox
+                value={walletId}
+                onValueChange={setWalletId}
+                options={wallets.map((w) => ({ value: w.id, label: w.name }))}
+              />
+            </Field>
+          </div>
         )}
-      </FormFields>
-    </Modal>
+      </div>
+    </FormDialog>
   );
 }

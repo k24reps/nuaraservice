@@ -90,13 +90,4 @@
 @source "../features/auth";
 @source "../features/onboarding";
 @source "../dev";
-/* Servis dipindah per berkas (L-48 daftar + form, L-49 detail, L-59/L-60 modal):
-   folder yang sama masih memuat modal FixMaster, jadi hanya berkas yang sudah
-   dipindah yang dipindai. */
-@source "../features/services/ServicesPage.tsx";
-@source "../features/services/ServiceModal.tsx";
-@source "../features/services/ServiceDetailPage.tsx";
-@source "../features/services/ScreenLockReadout.tsx";
-@source "../features/services/StatusModal.tsx";
-@source "../features/services/TicketDoneModal.tsx";
-@source "../features/services/PartWarrantyFields.tsx";
+@source "../features/services";

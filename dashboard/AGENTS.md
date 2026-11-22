@@ -62,7 +62,7 @@ tetap relevan, tetapi bagian merek, harga, dan infrastruktur FixMaster tidak ber
 - **Tiga syarat halaman yang dipindah** (tanpa ini kelas Tailwind tidak terbentuk atau gaya
   lama merembes): (1) elemen akarnya diberi atribut `data-nu`; (2) foldernya ditambah ke daftar
   `@source` di `src/styles/app.css`, atau berkasnya saja bila folder itu masih memuat halaman
-  FixMaster (mis. `features/services` sampai L-60); (3) foto per piksel halaman lain + probe
+  FixMaster (seperti `features/services` selama L-48 s.d. L-60); (3) foto per piksel halaman lain + probe
   `audit-*` sama dengan sebelum langkah.
 - **Pengganti komponen FixMaster** sudah ada di `src/components/dens/` dengan API yang sama
   (`SummaryStrip`, `FilterChips`, `TextInput`, `SelectBox`, `FormDialog`, `ConfirmDialog`,

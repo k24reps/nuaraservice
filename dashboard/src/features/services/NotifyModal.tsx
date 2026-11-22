@@ -1,5 +1,10 @@
 import { useState } from 'react';
-import { Modal, Button, Icon } from '@/components/ui';
+import { Link2, Printer } from 'lucide-react';
+import { Button } from '@/components/dens/button';
+import { Field } from '@/components/dens/field';
+import { FormDialog } from '@/components/dens/form-dialog';
+import { Textarea } from '@/components/dens/textarea';
+import { WhatsAppIcon } from '@/components/dens/whatsapp-icon';
 import {
   waLink,
   interpolate,
@@ -15,7 +20,6 @@ import { demoGuard } from '@/stores/demo';
 import { useSessionStore } from '@/stores/session';
 import { useResetOnOpen } from '@/hooks/useResetOnOpen';
 import type { Service } from '@/data/types';
-import styles from './NotifyModal.module.css';
 import { useT } from '@/i18n';
 
 interface NotifyModalProps {
@@ -78,27 +82,31 @@ export function NotifyModal({ open, onClose, service, initialTemplate }: NotifyM
   };
 
   return (
-    <Modal
+    <FormDialog
       open={open}
       onClose={onClose}
       title={interpolate(t('notify.title'), { no: service.serviceNo })}
       footer={
         <>
-          <Button variant="secondary" onClick={printReceipt} iconLeft={<Icon name="print" aria-hidden />}>
+          <Button variant="outline" onClick={printReceipt}>
+            <Printer aria-hidden />
             {t('notify.print')}
           </Button>
-          <Button onClick={sendWa} iconLeft={<Icon name="whatsapp" aria-hidden />}>
+          <Button onClick={sendWa}>
+            <WhatsAppIcon className="size-4" />
             {t('notify.sendWa')}
           </Button>
         </>
       }
     >
-      <div className={styles.body}>
-        <div className={styles.templateTabs}>
+      <div className="grid gap-4">
+        <div className="flex flex-wrap gap-2" role="group" aria-label={t('notify.message')}>
           {(Object.keys(templates) as TemplateKey[]).map((k) => (
             <button
               key={k}
-              className={[styles.tab, templateKey === k ? styles.tabActive : ''].join(' ')}
+              type="button"
+              aria-pressed={templateKey === k}
+              className="min-h-9 flex-auto rounded-full bg-card px-3 text-[13px] font-medium text-foreground ring-1 ring-border outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring aria-pressed:bg-primary aria-pressed:text-primary-foreground aria-pressed:ring-primary pointer-coarse:min-h-11"
               onClick={() => setTemplateKey(k)}
             >
               {WA_TEMPLATE_LABELS[k]}
@@ -106,18 +114,19 @@ export function NotifyModal({ open, onClose, service, initialTemplate }: NotifyM
           ))}
         </div>
 
-        <label className={styles.label}>{t('notify.message')}</label>
-        <textarea
-          className={styles.textarea}
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          rows={12}
-        />
+        <Field label={t('notify.message')}>
+          <Textarea
+            className="max-h-[50dvh] min-h-48 [field-sizing:fixed]"
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            rows={12}
+          />
+        </Field>
 
-        <button className={styles.copyLink} onClick={copyTracking}>
-          <Icon name="link" aria-hidden /> {t('notify.copyLink')}
-        </button>
+        <Button type="button" variant="outline" size="sm" className="justify-self-start" onClick={copyTracking}>
+          <Link2 aria-hidden /> {t('notify.copyLink')}
+        </Button>
       </div>
-    </Modal>
+    </FormDialog>
   );
 }

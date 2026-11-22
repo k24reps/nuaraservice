@@ -5,8 +5,10 @@ import detailTsxRaw from './ServiceDetailPage.tsx?raw';
 import statusTsxRaw from './StatusModal.tsx?raw';
 import doneTsxRaw from './TicketDoneModal.tsx?raw';
 import warrantyTsxRaw from './PartWarrantyFields.tsx?raw';
+import notifyTsxRaw from './NotifyModal.tsx?raw';
+import claimTsxRaw from './WarrantyClaimModal.tsx?raw';
+import partWarrantyModalRaw from './PartWarrantyModal.tsx?raw';
 import pickerTsxRaw from './SparepartPickerModal.tsx?raw';
-import pickerCssRaw from './SparepartPickerModal.module.css?raw';
 import appCssRaw from '../../styles/app.css?raw';
 import themeRaw from '../../styles/nuara-theme.css?raw';
 import { STATUS_BADGE } from '@/lib/business/services';
@@ -20,8 +22,10 @@ const detailTsx = lf(detailTsxRaw);
 const statusTsx = lf(statusTsxRaw);
 const doneTsx = lf(doneTsxRaw);
 const warrantyTsx = lf(warrantyTsxRaw);
+const notifyTsx = lf(notifyTsxRaw);
+const claimTsx = lf(claimTsxRaw);
+const partWarrantyModalTsx = lf(partWarrantyModalRaw);
 const pickerTsx = lf(pickerTsxRaw);
-const pickerCss = lf(pickerCssRaw);
 const appCss = lf(appCssRaw);
 const theme = lf(themeRaw);
 
@@ -52,12 +56,11 @@ describe('tampilan Daftar servis', () => {
     expect(tsx).toContain('className="@container/svc"');
   });
 
-  it('kelas Tailwind halaman ini benar-benar dibuat: berkasnya ada di @source', () => {
+  it('kelas Tailwind halaman ini benar-benar dibuat: folder Servis ada di @source, tanpa CSS Module tersisa', () => {
     // Tanpa ini semua kelas di bawah hanya teks: Tailwind hanya memindai @source.
-    expect(appCss).toContain('@source "../features/services/ServicesPage.tsx";');
-    expect(appCss).toContain('@source "../features/services/ServiceModal.tsx";');
-    // Halaman FixMaster di folder yang sama (detail, modal L-49) belum dipindai.
-    expect(appCss).not.toContain('@source "../features/services";');
+    // Sejak L-60 seluruh folder dipindai: tak ada lagi halaman FixMaster di sana.
+    expect(appCss).toContain('@source "../features/services";');
+    expect(Object.keys(import.meta.glob('./*.module.css'))).toEqual([]);
     expect(tsx).toContain('<div data-nu ');
   });
 
@@ -239,22 +242,14 @@ describe('tampilan Daftar servis', () => {
     expect(tsx).not.toContain('data-tone=');
   });
 
-  it('strip tiket di pemilih sparepart memakai spine yang sama dengan baris (peta STATUS_TONE)', () => {
-    // Spine resmi, bukan "side-stripe" hiasan: warnanya status tiket, dari peta yang sama.
-    expect(pickerTsx).toContain('data-tone={STATUS_TONE[ticket.status]}');
-    expect(pickerCss).toMatch(/\.context \{[^}]*border-left: 3px solid var\(--text-muted\);/);
-    const tones: Record<string, string> = {
-      info: '--info',
-      warning: '--warning',
-      accent: '--accent',
-      success: '--success',
-      danger: '--danger',
-    };
-    for (const [tone, token] of Object.entries(tones)) {
-      expect(pickerCss).toContain(`.context[data-tone='${tone}'] {\n  border-left-color: var(${token});\n}`);
-    }
+  it('strip tiket di pemilih sparepart: status tiket lewat lencana peta STATUS_BADGE, bukan spine', () => {
+    // Dulu spine 3px berwarna STATUS_TONE (motif FixMaster); sejak L-60 lencana yang sama
+    // dengan daftar dan detail tiket.
+    expect(pickerTsx).toContain('<Badge variant={STATUS_BADGE[ticket.status]}>');
+    expect(pickerTsx).not.toContain('STATUS_TONE');
+    expect(pickerTsx).not.toContain('data-tone=');
     // Warna hanya lewat token: tak ada hex di berkasnya.
-    expect(pickerCss).not.toMatch(/#[0-9a-f]{3,8}\b/i);
+    expect(pickerTsx).not.toMatch(/#[0-9a-f]{6}\b/i);
   });
 
 
@@ -435,9 +430,7 @@ describe('form Servis Baru (L-48)', () => {
 });
 
 describe('detail tiket (L-49)', () => {
-  it('kelas detail tiket dibuat: berkasnya ada di @source, akarnya data-nu', () => {
-    expect(appCss).toContain('@source "../features/services/ServiceDetailPage.tsx";');
-    expect(appCss).toContain('@source "../features/services/ScreenLockReadout.tsx";');
+  it('akar detail tiket data-nu, tanpa CSS Module', () => {
     expect(detailTsx).toContain('<div data-nu className="@container/detail');
     expect(detailTsx).not.toContain('styles.');
   });
@@ -488,10 +481,7 @@ describe('detail tiket (L-49)', () => {
 });
 
 describe('modal Ubah Status, Tiket Jadi, garansi part (L-59)', () => {
-  it('kelasnya dibuat dan tak ada lagi CSS Module', () => {
-    for (const f of ['StatusModal', 'TicketDoneModal', 'PartWarrantyFields']) {
-      expect(appCss).toContain(`@source "../features/services/${f}.tsx";`);
-    }
+  it('tak ada lagi CSS Module', () => {
     for (const src of [statusTsx, doneTsx, warrantyTsx]) {
       expect(src).not.toContain('styles.');
       expect(src).not.toContain('.module.css');
@@ -529,5 +519,34 @@ describe('modal Ubah Status, Tiket Jadi, garansi part (L-59)', () => {
     expect(doneTsx).toContain("t(intake ? 'ticketDone.intakeStamp' : 'ticketDone.handoverStamp')");
     expect(doneTsx).toContain("<Badge variant={intake ? 'info' : 'success'}");
     expect(doneTsx).not.toMatch(/rotate/);
+  });
+});
+
+describe('modal kirim WA, pemilih sparepart, garansi part, klaim garansi (L-60)', () => {
+  it('semua modal Servis memakai FormDialog dens; tak ada Modal FixMaster tersisa', () => {
+    for (const src of [notifyTsx, pickerTsx, partWarrantyModalTsx, claimTsx, statusTsx, doneTsx, modalTsx]) {
+      expect(src).toContain('<FormDialog');
+      expect(src).not.toMatch(/from '@\/components\/ui'/);
+      expect(src).not.toContain('styles.');
+    }
+  });
+
+  it('fokus awal lewat data-autofocus di jendela yang dibuka dari state', () => {
+    // autoFocus saat jendela dibuka membuat fokus hilang ke body saat ditutup (L-48).
+    expect(claimTsx).toContain('data-autofocus');
+    expect(claimTsx).not.toMatch(/\bautoFocus\b/);
+    const search = pickerTsx.slice(pickerTsx.indexOf("placeholder={t('partPicker.searchPh')}"));
+    expect(search.slice(0, 300)).toContain('data-autofocus');
+  });
+
+  it('kotak centang klaim garansi memakai Checkbox dens di dalam label (seluruh baris bisa diketuk)', () => {
+    expect(claimTsx).not.toContain('type="checkbox"');
+    expect(claimTsx.match(/<label key=\{key\} className=\{checkRow\}>/g)).toHaveLength(1);
+    expect(claimTsx).toContain("const checkRow = 'flex min-h-9 cursor-pointer items-center gap-2.5 text-sm pointer-coarse:min-h-11';");
+  });
+
+  it('pesan WA: label tersambung ke isian teks, template = tombol aria-pressed', () => {
+    expect(notifyTsx).toContain("<Field label={t('notify.message')}>");
+    expect(notifyTsx).toContain('aria-pressed={templateKey === k}');
   });
 });

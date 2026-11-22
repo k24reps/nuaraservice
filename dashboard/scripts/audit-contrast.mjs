@@ -255,6 +255,15 @@ for (const theme of ['light']) {
       await page.keyboard.press('Escape');
       await page.getByRole('button', { name: /Servis Baru/ }).first().click();
     }],
+    // Modal dens-ui yang dibuka dari daftar (L-60): pemilih sparepart dan kirim WA.
+    ['Servis-Sparepart', async () => {
+      await page.keyboard.press('Escape');
+      await page.locator('button[aria-label="Tambah sparepart"]').first().click();
+    }],
+    ['Servis-Notifikasi', async () => {
+      await page.keyboard.press('Escape');
+      await page.locator('button[aria-label="Notifikasi & nota"]').first().click();
+    }],
     ['Servis-Detail', async () => {
       await page.keyboard.press('Escape');
       await page.locator('a[href^="/services/"]').first().click();

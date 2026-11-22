@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { Modal, Button } from '@/components/ui';
+import { LoaderCircle } from 'lucide-react';
+import { Button } from '@/components/dens/button';
+import { FormDialog } from '@/components/dens/form-dialog';
 import { repository } from '@/data';
 import { toast } from '@/stores/toast';
 import { useResetOnOpen } from '@/hooks/useResetOnOpen';
@@ -68,22 +70,23 @@ export function PartWarrantyModal({
   };
 
   return (
-    <Modal
+    <FormDialog
       open={open}
       onClose={onClose}
       title={interpolate(t('partWarranty.title'), { no: service.serviceNo })}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="outline" onClick={onClose}>
             {t('common.cancel')}
           </Button>
-          <Button onClick={save} loading={busy}>
+          <Button onClick={save} disabled={busy}>
+            {busy && <LoaderCircle aria-hidden className="animate-spin motion-reduce:animate-none" />}
             {t('common.save')}
           </Button>
         </>
       }
     >
-      <p style={{ margin: '0 0 var(--space-3)', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
+      <p className="mb-3 text-sm text-muted-foreground">
         {interpolate(t('partWarranty.intro'), { date: fmtDate(finishDate) })}
       </p>
       <PartWarrantyFields
@@ -92,6 +95,6 @@ export function PartWarrantyModal({
         onChange={(i, v) => setValues((prev) => prev.map((x, j) => (j === i ? v : x)))}
         presets={getWarrantyPresets()}
       />
-    </Modal>
+    </FormDialog>
   );
 }

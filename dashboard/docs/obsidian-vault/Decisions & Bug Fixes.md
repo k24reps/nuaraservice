@@ -13,6 +13,19 @@ Catatan keputusan desain penting + bug nyata yang ditemukan saat verifikasi.
 
 ## Keputusan desain
 
+### Modal Servis tersisa pindah ke dens-ui, folder Servis selesai (L-60, 22 Nov 2026)
+`NotifyModal`, `SparepartPickerModal`, `PartWarrantyModal`, `WarrantyClaimModal` ditulis ulang
+dengan `FormDialog`; dua CSS Module terakhir di `features/services` dihapus dan `@source` kini
+memindai folder utuh (sebelumnya per berkas, L-48 s.d. L-59). Tes `servicesTableWidth` mengunci
+bahwa folder itu tak punya CSS Module lagi (`import.meta.glob('./*.module.css')` kosong).
+- **Pemilih sparepart**: strip tiket memakai lencana `STATUS_BADGE` (dulu spine `STATUS_TONE`);
+  fokus awal di kolom cari lewat `data-autofocus`; tab pembelian luar memakai `autoFocus` karena
+  jendelanya sudah terbuka saat tab itu dipilih (pemulihan fokus tak terganggu).
+- **Klaim garansi**: `Checkbox` dens di dalam `<label>` sebaris, seluruh baris jadi area ketuk.
+- **Kirim WA**: label "Pesan" kini tersambung ke isian teks lewat `Field` (dulu `<label>` tanpa
+  `htmlFor`); template = tombol `aria-pressed`.
+- `audit-contrast.mjs` ikut memeriksa pemilih sparepart dan kirim WA.
+
 ### Modal Ubah Status dan Tiket Jadi pindah ke dens-ui (L-59, 22 Nov 2026)
 `StatusModal`, `TicketDoneModal`, dan `PartWarrantyFields` ditulis ulang dengan dens-ui
 (`FormDialog`, `Field`, `TextInput`, `SelectBox`); tiga CSS Module dihapus. Logika simpan
