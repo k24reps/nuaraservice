@@ -1,6 +1,5 @@
-import { Input } from '@/components/ui';
+import { TextInput } from '@/components/dens/text-input';
 import type { ServiceSparepart } from '@/data/types';
-import styles from './PartWarrantyFields.module.css';
 import { useT } from '@/i18n';
 import { interpolate } from '@/lib/business/notify';
 
@@ -16,12 +15,15 @@ export function WarrantyPresets({
 }) {
   const t = useT();
   return (
-    <div className={styles.presetRow}>
+    // data-nu: juga dipakai PartWarrantyModal yang masih FixMaster (L-60); tanpa
+    // atribut ini tombolnya kehilangan reset dens-ui dan mewarisi gaya tombol lama.
+    // bg-transparent: [data-nu] memberi latar halaman, yang di sini tak diinginkan.
+    <div data-nu className="flex flex-wrap items-center gap-1.5 bg-transparent">
       {[0, ...presets.filter((d) => d > 0)].map((d) => (
         <button
           key={d}
           type="button"
-          className={styles.presetChip}
+          className="inline-flex h-7 items-center rounded-full bg-card px-2.5 text-xs font-medium text-muted-foreground ring-1 ring-border outline-none transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring pointer-coarse:min-h-11"
           onClick={() => onPick(d)}
           title={
             d === 0
@@ -54,17 +56,22 @@ export function PartWarrantyFields({
 }) {
   const t = useT();
   return (
-    <div className={styles.list}>
+    // data-nu: lihat WarrantyPresets.
+    <div data-nu className="flex flex-col gap-3 bg-transparent">
       {parts.map((p, i) => (
-        <div key={`${p.itemId ?? 'm'}-${i}`} className={styles.row}>
-          <span className={styles.name} title={p.name}>
+        <div
+          key={`${p.itemId ?? 'm'}-${i}`}
+          className="grid grid-cols-[minmax(0,1fr)_6rem] items-center gap-x-2 gap-y-1 [&>[data-nu]]:col-span-full"
+        >
+          <span className="truncate text-sm text-foreground" title={p.name}>
             {p.name}
             {p.kind === 'manual' ? '' : ` ×${p.qty}`}
           </span>
-          <Input
+          <TextInput
             type="number"
             inputMode="numeric"
             min={0}
+            className="font-mono tabular-nums"
             value={values[i] ?? ''}
             onChange={(e) => onChange(i, e.target.value)}
             placeholder="0"

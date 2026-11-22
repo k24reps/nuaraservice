@@ -1,6 +1,13 @@
-import { EmptyValue } from '@/components/ui/EmptyValue';
 import { useState } from 'react';
-import { Modal, Select, Input, Button, Badge, ConfirmDialog, Icon } from '@/components/ui';
+import { Banknote, ChevronRight, LoaderCircle, Plus, X } from 'lucide-react';
+import { Badge } from '@/components/dens/badge';
+import { Button } from '@/components/dens/button';
+import { ConfirmDialog } from '@/components/dens/confirm-dialog';
+import { Field } from '@/components/dens/field';
+import { FormDialog } from '@/components/dens/form-dialog';
+import { SelectBox } from '@/components/dens/select-box';
+import { TextInput } from '@/components/dens/text-input';
+import { cn } from '@/lib/utils';
 import { useT } from '@/i18n';
 import { walletsForOutlet } from '@/lib/business/finance';
 import { PartWarrantyFields, WarrantyPresets } from './PartWarrantyFields';
@@ -24,7 +31,7 @@ import {
   computeStockRestore,
   isTerminal,
   STATUS_LABELS,
-  STATUS_TONE,
+  STATUS_BADGE,
   outstandingBalance,
   settlementAmount,
   normalizeSplits,
@@ -37,7 +44,7 @@ import {
   overpaidRefundDescription,
   costCorrectionDescription,
 } from '@/lib/business/services';
-import type { PaymentSplit } from '@/lib/business/services';
+import type { PaymentSplit, StatusBadge } from '@/lib/business/services';
 import { applyBalance } from '@/lib/business/finance';
 import { logActivity } from '@/lib/activity';
 import { toast } from '@/stores/toast';
@@ -46,7 +53,6 @@ import { getLastExpenseWallet, setLastExpenseWallet } from '@/config/orgConfig';
 import { useSessionStore } from '@/stores/session';
 import { isCloudMode } from '@/stores/demo';
 import type { Service, ServiceStatus } from '@/data/types';
-import styles from './StatusModal.module.css';
 import { interpolate } from '@/lib/business/notify';
 import type { TranslationKey } from '@/i18n';
 import { PICKUP_NOTE } from '@/lib/business/services';
@@ -775,42 +781,75 @@ export function StatusModal({
   const estimate = service.estimateCost ?? 0;
   const workTargets = allowed.filter((s) => s !== 'batal');
 
+  // Isi yang memang kosong: mata melihat tanda pisah, pembaca layar mendengar "kosong".
+  const emptyValue = (
+    <>
+      <span aria-hidden="true">{EMPTY_VALUE}</span>
+      <span className="sr-only">{t('common.emptyValue')}</span>
+    </>
+  );
+  // Titik warna kanal status: nada yang sama dengan lencana tahap (STATUS_BADGE).
+  const DOT: Record<StatusBadge, string> = {
+    info: 'bg-info-foreground',
+    highlight: 'bg-highlight',
+    warning: 'bg-warning-foreground',
+    success: 'bg-success-foreground',
+    'destructive-soft': 'bg-destructive',
+  };
+  const label = 'text-xs font-medium text-muted-foreground';
+  const hint = 'text-xs leading-relaxed text-muted-foreground';
+  const box = 'grid gap-3 rounded-xl bg-surface p-3.5 ring-1 ring-border/60';
+  // Dua kolom (jumlah + wallet) selama jendela cukup lebar (container query).
+  const pair = 'grid gap-3 @min-[26rem]/sm:grid-cols-2';
+  const money = 'font-mono tabular-nums placeholder:font-sans';
+  const fold = 'group rounded-xl ring-1 ring-border/60 [&_summary::-webkit-details-marker]:hidden';
+  const foldSummary =
+    'flex cursor-pointer list-none items-center gap-2 rounded-xl px-3.5 py-2.5 text-sm font-medium outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring pointer-coarse:min-h-11';
+  const channel = (s: ServiceStatus, checked: boolean, danger = false) =>
+    cn(
+      'flex min-h-10 items-center gap-2.5 rounded-xl bg-card px-3 text-left text-sm font-medium ring-1 ring-border outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring pointer-coarse:min-h-11',
+      checked && !danger && 'bg-accent ring-2 ring-primary',
+      checked && danger && 'bg-destructive-soft text-destructive ring-2 ring-destructive',
+      s === 'batal' && !checked && 'text-destructive',
+    );
+
   return (
     <>
-    <Modal
+    <FormDialog
       open={open}
       onClose={onClose}
       title={interpolate(t('serviceStatus.title'), { no: service.serviceNo })}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="outline" onClick={onClose}>
             {t('common.close')}
           </Button>
           <Button
-            variant={cancelling ? 'danger' : 'primary'}
-            className={styles.applyBtn}
+            variant={cancelling ? 'destructive' : 'default'}
+            className="min-w-32"
             onClick={apply}
-            loading={busy}
-            disabled={noActions}
+            disabled={busy || noActions}
           >
+            {busy && <LoaderCircle aria-hidden className="animate-spin motion-reduce:animate-none" />}
             {applyLabel}
           </Button>
         </>
       }
     >
-      <div className={styles.body}>
-        <div className={styles.current}>
-          <span className={styles.label}>{t('serviceStatus.current')}</span>
-          <Badge tone={STATUS_TONE[service.status]}>{t(`statusLabel.${service.status}`)}</Badge>
+      <div className="@container/sm grid gap-4">
+        <div className="flex items-center gap-3">
+          <span className={label}>{t('serviceStatus.current')}</span>
+          <Badge variant={STATUS_BADGE[service.status]}>{t(`statusLabel.${service.status}`)}</Badge>
         </div>
 
         {modes.length > 1 && (
-          <div className={styles.modeTabs}>
+          <div className="flex gap-0.5 rounded-full bg-secondary p-0.5" role="group">
             {modes.map((m) => (
               <button
                 key={m}
                 type="button"
-                className={[styles.modeTab, mode === m ? styles.modeTabActive : ''].join(' ')}
+                aria-pressed={mode === m}
+                className="min-h-9 flex-1 rounded-full px-3 text-[13px] font-medium text-secondary-foreground outline-none transition-colors hover:bg-card/60 focus-visible:ring-2 focus-visible:ring-ring aria-pressed:bg-card aria-pressed:text-foreground aria-pressed:shadow-[0_1px_2px_rgb(6_32_54/0.08)] pointer-coarse:min-h-11"
                 onClick={() => setMode(m)}
               >
                 {t(MODE_LABELS[m])}
@@ -820,26 +859,28 @@ export function StatusModal({
         )}
 
         {service.spareparts.length > 0 && (
-          <div className={styles.partsSummary}>
-            <span className={styles.label}>{t('serviceStatus.partsAndCost')}</span>
-            <ul className={styles.partsList}>
+          <div className={box}>
+            <span className={label}>{t('serviceStatus.partsAndCost')}</span>
+            <ul className="m-0 grid list-none gap-1.5 p-0 text-sm">
               {service.spareparts.map((p, i) => (
-                <li key={`${p.itemId ?? 'm'}-${i}`}>
-                  <span className={styles.partName}>
-                    {p.kind === 'manual' && <Icon name="money-bill-wave" aria-hidden />}
+                <li key={`${p.itemId ?? 'm'}-${i}`} className="flex items-baseline justify-between gap-3">
+                  <span className="inline-flex min-w-0 items-center gap-1.5 [overflow-wrap:anywhere] [&_svg]:size-3.5 [&_svg]:shrink-0 [&_svg]:text-muted-foreground">
+                    {p.kind === 'manual' && <Banknote aria-hidden />}
                     {p.name}
                     {p.kind === 'manual' ? '' : ` ×${p.qty}`}
                   </span>
-                  <span className={styles.partCost}>{fmtRp(p.kind === 'manual' ? p.costPrice : p.sellPrice * p.qty)}</span>
+                  <span className="shrink-0 font-mono tabular-nums">
+                    {fmtRp(p.kind === 'manual' ? p.costPrice : p.sellPrice * p.qty)}
+                  </span>
                 </li>
               ))}
             </ul>
-            <p className={styles.partsHint}>{t('serviceStatus.partsHint')}</p>
+            <p className={hint}>{t('serviceStatus.partsHint')}</p>
           </div>
         )}
 
         {noActions && (
-          <p className={styles.terminal}>
+          <p className="rounded-xl bg-surface p-3.5 text-sm text-muted-foreground ring-1 ring-border/60">
             {t('serviceStatus.final')}
             {!canSetStatus(role, 'lunas') && t('serviceStatus.finalRole')}.
           </p>
@@ -848,90 +889,93 @@ export function StatusModal({
         {/* ---- Status sub-action ---- */}
         {mode === 'status' && allowed.length > 0 && (
           <>
-            {/* Status tujuan = kanal instrumen, satu ketukan. Batal dipisah di
-                bawah seam titik: final dan memindah uang, tak boleh sejajar
-                dengan langkah kerja biasa. */}
-            <div className={styles.channelBlock} role="radiogroup" aria-label={t('serviceStatus.target')}>
-              <span className={styles.label}>{t('serviceStatus.target')}</span>
+            {/* Status tujuan, satu ketukan. Batal dipisah di bawah garis: final dan
+                memindah uang, tak boleh sejajar dengan langkah kerja biasa. */}
+            <div className="grid gap-2" role="radiogroup" aria-label={t('serviceStatus.target')}>
+              <span className={label}>{t('serviceStatus.target')}</span>
               {workTargets.length > 0 && (
-                <div className={styles.channels}>
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(min(11rem,100%),1fr))] gap-2">
                   {workTargets.map((s) => (
                     <button
                       key={s}
                       type="button"
                       role="radio"
                       aria-checked={target === s}
-                      data-tone={STATUS_TONE[s]}
-                      className={styles.channel}
+                      className={channel(s, target === s)}
                       onClick={() => onTargetChange(s)}
                     >
-                      <span className={styles.channelLed} aria-hidden />
+                      <span aria-hidden className={cn('size-2 shrink-0 rounded-full', DOT[STATUS_BADGE[s]])} />
                       {t(`statusLabel.${s}`)}
                     </button>
                   ))}
                 </div>
               )}
               {allowed.includes('batal') && (
-                <div className={styles.channelDangerRow}>
+                <div className="mt-1 flex border-t border-dashed border-border pt-3">
                   <button
                     type="button"
                     role="radio"
                     aria-checked={target === 'batal'}
-                    data-tone="danger"
-                    className={styles.channel}
+                    className={channel('batal', target === 'batal', true)}
                     onClick={() => onTargetChange('batal')}
                   >
-                    <span className={styles.channelLed} aria-hidden />
+                    <span aria-hidden className={cn('size-2 shrink-0 rounded-full', DOT[STATUS_BADGE.batal])} />
                     {t('statusLabel.batal')}
                   </button>
                 </div>
               )}
             </div>
-            {reopening && (
-              <p className={styles.dp}>
-                {t('serviceStatus.reopenNote')}
-              </p>
-            )}
+            {reopening && <p className={hint}>{t('serviceStatus.reopenNote')}</p>}
             {needsCost && (
-              <div className={styles.costField}>
-                <Input
-                  label={t('serviceStatus.finalCost')}
-                  value={finalCost}
-                  onChange={(e) => changeCost(fmtRpInput(e.target.value))}
-                  placeholder="0"
-                  inputMode="numeric"
-                />
-                {/* Estimasi saat intake tak perlu diingat lalu diketik ulang. */}
-                {/* Hanya sebelum harga disepakati: setelah Konfirmasi, chip ini bisa
+              <div className="grid gap-2">
+                <Field label={t('serviceStatus.finalCost')}>
+                  <TextInput
+                    capitalize="none"
+                    className={money}
+                    value={finalCost}
+                    onChange={(e) => changeCost(fmtRpInput(e.target.value))}
+                    placeholder="0"
+                    inputMode="numeric"
+                  />
+                </Field>
+                {/* Estimasi saat intake tak perlu diingat lalu diketik ulang. Hanya
+                    sebelum harga disepakati: setelah Konfirmasi, tombol ini bisa
                     menurunkan harga yang sudah disetujui pelanggan dengan satu ketukan. */}
                 {estimate > 0 && service.finalCost <= 0 && parseRpInput(finalCost) !== estimate && (
-                  <button
+                  <Button
                     type="button"
-                    className={styles.estimateChip}
+                    variant="outline"
+                    size="sm"
+                    className="justify-self-start"
                     onClick={() => changeCost(fmtRpInput(String(estimate)))}
                   >
                     {t('serviceStatus.useEstimate').replace('{amount}', fmtRp(estimate))}
-                  </button>
+                  </Button>
                 )}
               </div>
             )}
             {needsHandling && (
-              <Input
-                label={t('serviceStatus.handling')}
-                value={handling}
-                onChange={(e) => setHandling(e.target.value)}
-                placeholder={t('serviceStatus.handlingPh')}
-              />
+              <Field label={t('serviceStatus.handling')}>
+                <TextInput
+                  value={handling}
+                  onChange={(e) => setHandling(e.target.value)}
+                  placeholder={t('serviceStatus.handlingPh')}
+                />
+              </Field>
             )}
             {canExpress && (
-              <div className={styles.expressRow}>
-                <span className={styles.expressText}>
-                  <strong>{t('serviceStatus.expressQ')}</strong>
-                  <small>{t(target === 'lunas' ? 'serviceStatus.expressSubPaid' : 'serviceStatus.expressSub')}</small>
+              <div className="flex items-center justify-between gap-3 rounded-xl bg-surface p-3.5 ring-1 ring-border/60">
+                <span className="grid min-w-0 gap-0.5">
+                  <strong className="text-sm font-semibold">{t('serviceStatus.expressQ')}</strong>
+                  <small className={hint}>
+                    {t(target === 'lunas' ? 'serviceStatus.expressSubPaid' : 'serviceStatus.expressSub')}
+                  </small>
                 </span>
-                <button
+                <Button
                   type="button"
-                  className={styles.expressToggle}
+                  variant={express ? 'default' : 'outline'}
+                  size="sm"
+                  className="shrink-0"
                   aria-pressed={express}
                   aria-label={t('serviceStatus.expressAria')}
                   onClick={() => {
@@ -940,47 +984,56 @@ export function StatusModal({
                   }}
                 >
                   {t(express ? 'serviceStatus.expressOn' : 'serviceStatus.expressOff')}
-                </button>
+                </Button>
               </div>
             )}
             {paying && settleDue > 0 && (
-              <div className={styles.splitBlock}>
-                <span className={styles.splitLabel}>{t('serviceStatus.splitLabel')}</span>
+              <div className={box}>
+                <span className={label}>{t('serviceStatus.splitLabel')}</span>
                 {splits.map((s, i) => (
-                  <div key={i} className={styles.splitRow}>
-                    <Select
+                  <div key={i} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-center gap-2">
+                    <SelectBox
                       aria-label={interpolate(t('serviceStatus.splitWallet'), { n: String(i + 1) })}
                       value={s.walletId}
-                      onChange={(e) => setSplitWallet(i, e.target.value)}
+                      onValueChange={(v) => setSplitWallet(i, v)}
                       options={walletOptions}
                       placeholder={t('serviceStatus.walletPh')}
                     />
-                    <Input
+                    <TextInput
+                      capitalize="none"
+                      className={money}
                       aria-label={interpolate(t('serviceStatus.splitAmount'), { n: String(i + 1) })}
                       inputMode="numeric"
                       value={s.amount}
                       onChange={(e) => setSplitAmount(i, e.target.value)}
                       placeholder="0"
                     />
-                    {splits.length > 1 && (
-                      <button
+                    {splits.length > 1 ? (
+                      <Button
                         type="button"
-                        className={styles.splitRemove}
+                        variant="ghost"
+                        size="icon"
+                        className="text-muted-foreground hover:bg-destructive-soft hover:text-destructive"
                         onClick={() => removeSplit(i)}
                         title={t('serviceStatus.splitRemove')}
                         aria-label={t('serviceStatus.splitRemove')}
                       >
-                        <Icon name="xmark" aria-hidden />
-                      </button>
+                        <X aria-hidden />
+                      </Button>
+                    ) : (
+                      <span aria-hidden />
                     )}
                   </div>
                 ))}
-                <div className={styles.splitFooter}>
-                  <button type="button" className={styles.splitAdd} onClick={addSplit}>
-                    <Icon name="plus" aria-hidden /> {t('serviceStatus.splitAdd')}
-                  </button>
+                <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+                  <Button type="button" variant="outline" size="sm" onClick={addSplit}>
+                    <Plus aria-hidden /> {t('serviceStatus.splitAdd')}
+                  </Button>
                   <span
-                    className={styles.splitTally}
+                    className={cn(
+                      'font-mono text-sm tabular-nums',
+                      splitPaid === settleDue ? 'text-success-foreground' : 'text-warning-foreground',
+                    )}
                     data-balanced={splitPaid === settleDue}
                   >
                     {fmtRp(splitPaid)} / {fmtRp(settleDue)}
@@ -989,18 +1042,20 @@ export function StatusModal({
               </div>
             )}
             {needsWarranty && (
-              <div className={styles.warranty}>
-                <span className={styles.warrantyLabel}>{t('serviceStatus.warrantyLabel')}</span>
-                <div className={styles.warrantyField}>
-                  <Input
-                    label={t('serviceStatus.warrantyService')}
-                    type="number"
-                    inputMode="numeric"
-                    min={0}
-                    value={warrantyService}
-                    onChange={(e) => setWarrantyService(e.target.value)}
-                    placeholder="30"
-                  />
+              <div className={box}>
+                <span className={label}>{t('serviceStatus.warrantyLabel')}</span>
+                <div className="grid gap-2">
+                  <Field label={t('serviceStatus.warrantyService')}>
+                    <TextInput
+                      type="number"
+                      inputMode="numeric"
+                      min={0}
+                      className={money}
+                      value={warrantyService}
+                      onChange={(e) => setWarrantyService(e.target.value)}
+                      placeholder="30"
+                    />
+                  </Field>
                   <WarrantyPresets
                     presets={warrantyPresets}
                     onPick={(d) => setWarrantyService(String(d))}
@@ -1009,115 +1064,130 @@ export function StatusModal({
                 </div>
                 {service.spareparts.length > 0 && (
                   // Terisi dari garansi bawaan item/toko; jarang diubah, jadi dilipat.
-                  <details className={[styles.fold, styles.partWarranty].join(' ')}>
-                    <summary className={styles.foldSummary}>
+                  <details className={cn(fold, 'bg-card')}>
+                    <summary className={foldSummary}>
+                      <ChevronRight aria-hidden className="size-4 shrink-0 transition-transform group-open:rotate-90" />
                       {t('serviceStatus.partWarranty')}
-                      <span className={styles.foldCount}>
+                      <span className="ml-auto text-xs font-normal text-muted-foreground">
                         {t('serviceStatus.partCount').replace('{n}', String(service.spareparts.length))}
                       </span>
                     </summary>
-                    <PartWarrantyFields
-                      parts={service.spareparts}
-                      values={partDays}
-                      onChange={(i, v) =>
-                        setPartDays((prev) =>
-                          service.spareparts.map((_, j) => (j === i ? v : prev[j] ?? '')),
-                        )
-                      }
-                      presets={warrantyPresets}
-                    />
+                    <div className="px-3.5 pb-3.5">
+                      <PartWarrantyFields
+                        parts={service.spareparts}
+                        values={partDays}
+                        onChange={(i, v) =>
+                          setPartDays((prev) =>
+                            service.spareparts.map((_, j) => (j === i ? v : prev[j] ?? '')),
+                          )
+                        }
+                        presets={warrantyPresets}
+                      />
+                    </div>
                   </details>
                 )}
               </div>
             )}
             {paying && lunasExcess > 0 && (
-              <div className={styles.warranty}>
-                <span className={styles.warrantyLabel}>
+              <div className={box}>
+                <span className={label}>
                   {interpolate(t('serviceStatus.excessLabel'), { amount: fmtRp(lunasExcess), dp: fmtRp(service.downPayment) })}
                 </span>
-                <div className={styles.warrantyRow}>
-                  <Input
-                    label={t('serviceStatus.refundToCustomer')}
-                    value={refundAmount}
-                    onChange={(e) => setRefundAmount(fmtRpInput(e.target.value))}
-                    placeholder="0"
-                  />
-                  <Select
-                    label={t('serviceStatus.fromWallet')}
-                    value={refundWalletId}
-                    onChange={(e) => setRefundWalletId(e.target.value)}
-                    options={walletOptions}
-                    placeholder={t('serviceStatus.pickWallet')}
-                  />
+                <div className={pair}>
+                  <Field label={t('serviceStatus.refundToCustomer')}>
+                    <TextInput
+                      capitalize="none"
+                      inputMode="numeric"
+                      className={money}
+                      value={refundAmount}
+                      onChange={(e) => setRefundAmount(fmtRpInput(e.target.value))}
+                      placeholder="0"
+                    />
+                  </Field>
+                  <Field label={t('serviceStatus.fromWallet')}>
+                    <SelectBox
+                      value={refundWalletId}
+                      onValueChange={setRefundWalletId}
+                      options={walletOptions}
+                      placeholder={t('serviceStatus.pickWallet')}
+                    />
+                  </Field>
                 </div>
-                <p className={styles.dp}>
-                  {t('serviceStatus.excessHint')}
-                </p>
+                <p className={hint}>{t('serviceStatus.excessHint')}</p>
               </div>
             )}
             {target === 'batal' && service.downPayment > 0 && (
-              <div className={styles.warranty}>
-                <span className={styles.warrantyLabel}>
+              <div className={box}>
+                <span className={label}>
                   {interpolate(t('serviceStatus.refundDpLabel'), { amount: fmtRp(service.downPayment) })}
                 </span>
-                <div className={styles.warrantyRow}>
-                  <Input
-                    label={t('serviceStatus.refundAmount')}
-                    value={refundAmount}
-                    onChange={(e) => setRefundAmount(fmtRpInput(e.target.value))}
-                    placeholder="0"
-                  />
-                  <Select
-                    label={t('serviceStatus.fromWallet')}
-                    value={refundWalletId}
-                    onChange={(e) => setRefundWalletId(e.target.value)}
-                    options={walletOptions}
-                    placeholder={t('serviceStatus.pickWallet')}
-                  />
+                <div className={pair}>
+                  <Field label={t('serviceStatus.refundAmount')}>
+                    <TextInput
+                      capitalize="none"
+                      inputMode="numeric"
+                      className={money}
+                      value={refundAmount}
+                      onChange={(e) => setRefundAmount(fmtRpInput(e.target.value))}
+                      placeholder="0"
+                    />
+                  </Field>
+                  <Field label={t('serviceStatus.fromWallet')}>
+                    <SelectBox
+                      value={refundWalletId}
+                      onValueChange={setRefundWalletId}
+                      options={walletOptions}
+                      placeholder={t('serviceStatus.pickWallet')}
+                    />
+                  </Field>
                 </div>
-                <p className={styles.dp}>
-                  {t('serviceStatus.refundDpHint')}
-                </p>
+                <p className={hint}>{t('serviceStatus.refundDpHint')}</p>
               </div>
             )}
             {target === 'batal' && (
-              <div className={styles.warranty}>
-                <span className={styles.warrantyLabel}>{t('serviceStatus.feeLabel')}</span>
-                <div className={styles.warrantyRow}>
-                  <Input
-                    label={t('serviceStatus.feeAmount')}
-                    inputMode="numeric"
-                    value={feeAmount}
-                    onChange={(e) => setFeeAmount(fmtRpInput(e.target.value))}
-                    placeholder="0"
-                  />
-                  <Select
-                    label={t('serviceStatus.feeWallet')}
-                    value={feeWalletId}
-                    onChange={(e) => setFeeWalletId(e.target.value)}
-                    options={walletOptions}
-                    placeholder={t('serviceStatus.pickWallet')}
-                  />
+              <div className={box}>
+                <span className={label}>{t('serviceStatus.feeLabel')}</span>
+                <div className={pair}>
+                  <Field label={t('serviceStatus.feeAmount')}>
+                    <TextInput
+                      capitalize="none"
+                      inputMode="numeric"
+                      className={money}
+                      value={feeAmount}
+                      onChange={(e) => setFeeAmount(fmtRpInput(e.target.value))}
+                      placeholder="0"
+                    />
+                  </Field>
+                  <Field label={t('serviceStatus.feeWallet')}>
+                    <SelectBox
+                      value={feeWalletId}
+                      onValueChange={setFeeWalletId}
+                      options={walletOptions}
+                      placeholder={t('serviceStatus.pickWallet')}
+                    />
+                  </Field>
                 </div>
-                <p className={styles.dp}>
+                <p className={hint}>
                   {t(service.downPayment > 0 ? 'serviceStatus.feeHintWithDp' : 'serviceStatus.feeHint')}
                 </p>
               </div>
             )}
             {target === 'batal' && heldParts.length > 0 && (
-              <div className={styles.warranty}>
-                <span className={styles.warrantyLabel}>{t('serviceStatus.stockParts')}</span>
-                <div className={styles.partFate}>
+              <div className={box}>
+                <span className={label}>{t('serviceStatus.stockParts')}</span>
+                <div className="grid gap-2">
                   {heldParts.map(({ part, index }) => {
                     const used = consumedParts.has(index);
                     return (
-                      <div key={index} className={styles.partFateRow}>
-                        <span className={styles.partFateName}>
+                      <div key={index} className="flex items-center justify-between gap-3">
+                        <span className="min-w-0 text-sm [overflow-wrap:anywhere]">
                           {part.name} ×{part.qty}
                         </span>
-                        <button
+                        <Button
                           type="button"
-                          className={styles.partFateToggle}
+                          variant={used ? 'soft' : 'outline'}
+                          size="sm"
+                          className="shrink-0"
                           aria-pressed={used}
                           aria-label={interpolate(t(used ? 'serviceStatus.partUsedAria' : 'serviceStatus.partBackAria'), { name: part.name })}
                           onClick={() =>
@@ -1130,30 +1200,29 @@ export function StatusModal({
                           }
                         >
                           {t(used ? 'serviceStatus.partUsed' : 'serviceStatus.partBack')}
-                        </button>
+                        </Button>
                       </div>
                     );
                   })}
                 </div>
-                <p className={styles.dp}>
-                  {t('serviceStatus.partFateHint')}
-                </p>
+                <p className={hint}>{t('serviceStatus.partFateHint')}</p>
               </div>
             )}
-            <Input
-              label={t(noteRequired ? 'serviceStatus.noteReq' : 'serviceStatus.noteOpt')}
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder={
-                target === 'batal'
-                  ? t('serviceStatus.notePhCancel')
-                  : target === 'selesai'
-                    ? t('serviceStatus.notePhDone')
-                    : t('serviceStatus.notePhWork')
-              }
-            />
+            <Field label={t(noteRequired ? 'serviceStatus.noteReq' : 'serviceStatus.noteOpt')}>
+              <TextInput
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder={
+                  target === 'batal'
+                    ? t('serviceStatus.notePhCancel')
+                    : target === 'selesai'
+                      ? t('serviceStatus.notePhDone')
+                      : t('serviceStatus.notePhWork')
+                }
+              />
+            </Field>
             {service.downPayment > 0 && (
-              <p className={styles.dp}>
+              <p className={hint}>
                 {interpolate(t('serviceStatus.dpLine'), { amount: fmtRp(service.downPayment) })}{' '}
                 {needsCost && lunasExcess > 0
                   ? interpolate(t('serviceStatus.excessLine'), { amount: fmtRp(lunasExcess) }) +
@@ -1170,24 +1239,29 @@ export function StatusModal({
         {mode === 'dp' && (
           <>
             {staffDpOnly && (
-              <p className={styles.staffNote}>
+              <p className="rounded-xl bg-surface p-3.5 text-sm text-muted-foreground ring-1 ring-border/60">
                 {interpolate(t('serviceStatus.staffDpOnly'), { status: t(`statusLabel.${service.status}`).toLowerCase() })}
               </p>
             )}
-            <Input
-              label={t('serviceStatus.dpAmount')}
-              value={dpAmount}
-              onChange={(e) => setDpAmount(fmtRpInput(e.target.value))}
-              placeholder="100.000"
-            />
-            <Select
-              label={t('serviceStatus.toWallet')}
-              value={dpWalletId}
-              onChange={(e) => setDpWalletId(e.target.value)}
-              options={walletOptions}
-              placeholder={t('serviceStatus.pickWallet')}
-            />
-            <p className={styles.dp}>
+            <Field label={t('serviceStatus.dpAmount')}>
+              <TextInput
+                capitalize="none"
+                inputMode="numeric"
+                className={money}
+                value={dpAmount}
+                onChange={(e) => setDpAmount(fmtRpInput(e.target.value))}
+                placeholder="100.000"
+              />
+            </Field>
+            <Field label={t('serviceStatus.toWallet')}>
+              <SelectBox
+                value={dpWalletId}
+                onValueChange={setDpWalletId}
+                options={walletOptions}
+                placeholder={t('serviceStatus.pickWallet')}
+              />
+            </Field>
+            <p className={hint}>
               {t('serviceStatus.dpHint')}
               {service.downPayment > 0 && interpolate(t('serviceStatus.dpSoFar'), { amount: fmtRp(service.downPayment) })}
             </p>
@@ -1197,20 +1271,25 @@ export function StatusModal({
         {/* ---- Koreksi sub-action ---- */}
         {mode === 'koreksi' && (
           <>
-            <Input
-              label={t('serviceStatus.correctLabel')}
-              value={correctAmount}
-              onChange={(e) => setCorrectAmount(fmtRpInput(e.target.value))}
-              placeholder="0"
-            />
-            <Select
-              label={t(correctDelta < 0 ? 'serviceStatus.correctOutWallet' : 'serviceStatus.correctInWallet')}
-              value={correctWalletId}
-              onChange={(e) => setCorrectWalletId(e.target.value)}
-              options={walletOptions}
-              placeholder={t('serviceStatus.pickWallet')}
-            />
-            <p className={styles.dp}>
+            <Field label={t('serviceStatus.correctLabel')}>
+              <TextInput
+                capitalize="none"
+                inputMode="numeric"
+                className={money}
+                value={correctAmount}
+                onChange={(e) => setCorrectAmount(fmtRpInput(e.target.value))}
+                placeholder="0"
+              />
+            </Field>
+            <Field label={t(correctDelta < 0 ? 'serviceStatus.correctOutWallet' : 'serviceStatus.correctInWallet')}>
+              <SelectBox
+                value={correctWalletId}
+                onValueChange={setCorrectWalletId}
+                options={walletOptions}
+                placeholder={t('serviceStatus.pickWallet')}
+              />
+            </Field>
+            <p className={hint}>
               {correctDelta > 0
                 ? interpolate(t('serviceStatus.correctInHint'), { amount: fmtRp(correctDelta) })
                 : correctDelta < 0
@@ -1222,17 +1301,24 @@ export function StatusModal({
         )}
 
         {/* Riwayat lengkap ada di halaman detail; di sini hanya rujukan, dilipat. */}
-        <details className={[styles.fold, styles.history].join(' ')}>
-          <summary className={styles.foldSummary}>
+        <details className={fold}>
+          <summary className={foldSummary}>
+            <ChevronRight aria-hidden className="size-4 shrink-0 transition-transform group-open:rotate-90" />
             {t('serviceStatus.history')}
-            <span className={styles.foldCount}>{history.length}</span>
+            <span className="ml-auto font-mono text-xs font-normal text-muted-foreground">{history.length}</span>
           </summary>
-          <ul className={styles.timeline}>
+          <ul className="m-0 grid list-none gap-3 px-3.5 pb-3.5 pt-1">
             {[...history].reverse().map((h, i) => (
-              <li key={i} className={styles.timelineItem}>
-                <span className={styles.dot} data-tone={h.status === 'edit' ? 'neutral' : STATUS_TONE[h.status as ServiceStatus]} />
-                <div>
-                  <strong>{(() => {
+              <li key={i} className="flex gap-2.5">
+                <span
+                  aria-hidden
+                  className={cn(
+                    'mt-1.5 size-2 shrink-0 rounded-full',
+                    h.status === 'edit' ? 'bg-muted-foreground/50' : DOT[STATUS_BADGE[h.status as ServiceStatus]],
+                  )}
+                />
+                <div className="grid min-w-0 gap-0.5">
+                  <strong className="text-sm font-semibold">{(() => {
                     const k = historyKind(h);
                     return k === 'pickup'
                       ? t('services.pickedUp')
@@ -1242,8 +1328,8 @@ export function StatusModal({
                           ? t('serviceDetail.historyEdited')
                           : t(`statusLabel.${k}`);
                   })()}</strong>
-                  <small>
-                    {fmtDate(localDateOf(h.at))} · {h.byName || <EmptyValue />}
+                  <small className="text-xs text-muted-foreground [overflow-wrap:anywhere]">
+                    {fmtDate(localDateOf(h.at))} · {h.byName || emptyValue}
                     {h.note ? ` · ${h.note}` : ''}
                   </small>
                 </div>
@@ -1252,7 +1338,7 @@ export function StatusModal({
           </ul>
         </details>
       </div>
-    </Modal>
+    </FormDialog>
     <ConfirmDialog
       open={confirmCancel}
       title={t('serviceStatus.confirmCancelTitle').replace('{no}', service.serviceNo)}

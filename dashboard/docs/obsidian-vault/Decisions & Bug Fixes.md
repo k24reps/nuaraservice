@@ -13,6 +13,23 @@ Catatan keputusan desain penting + bug nyata yang ditemukan saat verifikasi.
 
 ## Keputusan desain
 
+### Modal Ubah Status dan Tiket Jadi pindah ke dens-ui (L-59, 22 Nov 2026)
+`StatusModal`, `TicketDoneModal`, dan `PartWarrantyFields` ditulis ulang dengan dens-ui
+(`FormDialog`, `Field`, `TextInput`, `SelectBox`); tiga CSS Module dihapus. Logika simpan
+(status, pembayaran terbagi, DP, koreksi biaya, refund kelebihan dan DP batal, nasib part saat
+batal, garansi) tidak berubah.
+- **Status tujuan tetap grup radio**: kanal kerja dalam kisi `auto-fill`, Batal terpisah di bawah
+  garis putus-putus dan bernada bahaya. Titik warna kanal memakai `STATUS_BADGE` (sama dengan
+  lencana di daftar dan detail), bukan `STATUS_TONE`.
+- **Pasangan jumlah + wallet** dua kolom lewat container query di dalam jendela
+  (`@min-[26rem]/sm`), bukan media query 520px.
+- **Komponen dens di dalam modal FixMaster**: isian garansi part juga dipakai modal Garansi part
+  (masih FixMaster sampai L-60). Akarnya `data-nu` (supaya reset dens berlaku) + `bg-transparent`
+  (karena `[data-nu]` memberi latar halaman). Tanpa yang kedua, baris isian tampak berlatar abu.
+- Cap miring Tiket Jadi diganti lencana berteks sama (pola K-10).
+- Verifikasi: lima keadaan modal x dua ukuran, kontras bersih, halaman dan modal lain sama per
+  piksel, 1153 tes.
+
 ### Detail tiket pindah ke dens-ui (L-49, 22 Nov 2026)
 `ServiceDetailPage` dan `ScreenLockReadout` ditulis ulang dengan Tailwind + dens-ui;
 `ServiceDetailPage.module.css` (983 baris) dihapus. Logika tidak berubah (sparepart + stok,

@@ -1,6 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Modal, Button, Icon } from '@/components/ui';
+import { Printer } from 'lucide-react';
+import { Badge } from '@/components/dens/badge';
+import { Button } from '@/components/dens/button';
+import { FormDialog } from '@/components/dens/form-dialog';
+import { WhatsAppIcon } from '@/components/dens/whatsapp-icon';
 import { useSessionStore } from '@/stores/session';
 import { fmtRp } from '@/lib/format';
 import { fmtDate } from '@/lib/time';
@@ -9,7 +13,6 @@ import { useT } from '@/i18n';
 import type { Service } from '@/data/types';
 import { NotifyModal } from './NotifyModal';
 import { useServicePrint } from './useServicePrint';
-import styles from './TicketDoneModal.module.css';
 
 interface TicketDoneModalProps {
   open: boolean;
@@ -36,7 +39,7 @@ export function TicketDoneModal({ open, onClose, service, variant }: TicketDoneM
 
   return (
     <>
-      <Modal
+      <FormDialog
         open={open}
         onClose={onClose}
         title={t(intake ? 'ticketDone.intakeTitle' : 'ticketDone.handoverTitle')}
@@ -54,65 +57,60 @@ export function TicketDoneModal({ open, onClose, service, variant }: TicketDoneM
                 {t('ticketDone.viewTicket')}
               </Button>
             )}
-            <Button variant="secondary" onClick={onClose}>
+            <Button variant="outline" onClick={onClose}>
               {t('common.close')}
             </Button>
           </>
         }
       >
-        <div className={styles.body}>
-          <div className={styles.head}>
-            <span className={styles.stamp} data-variant={variant}>
+        <div className="grid gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            {/* Dulu cap miring (motif FixMaster); kini lencana dengan teks yang sama. */}
+            <Badge variant={intake ? 'info' : 'success'} className="px-3 py-1 text-sm">
               {t(intake ? 'ticketDone.intakeStamp' : 'ticketDone.handoverStamp')}
-            </span>
-            <span className={styles.no}>{service.serviceNo}</span>
+            </Badge>
+            <span className="font-mono text-sm font-semibold tracking-wide text-muted-foreground">{service.serviceNo}</span>
           </div>
-          <dl className={styles.readout}>
-            <div>
-              <dt>{t('ticketDone.unit')}</dt>
-              <dd>{service.device}</dd>
-            </div>
-            <div>
-              <dt>{t('ticketDone.customer')}</dt>
-              <dd>{service.customerName}</dd>
-            </div>
-            {intake ? (
-              service.estimateCost > 0 && (
-                <div>
-                  <dt>{t('ticketDone.estimate')}</dt>
-                  <dd>{fmtRp(service.estimateCost)}</dd>
-                </div>
-              )
-            ) : (
-              <>
-                <div>
-                  <dt>{t('ticketDone.paid')}</dt>
-                  <dd>{fmtRp(service.finalCost)}</dd>
-                </div>
-                {service.warrantyServiceUntil && (
-                  <div>
-                    <dt>{t('ticketDone.warranty')}</dt>
-                    <dd>
-                      {interpolate(t('ticketDone.until'), { date: fmtDate(service.warrantyServiceUntil.slice(0, 10)) })}
-                    </dd>
-                  </div>
-                )}
-              </>
-            )}
+          <dl className="m-0 grid divide-y divide-border/70 border-y border-border/70">
+            {[
+              [t('ticketDone.unit'), service.device, ''],
+              [t('ticketDone.customer'), service.customerName, ''],
+              ...(intake
+                ? service.estimateCost > 0
+                  ? [[t('ticketDone.estimate'), fmtRp(service.estimateCost), 'font-mono tabular-nums']]
+                  : []
+                : [
+                    [t('ticketDone.paid'), fmtRp(service.finalCost), 'font-mono tabular-nums'],
+                    ...(service.warrantyServiceUntil
+                      ? [[
+                          t('ticketDone.warranty'),
+                          interpolate(t('ticketDone.until'), { date: fmtDate(service.warrantyServiceUntil.slice(0, 10)) }),
+                          '',
+                        ]]
+                      : []),
+                  ]),
+            ].map(([term, value, cls]) => (
+              <div key={term} className="flex items-baseline justify-between gap-3 py-2 text-sm">
+                <dt className="shrink-0 text-muted-foreground">{term}</dt>
+                <dd className={`m-0 min-w-0 text-right font-medium [overflow-wrap:anywhere] ${cls}`}>{value}</dd>
+              </div>
+            ))}
           </dl>
-          <p className={styles.hint}>{t(intake ? 'ticketDone.intakeHint' : 'ticketDone.handoverHint')}</p>
-          <div className={styles.actions}>
+          <p className="text-sm text-muted-foreground">{t(intake ? 'ticketDone.intakeHint' : 'ticketDone.handoverHint')}</p>
+          <div className="grid gap-2">
             {org && (
-              <Button onClick={print} iconLeft={<Icon name="print" aria-hidden />}>
+              <Button onClick={print}>
+                <Printer aria-hidden />
                 {t(intake ? 'ticketDone.printIntake' : 'ticketDone.printNota')}
               </Button>
             )}
-            <Button variant="secondary" onClick={() => setNotifyOpen(true)} iconLeft={<Icon name="whatsapp" aria-hidden />}>
+            <Button variant="outline" onClick={() => setNotifyOpen(true)}>
+              <WhatsAppIcon className="size-4" />
               {t('ticketDone.sendWa')}
             </Button>
           </div>
         </div>
-      </Modal>
+      </FormDialog>
       <NotifyModal
         open={notifyOpen}
         onClose={() => setNotifyOpen(false)}

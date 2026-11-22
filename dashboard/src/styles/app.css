@@ -97,3 +97,6 @@
 @source "../features/services/ServiceModal.tsx";
 @source "../features/services/ServiceDetailPage.tsx";
 @source "../features/services/ScreenLockReadout.tsx";
+@source "../features/services/StatusModal.tsx";
+@source "../features/services/TicketDoneModal.tsx";
+@source "../features/services/PartWarrantyFields.tsx";

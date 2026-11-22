@@ -68,6 +68,8 @@ tetap relevan, tetapi bagian merek, harga, dan infrastruktur FixMaster tidak ber
   (`SummaryStrip`, `FilterChips`, `TextInput`, `SelectBox`, `FormDialog`, `ConfirmDialog`,
   `EmptyState`, `Field`/`FormMessage`; daftar di README folder itu). Pakai itu sebelum membuat
   yang baru. Fokus awal jendela lewat `data-autofocus`, bukan `autoFocus` (lihat form-dialog.tsx).
+  Komponen dens yang juga dipakai di dalam halaman/modal FixMaster: akarnya `data-nu bg-transparent`
+  (tanpa `data-nu` reset dens tidak berlaku; `[data-nu]` sendiri memberi latar halaman).
 - **Arsitektur CSS Fase B** (`src/styles/app.css`): layer `theme` < `legacy` (global.css) <
   `nu-base` (reset dens-ui) < `utilities`; CSS Module tidak berlayer dan selalu menang.
   Preflight Tailwind sengaja TIDAK global (`dens-base.css`, terbatas ke `[data-slot]`/`[data-nu]`):

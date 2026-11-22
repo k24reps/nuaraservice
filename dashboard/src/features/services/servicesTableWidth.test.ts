@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import tsxRaw from './ServicesPage.tsx?raw';
 import modalTsxRaw from './ServiceModal.tsx?raw';
 import detailTsxRaw from './ServiceDetailPage.tsx?raw';
+import statusTsxRaw from './StatusModal.tsx?raw';
+import doneTsxRaw from './TicketDoneModal.tsx?raw';
+import warrantyTsxRaw from './PartWarrantyFields.tsx?raw';
 import pickerTsxRaw from './SparepartPickerModal.tsx?raw';
 import pickerCssRaw from './SparepartPickerModal.module.css?raw';
 import appCssRaw from '../../styles/app.css?raw';
@@ -14,6 +17,9 @@ const lf = (s: string) => s.replace(/\r\n/g, '\n');
 const tsx = lf(tsxRaw);
 const modalTsx = lf(modalTsxRaw);
 const detailTsx = lf(detailTsxRaw);
+const statusTsx = lf(statusTsxRaw);
+const doneTsx = lf(doneTsxRaw);
+const warrantyTsx = lf(warrantyTsxRaw);
 const pickerTsx = lf(pickerTsxRaw);
 const pickerCss = lf(pickerCssRaw);
 const appCss = lf(appCssRaw);
@@ -478,5 +484,50 @@ describe('detail tiket (L-49)', () => {
     expect(detailTsx).toContain('<Badge variant={STATUS_BADGE[service.status]}');
     expect(detailTsx).not.toContain('REPAIR TICKET');
     expect(detailTsx).not.toContain('STATUS_TONE');
+  });
+});
+
+describe('modal Ubah Status, Tiket Jadi, garansi part (L-59)', () => {
+  it('kelasnya dibuat dan tak ada lagi CSS Module', () => {
+    for (const f of ['StatusModal', 'TicketDoneModal', 'PartWarrantyFields']) {
+      expect(appCss).toContain(`@source "../features/services/${f}.tsx";`);
+    }
+    for (const src of [statusTsx, doneTsx, warrantyTsx]) {
+      expect(src).not.toContain('styles.');
+      expect(src).not.toContain('.module.css');
+    }
+  });
+
+  it('status tujuan = grup radio; Batal terpisah di bawah garis dan bernada bahaya', () => {
+    expect(statusTsx).toContain('role="radiogroup" aria-label={t(\'serviceStatus.target\')}');
+    expect(statusTsx.match(/role="radio"/g)).toHaveLength(2);
+    expect(statusTsx).toContain("className={channel('batal', target === 'batal', true)}");
+    expect(statusTsx).toContain("checked && danger && 'bg-destructive-soft text-destructive ring-2 ring-destructive'");
+    // Warna titik kanal = peta lencana tahap yang sama dengan daftar dan detail.
+    expect(statusTsx).toContain('DOT[STATUS_BADGE[s]]');
+    expect(statusTsx).not.toContain('STATUS_TONE');
+  });
+
+  it('pasangan jumlah + wallet dua kolom lewat container query, bukan media query', () => {
+    expect(statusTsx).toContain("const pair = 'grid gap-3 @min-[26rem]/sm:grid-cols-2';");
+    expect(statusTsx).toContain('<div className="@container/sm grid gap-4">');
+    expect(statusTsx).not.toMatch(/@media|useMediaQuery/);
+  });
+
+  it('uang dan hari garansi memakai huruf mono, placeholder tidak', () => {
+    expect(statusTsx).toContain("const money = 'font-mono tabular-nums placeholder:font-sans';");
+    expect(statusTsx.match(/className=\{money\}/g)!.length).toBeGreaterThanOrEqual(8);
+  });
+
+  it('garansi part tetap benar di dalam modal FixMaster: akarnya data-nu tanpa latar', () => {
+    // PartWarrantyModal (L-60) masih FixMaster; tanpa data-nu tombol prasetel mewarisi gaya lama,
+    // dan [data-nu] sendiri memberi latar halaman.
+    expect(warrantyTsx.match(/<div data-nu className="[^"]*bg-transparent"/g)).toHaveLength(2);
+  });
+
+  it('Tiket Jadi: cap miring diganti lencana dengan teks yang sama', () => {
+    expect(doneTsx).toContain("t(intake ? 'ticketDone.intakeStamp' : 'ticketDone.handoverStamp')");
+    expect(doneTsx).toContain("<Badge variant={intake ? 'info' : 'success'}");
+    expect(doneTsx).not.toMatch(/rotate/);
   });
 });
