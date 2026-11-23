@@ -1,6 +1,6 @@
 # IPD (Implementation Plan Document) - Nuara Dashboard
 
-> Versi: 0.14 | Diperbarui: 2026-11-23 | Merujuk: PRD, TRD, AFD, DBD, `dashboard/AGENTS.md`
+> Versi: 0.15 | Diperbarui: 2026-11-23 | Merujuk: PRD, TRD, AFD, DBD, `dashboard/AGENTS.md`
 <!-- Versi 0.2 (42 langkah Next.js dari nol) dibatalkan 2026-11-21 (wawancara P13). Langkahnya disimpan di bagian Arsip dengan tanda [DIBATALKAN]; rujukan kriteria F-xx di sana tetap berguna untuk daftar selisih. -->
 
 ## Cara memakai
@@ -17,7 +17,7 @@
 | Fase | Tujuan | Langkah |
 |---|---|---|
 | A | Salinan FixMaster jalan sebagai Nuara Dashboard | L-43, L-44, L-45 |
-| B | UI dipindah ke dens-ui dengan warna Nuara, per halaman | L-46, L-47, L-58, L-48, L-49, L-59, L-60, L-50, L-61, L-51, L-62, L-52, L-63, L-53 s.d. L-56 |
+| B | UI dipindah ke dens-ui dengan warna Nuara, per halaman | L-46, L-47, L-58, L-48, L-49, L-59, L-60, L-50, L-61, L-51, L-62, L-52, L-63, L-53, L-64, L-54 s.d. L-56 |
 | C | Selisih PRD yang diputuskan Pemilik | ditentukan dari L-45 |
 | D | Rilis dan berhenti memakai FixMaster | L-57 |
 
@@ -105,7 +105,11 @@ Aturan bersama: satu langkah = satu kelompok halaman dipindah utuh, CSS Module l
   - Logika catat, transfer, hitung saldo, bayar gaji, dan tautan karyawan tidak berubah. `CountModal` yang dibuka dari Pengaturan ikut berganti.
   - Selesai jika: kelima jendela tampil di desktop, tablet, ponsel sampai 320px tanpa luberan dan tanpa isi keluar dari jendela; kontrol >= 44px di layar sentuh; fokus kembali ke tombol pembuka; kategori catat tetap bergrup; probe `audit-*` dan `audit-contrast` bersih; halaman sama per piksel; tes, lint, build lolos.
   - Hasil 2026-11-23: lihat Catatan L-63.
-- [ ] **L-53 Dashboard dan Laporan**
+- [x] **L-53 Dashboard** (`DashboardPage`); sesudahnya folder `features/dashboard` utuh di `@source`
+  - Dipecah 2026-11-23 (K-16): halaman Laporan pindah ke L-64. Logika KPI, peringatan, target + laju, break-even, dan papan teknisi tidak berubah. Maskot VOLT dan layar LCD panel laba dibuang (K-17).
+  - Selesai jika: Dashboard tampil di desktop, tablet, ponsel sampai 320px tanpa luberan dan tanpa isi keluar dari panel/baris; kontrol baru >= 44px di layar sentuh; probe `audit-*` dan `audit-contrast` bersih; halaman lain sama per piksel; tes, lint, build lolos.
+  - Hasil 2026-11-23: lihat Catatan L-53.
+- [ ] **L-64 Laporan** (`ReportsPage`, `TrendChart`); sesudahnya folder `features/reports` utuh di `@source`
 - [ ] **L-54 Absensi, Tugas, Log Aktivitas, Glosarium, Kalkulator Biaya**
 - [ ] **L-55 Pengaturan**
 - [ ] **L-56 Halaman lacak pelanggan + bersih-bersih**: lacak pelanggan memakai dunia "Nota Servis Rangkap" (DBD bagian 1, S-07); hapus token, maskot VOLT, dan CSS Modules FixMaster yang tersisa.
@@ -161,6 +165,8 @@ Dikumpulkan 2026-11-22 dari log wawancara, catatan IPD, dan langkah L-43 s.d. L-
 | K-13 | Panel total Kasir bergaya LCD (layar gelap, digit hantu "888", garis pindai, LED berdenyut) beserta perforasi struk, tuts qty mekanis, dan LED di tuts bayar (motif FixMaster) | L-50 | Diganti panel total navy dengan angka mono putih (ukurannya tetap menyesuaikan jumlah digit), garis putus, tuts bulat, dan cincin pilihan | Buang (pola K-10) | Sudah berlaku |
 | K-14 | Pemecahan L-51 (Pelanggan dan Supplier, sekitar 1.640 baris kode + 1.160 baris CSS) | Rencana L-51, 2026-11-23 | Dipecah: L-51 Pelanggan, L-62 Supplier (halaman + modal Supplier, PO, terima barang) | Dipecah (pola K-08) | Sudah berlaku |
 | K-15 | Pemecahan L-52 (Keuangan, sekitar 2.220 baris kode + 890 baris CSS) | Rencana L-52, 2026-11-23 | Dipecah: L-52 halaman Keuangan, L-63 lima modalnya (catat, transfer, hitung saldo, bayar gaji, tautkan karyawan) | Dipecah (pola K-08) | Sudah berlaku |
+| K-16 | Pemecahan L-53 (Dashboard dan Laporan, sekitar 2.800 baris kode + 2.600 baris CSS) | Rencana L-53, 2026-11-23 | Dipecah: L-53 Dashboard, L-64 Laporan | Dipecah (pola K-08) | Sudah berlaku |
+| K-17 | Maskot VOLT di konsol Dashboard dan panel laba bergaya layar LCD (layar gelap, garis pindai, LED bercahaya, bingkai gradien; motif FixMaster) | L-53 | Maskot dibuang; panel laba = panel navy dengan angka putih, arus kas negatif berwarna sorot | Buang (pola K-10, K-13) | Sudah berlaku |
 
 **Menunggu tindakan Pemilik (bukan keputusan).** L-44: membuat proyek Supabase tes milik Nuara (region Singapura), proyek Vercel kedua, dan DNS `app.nuaraservice.my.id`; mendaftar sebagai Pemilik dan mengundang satu akun uji. Tes integrasi belum pernah dijalankan sampai proyek itu ada.
 
@@ -232,6 +238,8 @@ Dikumpulkan 2026-11-22 dari log wawancara, catatan IPD, dan langkah L-43 s.d. L-
 - 2026-11-23 - L-52 - Tautan `Term` ("Arus Kas Bersih", komponen bersama FixMaster) masih 30px di layar sentuh, sama dengan sebelum langkah ini; dipindah bersama komponen bersama lain di L-56. Konfirmasi batal transfer dan hapus catatan kini mati selama diproses (dulu hanya labelnya berganti).
 - 2026-11-23 - L-63 - Hasil: jendela catat pengeluaran, catat pemasukan, bayar gaji, transfer, dan hitung saldo diukur di 5 ukuran (1440, 1025, tablet sentuh 834, iPhone 13, 320px): pas di layar, tanpa isi keluar dari jendela, kontrol >= 44px di layar sentuh (catatan yang tersisa hanya positif palsu `span.sr-only` dan `<select>` tersembunyi milik Radix), fokus kembali ke tombol pembuka di 25 dari 25 kasus. Dropdown kategori catat menampilkan enam grup. FixMaster meluap 6px di jendela hitung saldo 320px; kini tidak. `audit-contrast` bersih dan kini memeriksa jendela catat, hitung saldo, dan transfer; probe `audit-mobile`, pita tablet, `audit-zoom`, zoom 1,25, dan Padat identik dengan 228d213 (L-52); 13 halaman sama per piksel (selisih hanya di wilayah derau dan 1 piksel anti-alias ikon sidebar Keuangan); impeccable 0 temuan; 1183 tes / 89 berkas, lint, build lolos.
 - 2026-11-23 - L-63 - `SelectBox` dens kini menerima `groups` (opsi berkelompok, API sama dengan `Select` FixMaster). Teks FixMaster di modal Keuangan yang masih literal dibiarkan apa adanya.
+- 2026-11-23 - L-53 - Hasil: Dashboard diukur di 11 ukuran (1920 sampai 1025 desktop, tablet sentuh 1024/834/744, iPhone 13, 360px, 320px): tanpa luberan, tanpa isi keluar dari panel atau baris, tepat satu tombol Servis Baru terlihat di tiap ukuran (konsol di layar lebar, dok zona jempol di ponsel). `audit-contrast` bersih (Dashboard 119 elemen, termasuk panel navy); probe `audit-mobile`, pita tablet, `audit-zoom`, zoom 1,25, dan Padat identik dengan ec97774 (L-63); 12 halaman lain sama per piksel (selisih hanya di wilayah derau); impeccable 0 temuan; 1188 tes / 90 berkas, lint, build lolos.
+- 2026-11-23 - L-53 - Putaran verifikasi memperbaiki dua hal: tautan break-even 37px di layar sentuh (kini 44px) dan tombol dok Servis Baru yang hilang di atas panel laba navy (kini berbayangan + bercincin terang). Tautan `Term` (komponen bersama FixMaster) masih 30-32px seperti sebelumnya; dipindah di L-56. Komponen `Mascot` kini tak dipakai.
 
 ## Arsip: rencana Next.js (dibatalkan 2026-11-21)
 Langkah di bawah tidak dikerjakan. Disimpan karena rujukan kriteria F-xx dan keputusan di dalamnya dipakai untuk L-45.

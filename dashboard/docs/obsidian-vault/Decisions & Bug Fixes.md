@@ -13,6 +13,24 @@ Catatan keputusan desain penting + bug nyata yang ditemukan saat verifikasi.
 
 ## Keputusan desain
 
+### Dashboard pindah ke dens-ui (L-53, 23 Nov 2026)
+`DashboardPage` ditulis ulang dengan dens-ui; CSS Module-nya dihapus dan `@source` memindai
+`features/dashboard`. Laporan dipisah ke L-64 (K-16). Logika KPI, peringatan, target + laju,
+break-even, dan papan teknisi tidak disentuh.
+- **Maskot VOLT dan layar LCD dibuang (K-17).** Konsol tak lagi memuat wajah maskot; panel laba
+  (layar gelap bergaris pindai, LED bercahaya, bingkai gradien) jadi panel navy `bg-primary`
+  seperti panel total Kasir (K-13). Arus kas negatif = angka berwarna sorot (`highlight`), titik
+  status hijau/kuning. Komponen `Mascot` kini tak dipakai di mana pun (dibersihkan di L-56).
+- **Ambang tetap container query `dashboard`** (561px, 901px) seperti FixMaster; satu-satunya
+  media query yang tersisa adalah `phone:` untuk menyembunyikan Servis Baru di konsol saat dok
+  zona jempol tampil (dok itu sendiri terikat menu bawah, bukan lebar wadah).
+- Spine/LED di strip, peringatan, dan papan teknisi diganti titik warna sinyal; status tiket
+  memakai `STATUS_BADGE`. Meter teknisi peringkat 1 berwarna sorot.
+- Tombol Servis Baru di dok zona jempol diberi bayangan + cincin terang, karena navy-nya hilang
+  saat melintas di atas panel laba.
+- Tautan break-even setinggi 44px di layar sentuh (pertama terukur 37px). Tautan `Term`
+  (komponen bersama) masih 30-32px, sama dengan sebelumnya; dipindah di L-56.
+
 ### Modal Keuangan pindah ke dens-ui, folder Keuangan selesai (L-63, 23 Nov 2026)
 `EntryModal`, `TransferModal`, `CountModal`, `PayrollModal`, dan `LinkEmployeeModal` ditulis ulang
 dengan `FormDialog`; `FinancePage.module.css` dihapus dan `@source` memindai `features/finance`

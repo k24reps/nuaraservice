@@ -538,6 +538,11 @@ Dulu tabel jadi **grid laci komponen**. Tiap sparepart = bin berlabel kategori, 
 
 ## Dashboard — Diagnostic Panel
 
+**Nuara (L-53, 23 Nov 2026).** Dashboard kini dens-ui + Tailwind; konsol, daftar tindakan, panel
+laba, strip readout, Servis Terbaru, target, dan papan teknisi tetap. Maskot VOLT di konsol dan
+layar LCD panel laba dibuang (K-17): panel laba = panel navy seperti total Kasir. Uraian di bawah
+adalah tampilan FixMaster.
+
 - **Servis Baru di ponsel (7 Nov 2026, critique layout).** Aksi cepat konsol hanya tampil di desktop. Navigasi bawah menautkan ke daftar Servis, bukan ke tiket baru, jadi di ponsel Dashboard tidak punya jalan langsung ke Servis Baru. Kini ≤720px tombolnya ada di dok zona jempol `ThumbDock` (`/services?new=1`), dan tombol di konsol disembunyikan supaya tidak dobel. Di tablet sentuh, aksi cepat dan "Lihat semua" naik dari 36px ke 44px.
 
 ![[dashboard-dock-390-light.png]]
