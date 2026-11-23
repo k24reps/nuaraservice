@@ -13,6 +13,26 @@ Catatan keputusan desain penting + bug nyata yang ditemukan saat verifikasi.
 
 ## Keputusan desain
 
+### Halaman Supplier pindah ke dens-ui (L-62, 23 Nov 2026)
+`SuppliersPage`, `SupplierModal`, `PurchaseOrderModal`, dan `ReceiveModal` ditulis ulang dengan
+dens-ui; tiga CSS Module dihapus dan `@source` memindai `features/suppliers` utuh. Logika PO
+(buat, perbaiki, terima + HPP rata-rata + kas, batal dengan pembalikan stok/kas) tidak disentuh.
+- **Status PO = `PO_STATUS_BADGE`** (baru di `lib/business/purchase.ts`, diuji): draft abu,
+  dipesan biru, sebagian kuning, lengkap hijau, batal merah lembut. Spine warna di tepi baris
+  docket dibuang (pola K-10). Jendela terima kini memakai lencana sesuai status (dulu selalu biru).
+- **Baris docket tiga tingkat lewat container query**, ambang dari kasus terburuk terukur di layar
+  sentuh (nama panjang, "Sebagian Diterima" + Terima + dua tuts, "Rp 999.999.999"): satu baris
+  >=826px; status dan tuts turun ke baris kedua di bawahnya (butuh 515px); di bawah 516px total
+  ikut turun ke bawah nomor PO. FixMaster: `@container` 848px + `@media 640px` (viewport).
+- **Baris barang PO** memakai container query (kolom jumlah hilang di wadah <507px); kolom jumlah
+  kini `auto`, karena "Rp 12.500.000" mono tak muat di 90px. Isian qty dan harga beli diberi label
+  aksesibel (dulu tanpa label sama sekali); begitu juga isian terima di jendela terima.
+- **Batal PO**: tombol konfirmasi kini `disabled` selama proses (`loading`), dulu hanya labelnya
+  berganti "Membatalkan…" sehingga bisa diketuk dua kali.
+- **Jendela terima**: tabel barang ber-`role="table"`; kotak centang bayar = `Checkbox` dens di
+  dalam label 44px (dulu input 16px). FixMaster meluap 17px di 320px; kini tidak.
+- `audit-contrast.mjs` memeriksa tab Supplier, form PO dengan baris barang, dan jendela terima.
+
 ### Halaman Pelanggan pindah ke dens-ui (L-51, 23 Nov 2026)
 `CustomersPage`, `CustomerHistoryDrawer`, dan `CustomerModal` ditulis ulang dengan dens-ui; dua CSS
 Module dihapus dan `@source` memindai `features/customers` utuh. Supplier dipisah ke L-62 (K-14).

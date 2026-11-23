@@ -1,5 +1,9 @@
 import { useState } from 'react';
-import { Modal, Input, Button, FormFields, FormRow, FormError } from '@/components/ui';
+import { LoaderCircle } from 'lucide-react';
+import { Button } from '@/components/dens/button';
+import { Field, FormMessage } from '@/components/dens/field';
+import { FormDialog } from '@/components/dens/form-dialog';
+import { TextInput } from '@/components/dens/text-input';
 import { useFormFault } from '@/hooks/useFormFault';
 import { repository } from '@/data';
 import { newId } from '@/lib/id';
@@ -78,31 +82,49 @@ export function SupplierModal({ open, onClose, editing, suppliers }: SupplierMod
   };
 
   return (
-    <Modal
+    <FormDialog
       open={open}
       onClose={onClose}
       title={editing ? 'Ubah Supplier' : 'Supplier Baru'}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="outline" onClick={onClose}>
             Batal
           </Button>
-          <Button onClick={save} loading={busy}>
+          <Button onClick={save} disabled={busy} aria-busy={busy || undefined}>
+            {busy && <LoaderCircle aria-hidden className="animate-spin motion-reduce:animate-none" />}
             Simpan
           </Button>
         </>
       }
     >
-      <FormFields>
-        <FormError>{error}</FormError>
-        <Input invalid={invalid('name')} label="Nama Supplier" value={name} autoCapWords onChange={(e) => setName(e.target.value)} autoFocus />
-        <FormRow>
-          <Input invalid={invalid('phone')} label="No. Telepon" value={phone} inputMode="tel" onChange={(e) => setPhone(e.target.value)} />
-          <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-        </FormRow>
-        <Input label="Alamat" value={address} onChange={(e) => setAddress(e.target.value)} />
-        <Input label="Catatan" value={note} onChange={(e) => setNote(e.target.value)} />
-      </FormFields>
-    </Modal>
+      <div className="@container/form grid gap-4">
+        <FormMessage>{error}</FormMessage>
+        <Field label="Nama Supplier" invalid={invalid('name')}>
+          <TextInput capitalize="words" value={name} onChange={(e) => setName(e.target.value)} data-autofocus />
+        </Field>
+        {/* Dua kolom selama jendela cukup lebar (container query: zoom ikut dihitung). */}
+        <div className="grid gap-4 @sm/form:grid-cols-2">
+          <Field label="No. Telepon" invalid={invalid('phone')}>
+            <TextInput
+              capitalize="none"
+              className="font-mono placeholder:font-sans"
+              value={phone}
+              inputMode="tel"
+              onChange={(e) => setPhone(e.target.value)}
+            />
+          </Field>
+          <Field label="Email">
+            <TextInput type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+          </Field>
+        </div>
+        <Field label="Alamat">
+          <TextInput value={address} onChange={(e) => setAddress(e.target.value)} />
+        </Field>
+        <Field label="Catatan">
+          <TextInput value={note} onChange={(e) => setNote(e.target.value)} />
+        </Field>
+      </div>
+    </FormDialog>
   );
 }

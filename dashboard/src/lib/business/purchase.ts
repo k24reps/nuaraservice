@@ -106,6 +106,18 @@ export const PO_STATUS_LABELS: Record<PurchaseOrderStatus, string> = {
   cancelled: 'Dibatalkan',
 };
 
+/** Varian lencana dens untuk status PO (Nuara, L-62). Pola sama dengan
+ *  STATUS_BADGE tiket: hanya keadaan yang menuntut perhatian yang berwarna kuat. */
+export type PoStatusBadge = 'secondary' | 'info' | 'warning' | 'success' | 'destructive-soft';
+
+export const PO_STATUS_BADGE: Record<PurchaseOrderStatus, PoStatusBadge> = {
+  draft: 'secondary',
+  ordered: 'info',
+  partial: 'warning',
+  received: 'success',
+  cancelled: 'destructive-soft',
+};
+
 export const PO_STATUS_TONE: Record<PurchaseOrderStatus, string> = {
   draft: 'neutral',
   ordered: 'info',

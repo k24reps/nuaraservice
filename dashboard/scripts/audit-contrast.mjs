@@ -338,6 +338,27 @@ for (const theme of ['light']) {
       await page.locator('main [role="button"][title] button[aria-label="Ubah"]').first().click();
       await page.waitForTimeout(400);
     }],
+    ['Supplier-Vendor', async () => {
+      await page.keyboard.press('Escape');
+      await page.getByRole('link', { name: /^Supplier/ }).first().click();
+      await page.waitForTimeout(900);
+      await page.locator('main [role="group"] button[aria-pressed]').nth(1).click();
+      await page.waitForTimeout(300);
+    }],
+    ['Supplier-PO', async () => {
+      await page.locator('main [role="group"] button[aria-pressed]').nth(0).click();
+      await page.getByRole('button', { name: /^PO Baru/ }).click();
+      await page.waitForTimeout(400);
+      await page.locator('[role="dialog"] [role="combobox"]').nth(1).click();
+      await page.locator('[role="option"]').first().click();
+      await page.waitForTimeout(300);
+    }],
+    ['Supplier-Terima', async () => {
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(300);
+      await page.getByRole('button', { name: /Terima$/ }).first().click();
+      await page.waitForTimeout(400);
+    }],
     // Kartu Tampilan (Pengaturan › Sistem) dan chip pembesaran Topbar di ketiga
     // rona LED: nominal 100%, aksen 110% + Padat, jingga 90%. Tab Sistem tidak
     // terbuka oleh menu Pengaturan di atas, jadi kartu ini perlu langkah sendiri.

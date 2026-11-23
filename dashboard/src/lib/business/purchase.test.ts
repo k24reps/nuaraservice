@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
+  PO_STATUS_BADGE,
+  PO_STATUS_LABELS,
   poTotal,
   poOrderedQty,
   poReceivedQty,
@@ -128,5 +130,16 @@ describe('receivedValue', () => {
   it('is zero when nothing received', () => {
     const order = po([line({ itemId: 'a', qty: 10, costPrice: 50000 })]);
     expect(receivedValue(order, { a: 0 })).toBe(0);
+  });
+});
+
+describe('PO_STATUS_BADGE', () => {
+  it('setiap status PO punya lencana, dan status berbeda tak berbagi warna yang menuntut tindakan', () => {
+    expect(Object.keys(PO_STATUS_BADGE).sort()).toEqual(Object.keys(PO_STATUS_LABELS).sort());
+    // Sebagian diterima = masih menunggu barang (kuning), lengkap = hijau, batal = merah lembut.
+    expect(PO_STATUS_BADGE.partial).toBe('warning');
+    expect(PO_STATUS_BADGE.received).toBe('success');
+    expect(PO_STATUS_BADGE.cancelled).toBe('destructive-soft');
+    expect(new Set(Object.values(PO_STATUS_BADGE)).size).toBe(5);
   });
 });

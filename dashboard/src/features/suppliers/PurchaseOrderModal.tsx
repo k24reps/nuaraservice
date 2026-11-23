@@ -1,5 +1,10 @@
 import { useState } from 'react';
-import { Modal, Input, Select, Button, Icon } from '@/components/ui';
+import { LoaderCircle, Trash2 } from 'lucide-react';
+import { Button } from '@/components/dens/button';
+import { Field, FormMessage } from '@/components/dens/field';
+import { FormDialog } from '@/components/dens/form-dialog';
+import { SelectBox } from '@/components/dens/select-box';
+import { TextInput } from '@/components/dens/text-input';
 import { useFormFault } from '@/hooks/useFormFault';
 import { repository } from '@/data';
 import { useCollection } from '@/hooks/useCollection';
@@ -17,7 +22,6 @@ import type {
   Supplier,
   InventoryItem,
 } from '@/data/types';
-import styles from './PurchaseOrderModal.module.css';
 
 interface PurchaseOrderModalProps {
   open: boolean;
@@ -142,76 +146,96 @@ export function PurchaseOrderModal({
   const availableItems = inventory.filter((i) => !lines.some((l) => l.itemId === i.id));
 
   return (
-    <Modal
+    <FormDialog
       open={open}
       onClose={onClose}
       title={editing ? `Perbaiki ${editing.poNumber}` : 'PO Baru'}
       size="lg"
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="outline" onClick={onClose}>
             Batal
           </Button>
-          <Button onClick={save} loading={busy}>
+          <Button onClick={save} disabled={busy} aria-busy={busy || undefined}>
+            {busy && <LoaderCircle aria-hidden className="animate-spin motion-reduce:animate-none" />}
             {editing ? 'Simpan Perubahan' : 'Buat PO'}
           </Button>
         </>
       }
     >
-      <div className={styles.body}>
-        {error && <p className={styles.error}>{error}</p>}
-        <Select
-          label="Supplier"
-          invalid={invalid('supplier')}
-          value={supplierId}
-          onChange={(e) => setSupplierId(e.target.value)}
-          options={suppliers.map((s) => ({ value: s.id, label: s.name }))}
-          placeholder={suppliers.length ? undefined : 'Belum ada supplier'}
-        />
+      <div className="grid gap-4">
+        <FormMessage>{error}</FormMessage>
+        <Field label="Supplier" invalid={invalid('supplier')}>
+          <SelectBox
+            value={supplierId}
+            onValueChange={setSupplierId}
+            options={suppliers.map((s) => ({ value: s.id, label: s.name }))}
+            placeholder={suppliers.length ? undefined : 'Belum ada supplier'}
+            data-autofocus
+          />
+        </Field>
 
-        <div>
-          <label className={styles.label}>Tambah Barang</label>
-          <Select
+        <Field label="Tambah Barang">
+          <SelectBox
             value=""
-            onChange={(e) => e.target.value && addLine(e.target.value)}
+            onValueChange={(v) => v && addLine(v)}
             options={availableItems.map((i) => ({ value: i.id, label: `${i.name} (stok ${i.stock})` }))}
             placeholder="Pilih sparepart…"
           />
-        </div>
+        </Field>
 
         {lines.length > 0 && (
-          <div className={styles.lines}>
+          // Baris barang: nama | qty | harga beli | jumlah | hapus. Di wadah
+          // sempit kolom jumlah hilang (ambang muat/tidak muat = container query):
+          // nama 120 + qty 70 + harga 110 + "Rp 99.999.999" 110 + tuts 40 + jeda
+          // 32 + bingkai 24 = 506px.
+          <div className="@container/lines grid gap-2 rounded-xl bg-surface p-3">
             {lines.map((l) => (
-              <div key={l.itemId} className={styles.lineRow}>
-                <span className={styles.lineName}>{l.name}</span>
-                <Input
+              <div
+                key={l.itemId}
+                className="grid grid-cols-[minmax(0,1fr)_70px_110px_auto_40px] items-center gap-2 @max-[507px]/lines:grid-cols-[minmax(0,1fr)_60px_90px_40px]"
+              >
+                <span className="truncate text-sm font-medium">{l.name}</span>
+                <TextInput
                   type="number"
+                  className="px-2 text-center font-mono text-sm"
+                  aria-label={`Jumlah ${l.name}`}
                   value={String(l.qty)}
-                  onChange={(e) =>
-                    updateLine(l.itemId, { qty: Math.max(0, Math.round(Number(e.target.value))) })
-                  }
-                  className={styles.qtyInput}
+                  onChange={(e) => updateLine(l.itemId, { qty: Math.max(0, Math.round(Number(e.target.value))) })}
                 />
-                <Input
+                <TextInput
+                  capitalize="none"
+                  inputMode="numeric"
+                  className="px-2 text-right font-mono text-sm"
+                  aria-label={`Harga beli ${l.name}`}
                   value={fmtRpInput(String(l.costPrice))}
                   onChange={(e) => updateLine(l.itemId, { costPrice: parseRpInput(e.target.value) })}
-                  className={styles.costInput}
                 />
-                <span className={styles.lineTotal}>{fmtRp(l.qty * l.costPrice)}</span>
-                <button className={styles.removeBtn} onClick={() => removeLine(l.itemId)} aria-label="Hapus">
-                  <Icon name="trash" aria-hidden />
-                </button>
+                <span className="text-right font-mono text-sm font-semibold whitespace-nowrap tabular-nums @max-[507px]/lines:hidden">
+                  {fmtRp(l.qty * l.costPrice)}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-muted-foreground hover:bg-destructive-soft hover:text-destructive"
+                  onClick={() => removeLine(l.itemId)}
+                  aria-label={`Hapus ${l.name}`}
+                >
+                  <Trash2 aria-hidden />
+                </Button>
               </div>
             ))}
-            <div className={styles.totalRow}>
+            <div className="flex items-center justify-between border-t border-dashed border-border pt-3 text-sm">
               <span>Total PO</span>
-              <strong>{fmtRp(poTotal(lines))}</strong>
+              <strong className="font-mono text-base font-semibold tabular-nums">{fmtRp(poTotal(lines))}</strong>
             </div>
           </div>
         )}
 
-        <Input label="Catatan (opsional)" value={note} onChange={(e) => setNote(e.target.value)} />
+        <Field label="Catatan (opsional)">
+          <TextInput value={note} onChange={(e) => setNote(e.target.value)} />
+        </Field>
       </div>
-    </Modal>
+    </FormDialog>
   );
 }

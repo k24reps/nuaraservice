@@ -1,13 +1,19 @@
 import { useMemo, useState } from 'react';
-import { Card, Button, Badge, EmptyState, Icon, LoadState, loadPending, PageSummary } from '@/components/ui';
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { CircleX, FileText, Mail, PackageOpen, Pencil, Phone, Plus, Trash2, Truck } from 'lucide-react';
+import { LoadState, loadPending } from '@/components/ui';
+import { Badge } from '@/components/dens/badge';
+import { Button } from '@/components/dens/button';
+import { ConfirmDialog } from '@/components/dens/confirm-dialog';
+import { EmptyState } from '@/components/dens/empty-state';
+import { SummaryStrip } from '@/components/dens/summary-strip';
+import { cn } from '@/lib/utils';
 import { useCollection } from '@/hooks/useCollection';
 import { repository } from '@/data';
 import { isCloudMode } from '@/stores/demo';
 import { voidPurchaseOrder } from '@/data/supabase-client';
 import { fmtRp, EMPTY_VALUE } from '@/lib/format';
 import { fmtDate } from '@/lib/time';
-import { poTotal, poReceivedQty, PO_STATUS_LABELS, PO_STATUS_TONE } from '@/lib/business/purchase';
+import { poTotal, poReceivedQty, PO_STATUS_BADGE, PO_STATUS_LABELS } from '@/lib/business/purchase';
 import { applyBalance } from '@/lib/business/finance';
 import { logActivity } from '@/lib/activity';
 import { toast } from '@/stores/toast';
@@ -17,7 +23,6 @@ import { SupplierModal } from './SupplierModal';
 import { PurchaseOrderModal } from './PurchaseOrderModal';
 import { ReceiveModal } from './ReceiveModal';
 import type { Supplier, PurchaseOrder } from '@/data/types';
-import styles from './SuppliersPage.module.css';
 
 export function SuppliersPage() {
   const t = useT();
@@ -144,54 +149,60 @@ export function SuppliersPage() {
     }
   };
 
+  const panel = 'overflow-hidden rounded-2xl bg-card text-card-foreground shadow-panel ring-1 ring-border/60';
+  const newSupplier = () => {
+    setEditingSupplier(null);
+    setSupplierModal(true);
+  };
+
   return (
-    <div className={styles.wrap}>
-      <div className={styles.tabs} role="group" aria-label={t('suppliers.tabsAria')}>
-        <button
-          type="button"
-          className={[styles.tab, tab === 'po' ? styles.tabActive : ''].join(' ')}
-          aria-pressed={tab === 'po'}
-          onClick={() => setTab('po')}
-        >
-          {t('suppliers.tabPo')}
-          <span className={styles.tabCount}>{purchaseOrders.length}</span>
-        </button>
-        <button
-          type="button"
-          className={[styles.tab, tab === 'suppliers' ? styles.tabActive : ''].join(' ')}
-          aria-pressed={tab === 'suppliers'}
-          onClick={() => setTab('suppliers')}
-        >
-          {t('suppliers.tabSuppliers')}
-          <span className={styles.tabCount}>{suppliers.length}</span>
-        </button>
-        <div className={styles.spacer} />
+    <div data-nu className="flex flex-col gap-4 bg-transparent">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex gap-2" role="group" aria-label={t('suppliers.tabsAria')}>
+          {(
+            [
+              ['po', t('suppliers.tabPo'), purchaseOrders.length],
+              ['suppliers', t('suppliers.tabSuppliers'), suppliers.length],
+            ] as const
+          ).map(([id, label, count]) => (
+            <button
+              key={id}
+              type="button"
+              aria-pressed={tab === id}
+              onClick={() => setTab(id)}
+              className="inline-flex h-10 items-center gap-2 rounded-full px-4 text-sm font-semibold text-muted-foreground ring-1 ring-border outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring aria-pressed:bg-accent aria-pressed:text-foreground aria-pressed:ring-primary/30 pointer-coarse:h-11"
+            >
+              {label}
+              {/* Hitungan sebagai angka, bukan "(1)" dalam kurung. */}
+              <span className="rounded-full bg-secondary px-1.5 font-mono text-xs leading-[18px] text-secondary-foreground tabular-nums">
+                {count}
+              </span>
+            </button>
+          ))}
+        </div>
+        <div className="flex-1 compact:hidden" />
         {tab === 'po' ? (
           <Button
+            className="compact:w-full"
             onClick={() => {
               setEditingPo(null);
               setPoModal(true);
             }}
             disabled={suppliers.length === 0 || inventory.length === 0}
-            iconLeft={<Icon name="plus" aria-hidden />}
           >
+            <Plus aria-hidden />
             PO Baru
           </Button>
         ) : (
-          <Button
-            onClick={() => {
-              setEditingSupplier(null);
-              setSupplierModal(true);
-            }}
-            iconLeft={<Icon name="plus" aria-hidden />}
-          >
+          <Button className="compact:w-full" onClick={newSupplier}>
+            <Plus aria-hidden />
             Supplier Baru
           </Button>
         )}
       </div>
 
       {tab === 'po' && (
-        <PageSummary
+        <SummaryStrip
           label={t('suppliers.summaryAria')}
           items={[
             { label: t('suppliers.statPo'), short: t('suppliers.statPoShort'), value: purchaseOrders.length },
@@ -208,13 +219,13 @@ export function SuppliersPage() {
 
       {tab === 'po' ? (
         loadPending(poLoad) ? (
-          <Card>
+          <div className={panel}>
             <LoadState queries={[poLoad]} />
-          </Card>
+          </div>
         ) : sortedPOs.length === 0 ? (
-          <Card>
+          <div className={panel}>
             <EmptyState
-              icon={<Icon name="file-invoice" aria-hidden />}
+              icon={<FileText aria-hidden />}
               title="Belum ada PO"
               description={
                 suppliers.length === 0
@@ -222,32 +233,61 @@ export function SuppliersPage() {
                   : 'Buat PO untuk memesan stok dari supplier.'
               }
             />
-          </Card>
+          </div>
         ) : (
-          <Card padding={false}>
-            <div className={styles.docketList}>
+          <div className={panel}>
+            {/* Satu baris PO, tiga tingkat (ambang muat/tidak muat = container
+                query). Kasus terburuk terukur di layar sentuh: bingkai 40 +
+                nomor 116 + nama 160 + "Rp 999.999.999" 118 + status "Sebagian
+                Diterima" dengan Terima dan dua tuts 343 + jeda 48 = 825px; di
+                bawahnya status dan tuts turun ke baris kedua (butuh 515px). Di
+                bawah itu total ikut turun ke bawah nomor PO. */}
+            <ul className="@container/polist m-0 grid list-none p-0">
               {sortedPOs.map((po) => (
-                <div key={po.id} className={[styles.docket, styles[po.status]].join(' ')}>
-                  <span className={styles.poChip}>{po.poNumber}</span>
-                  <div className={styles.docketInfo}>
-                    <strong>{supplierName(po.supplierId)}</strong>
-                    <small>{po.orderedAt ? fmtDate(po.orderedAt) : 'belum dipesan'}</small>
+                <li
+                  key={po.id}
+                  className={cn(
+                    'grid items-center gap-x-4 gap-y-2 border-b border-dashed border-border px-5 py-3.5 last:border-b-0 hover:bg-accent/40',
+                    "grid-cols-[116px_minmax(0,1fr)_auto_auto] [grid-template-areas:'no_info_total_right']",
+                    "@max-[826px]/polist:grid-cols-[116px_minmax(0,1fr)_auto] @max-[826px]/polist:[grid-template-areas:'no_info_total'_'._right_right']",
+                    "@max-[516px]/polist:grid-cols-[104px_minmax(0,1fr)] @max-[516px]/polist:px-4 @max-[516px]/polist:[grid-template-areas:'no_info'_'total_total'_'right_right']",
+                  )}
+                >
+                  <span className="rounded-md bg-secondary px-2 py-1 text-center font-mono text-xs font-semibold whitespace-nowrap text-secondary-foreground [grid-area:no]">
+                    {po.poNumber}
+                  </span>
+                  <div className="grid min-w-0 gap-0.5 [grid-area:info]">
+                    {/* Nama supplier membungkus, maksimal dua baris. Satu baris +
+                        elipsis memotong "PT Sumber Komponen" di 1097px. */}
+                    <strong className="line-clamp-2 text-sm font-semibold [overflow-wrap:anywhere]">
+                      {supplierName(po.supplierId)}
+                    </strong>
+                    <small className="font-mono text-xs text-muted-foreground">
+                      {po.orderedAt ? fmtDate(po.orderedAt) : 'belum dipesan'}
+                    </small>
                   </div>
-                  <span className={styles.docketTotal}>{fmtRp(poTotal(po.lines))}</span>
-                  <div className={styles.docketRight}>
-                    <Badge tone={PO_STATUS_TONE[po.status] as 'brand'} dot>
-                      {PO_STATUS_LABELS[po.status]}
-                    </Badge>
+                  <span className="font-mono text-sm font-semibold whitespace-nowrap tabular-nums [grid-area:total]">
+                    {fmtRp(poTotal(po.lines))}
+                  </span>
+                  {/* Status di kiri, tuts mengumpul di kanan saat turun baris. */}
+                  <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-2 [grid-area:right] @max-[826px]/polist:[&>:first-child]:mr-auto">
+                    <Badge variant={PO_STATUS_BADGE[po.status]}>{PO_STATUS_LABELS[po.status]}</Badge>
                     {(po.status === 'ordered' || po.status === 'partial') && (
-                      <button className={styles.receiveBtn} onClick={() => setReceiveTarget(po)}>
-                        <Icon name="box-open" aria-hidden /> Terima
-                      </button>
+                      <Button
+                        variant="secondary"
+                        className="bg-success text-success-foreground hover:bg-success/75"
+                        onClick={() => setReceiveTarget(po)}
+                      >
+                        <PackageOpen aria-hidden /> Terima
+                      </Button>
                     )}
                     {/* Salah ketik qty/harga tak lagi memaksa batal + buat ulang —
                         selama belum ada barang masuk, PO-nya masih bisa diperbaiki. */}
                     {po.status !== 'cancelled' && poReceivedQty(po.lines) === 0 && (
-                      <button
-                        className={styles.voidBtn}
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="text-muted-foreground shadow-none hover:text-foreground"
                         onClick={() => {
                           setEditingPo(po);
                           setPoModal(true);
@@ -255,91 +295,113 @@ export function SuppliersPage() {
                         aria-label={`Perbaiki ${po.poNumber}`}
                         title="Perbaiki PO (belum ada barang diterima)"
                       >
-                        <Icon name="pen" aria-hidden />
-                      </button>
+                        <Pencil aria-hidden />
+                      </Button>
                     )}
                     {po.status !== 'cancelled' && po.status !== 'draft' && (
-                      <button
-                        className={styles.voidBtn}
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="text-muted-foreground shadow-none hover:border-destructive/40 hover:bg-destructive-soft hover:text-destructive"
                         onClick={() => setVoidTarget(po)}
                         aria-label="Batalkan PO"
                         title="Batalkan PO (kembalikan stok & keuangan)"
                       >
-                        <Icon name="circle-xmark" aria-hidden />
-                      </button>
+                        <CircleX aria-hidden />
+                      </Button>
                     )}
                   </div>
-                </div>
+                </li>
               ))}
-            </div>
-          </Card>
-        )
-      ) : (
-        loadPending(suppliersLoad) ? (
-          <Card>
-            <LoadState queries={[suppliersLoad]} />
-          </Card>
-        ) : suppliers.length === 0 ? (
-          <Card>
-            <EmptyState
-              icon={<Icon name="truck-field" aria-hidden />}
-              title="Belum ada supplier"
-              description="Tambahkan supplier untuk mulai membuat purchase order."
-              action={
-                <Button onClick={() => { setEditingSupplier(null); setSupplierModal(true); }} iconLeft={<Icon name="plus" aria-hidden />}>
-                  Supplier Baru
-                </Button>
-              }
-            />
-          </Card>
-        ) : (
-          <div className={styles.vendorGrid}>
-            {suppliers.map((s) => {
-              const vs = vendorStats.get(s.id) ?? { count: 0, total: 0 };
-              return (
-                <div key={s.id} className={styles.vendor}>
-                  <div className={styles.vendorHead}>
-                    <span className={styles.vendorPlate}>
-                      <Icon name="truck-field" aria-hidden />
-                    </span>
-                    <div className={styles.vendorIdent}>
-                      <div className={styles.vendorName}>{s.name}</div>
-                      <div className={styles.vendorId}>VND-{s.id.slice(0, 6).toUpperCase()}</div>
-                    </div>
-                  </div>
-                  <div className={styles.vendorContacts}>
-                    <div className={styles.contactRow}>
-                      <Icon name="phone" aria-hidden />
-                      <span>{s.phone || <em className={styles.contactMuted}>tanpa nomor</em>}</span>
-                    </div>
-                    <div className={styles.contactRow}>
-                      <Icon name="envelope" aria-hidden />
-                      <span>{s.email || <em className={styles.contactMuted}>tanpa email</em>}</span>
-                    </div>
-                  </div>
-                  <div className={styles.vendorFoot}>
-                    <div className={styles.vendorStat}>
-                      <span className={styles.vendorStatLabel}>Total PO</span>
-                      <span className={styles.vendorStatValue}>{vs.count}</span>
-                    </div>
-                    <div className={styles.vendorStat}>
-                      <span className={styles.vendorStatLabel}>Total Belanja</span>
-                      <span className={styles.vendorStatValue}>{fmtRp(vs.total)}</span>
-                    </div>
-                    <div className={styles.cardActions}>
-                      <button className={styles.iconBtn} onClick={() => { setEditingSupplier(s); setSupplierModal(true); }} aria-label="Ubah">
-                        <Icon name="pen" aria-hidden />
-                      </button>
-                      <button className={[styles.iconBtn, styles.danger].join(' ')} onClick={() => setDeleteSupplier(s)} aria-label="Hapus">
-                        <Icon name="trash" aria-hidden />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+            </ul>
           </div>
         )
+      ) : loadPending(suppliersLoad) ? (
+        <div className={panel}>
+          <LoadState queries={[suppliersLoad]} />
+        </div>
+      ) : suppliers.length === 0 ? (
+        <div className={panel}>
+          <EmptyState
+            icon={<Truck aria-hidden />}
+            title="Belum ada supplier"
+            description="Tambahkan supplier untuk mulai membuat purchase order."
+            action={
+              <Button onClick={newSupplier}>
+                <Plus aria-hidden />
+                Supplier Baru
+              </Button>
+            }
+          />
+        </div>
+      ) : (
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(min(290px,100%),1fr))] gap-3">
+          {suppliers.map((s) => {
+            const vs = vendorStats.get(s.id) ?? { count: 0, total: 0 };
+            return (
+              <div
+                key={s.id}
+                className="flex flex-col gap-3 rounded-2xl bg-card p-4 text-card-foreground shadow-panel ring-1 ring-border/60"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-info text-info-foreground [&>svg]:size-5">
+                    <Truck aria-hidden />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate font-semibold">{s.name}</div>
+                    <div className="font-mono text-xs text-muted-foreground uppercase">VND-{s.id.slice(0, 6).toUpperCase()}</div>
+                  </div>
+                </div>
+                <div className="grid gap-1.5 border-y border-dashed border-border py-3 font-mono text-xs text-muted-foreground">
+                  {(
+                    [
+                      [Phone, s.phone, 'tanpa nomor'],
+                      [Mail, s.email, 'tanpa email'],
+                    ] as const
+                  ).map(([Glyph, value, empty]) => (
+                    <div key={empty} className="flex min-w-0 items-center gap-2 [&>svg]:size-3.5 [&>svg]:shrink-0">
+                      <Glyph aria-hidden />
+                      <span className="truncate">{value || <em className="italic">{empty}</em>}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex items-end justify-between gap-3">
+                  <div className="grid gap-0.5">
+                    <span className="text-xs text-muted-foreground">Total PO</span>
+                    <span className="font-mono text-sm font-semibold tabular-nums">{vs.count}</span>
+                  </div>
+                  <div className="grid gap-0.5">
+                    <span className="text-xs text-muted-foreground">Total Belanja</span>
+                    <span className="font-mono text-sm font-semibold tabular-nums">{fmtRp(vs.total)}</span>
+                  </div>
+                  <div className="flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-muted-foreground hover:text-foreground"
+                      onClick={() => {
+                        setEditingSupplier(s);
+                        setSupplierModal(true);
+                      }}
+                      aria-label="Ubah"
+                    >
+                      <Pencil aria-hidden />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-muted-foreground hover:bg-destructive-soft hover:text-destructive"
+                      onClick={() => setDeleteSupplier(s)}
+                      aria-label="Hapus"
+                    >
+                      <Trash2 aria-hidden />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       )}
 
       <SupplierModal
@@ -380,6 +442,7 @@ export function SuppliersPage() {
         message={`PO ${voidTarget?.poNumber ?? ''} akan dibatalkan. Stok yang sudah diterima dikembalikan, pengeluaran terkait dihapus, dan saldo wallet dikembalikan. HPP rata-rata TIDAK ikut kembali ke nilai sebelumnya, jadi periksa harga modal barangnya setelah ini. Hanya bisa dibatalkan bila stoknya masih utuh dan pengeluarannya masih bulan ini.`}
         confirmLabel={voiding ? 'Membatalkan…' : 'Batalkan PO'}
         danger
+        loading={voiding}
         onConfirm={confirmVoid}
         onCancel={() => setVoidTarget(null)}
       />

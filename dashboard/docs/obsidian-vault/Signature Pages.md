@@ -614,6 +614,11 @@ masih tampilan FixMaster.
 
 ## Supplier — Vendor Ledger
 
+**Nuara (L-62, 23 Nov 2026).** Halaman Supplier dan tiga modalnya kini dens-ui + Tailwind. Spine
+status di tepi baris docket dan tuts Terima "mekanis" dibuang: status = lencana `PO_STATUS_BADGE`,
+Terima = tombol hijau dens. Ambang baris docket kini container query 826/516px dari kasus terburuk
+terukur (lihat Decisions L-62). Uraian di bawah adalah tampilan FixMaster.
+
 Tab berlabel **"PO" dan "Supplier"**, masing-masing dengan chip hitungan mono bergaris titik (`.tabCount`), dalam `role="group"` + `aria-pressed`. Dulu "Purchase Order (1)". Modal buat PO berjudul "PO Baru".
 
 Tab PO jadi **baris docket** dengan spine status (biru dipesan / amber sebagian / hijau diterima / abu draft), chip PO mono, total tabular, **tombol Terima mekanis**. Tab Supplier jadi kartu vendor + readout pembelian.

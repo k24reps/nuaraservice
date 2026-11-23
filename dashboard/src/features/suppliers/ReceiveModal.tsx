@@ -1,9 +1,16 @@
 import { useState } from 'react';
-import { Modal, Input, Button, Badge, Select } from '@/components/ui';
+import { LoaderCircle } from 'lucide-react';
+import { Badge } from '@/components/dens/badge';
+import { Button } from '@/components/dens/button';
+import { Checkbox } from '@/components/dens/checkbox';
+import { Field } from '@/components/dens/field';
+import { FormDialog } from '@/components/dens/form-dialog';
+import { SelectBox } from '@/components/dens/select-box';
+import { TextInput } from '@/components/dens/text-input';
 import { repository } from '@/data';
 import { isCloudMode } from '@/stores/demo';
 import { receiveGoodsWithFinance } from '@/data/supabase-client';
-import { receiveGoods, receivedValue, averageCost, PO_STATUS_LABELS } from '@/lib/business/purchase';
+import { receiveGoods, receivedValue, averageCost, PO_STATUS_BADGE, PO_STATUS_LABELS } from '@/lib/business/purchase';
 import { applyBalance } from '@/lib/business/finance';
 import { newId } from '@/lib/id';
 import { localDateStr } from '@/lib/time';
@@ -14,7 +21,6 @@ import { useSessionStore, resolveCreateOutlet, mustPickOutlet } from '@/stores/s
 import { useCollection } from '@/hooks/useCollection';
 import { useResetOnOpen } from '@/hooks/useResetOnOpen';
 import type { PurchaseOrder, Supplier } from '@/data/types';
-import styles from './ReceiveModal.module.css';
 
 interface ReceiveModalProps {
   open: boolean;
@@ -147,90 +153,93 @@ export function ReceiveModal({ open, onClose, po, supplier }: ReceiveModalProps)
     }
   };
 
+  const num = 'text-center font-mono text-sm tabular-nums';
   return (
-    <Modal
+    <FormDialog
       open={open}
       onClose={onClose}
       title={`Terima Barang · ${po.poNumber}`}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="outline" onClick={onClose}>
             Batal
           </Button>
-          <Button onClick={apply} loading={busy}>
+          <Button onClick={apply} disabled={busy} aria-busy={busy || undefined}>
+            {busy && <LoaderCircle aria-hidden className="animate-spin motion-reduce:animate-none" />}
             Terima & Update Stok
           </Button>
         </>
       }
     >
-      <div className={styles.body}>
-        <div className={styles.meta}>
-          <span>{supplier?.name ?? 'Supplier'}</span>
-          <Badge tone="info">{PO_STATUS_LABELS[po.status]}</Badge>
+      <div className="grid gap-4">
+        <div className="flex items-center justify-between gap-3 text-sm font-semibold">
+          <span className="min-w-0 [overflow-wrap:anywhere]">{supplier?.name ?? 'Supplier'}</span>
+          <Badge variant={PO_STATUS_BADGE[po.status]}>{PO_STATUS_LABELS[po.status]}</Badge>
         </div>
-        <div className={styles.lines}>
-          <div className={[styles.lineRow, styles.head].join(' ')}>
-            <span>Barang</span>
-            <span className={styles.center}>Dipesan</span>
-            <span className={styles.center}>Sudah</span>
-            <span className={styles.center}>Terima</span>
+        <div className="grid gap-2" role="table" aria-label="Barang yang diterima">
+          <div
+            role="row"
+            className="grid grid-cols-[minmax(0,1fr)_64px_64px_84px] items-center gap-2 border-b border-border pb-2 text-xs font-semibold text-muted-foreground"
+          >
+            <span role="columnheader">Barang</span>
+            <span role="columnheader" className="text-center">Dipesan</span>
+            <span role="columnheader" className="text-center">Sudah</span>
+            <span role="columnheader" className="text-center">Terima</span>
           </div>
           {po.lines.map((l) => {
             const remaining = Math.max(0, l.qty - l.receivedQty);
             return (
-              <div key={l.itemId} className={styles.lineRow}>
-                <span className={styles.name}>{l.name}</span>
-                <span className={styles.center}>{l.qty}</span>
-                <span className={styles.center}>{l.receivedQty}</span>
-                <Input
-                  type="number"
-                  className={styles.input}
-                  value={String(receipts[l.itemId] ?? 0)}
-                  onChange={(e) =>
-                    setReceipts((prev) => ({
-                      ...prev,
-                      [l.itemId]: Math.max(0, Math.min(Number(e.target.value), remaining)),
-                    }))
-                  }
-                  disabled={remaining === 0}
-                />
+              <div key={l.itemId} role="row" className="grid grid-cols-[minmax(0,1fr)_64px_64px_84px] items-center gap-2">
+                <span role="cell" className="truncate text-sm font-medium">{l.name}</span>
+                <span role="cell" className={num}>{l.qty}</span>
+                <span role="cell" className={num}>{l.receivedQty}</span>
+                <span role="cell">
+                  <TextInput
+                    type="number"
+                    className="px-2 text-center font-mono text-sm"
+                    aria-label={`Terima ${l.name}`}
+                    value={String(receipts[l.itemId] ?? 0)}
+                    onChange={(e) =>
+                      setReceipts((prev) => ({
+                        ...prev,
+                        [l.itemId]: Math.max(0, Math.min(Number(e.target.value), remaining)),
+                      }))
+                    }
+                    disabled={remaining === 0}
+                  />
+                </span>
               </div>
             );
           })}
         </div>
 
-        {/* Finance: value received now + optional cash payment from a wallet. */}
-        <div className={styles.finance}>
-          <div className={styles.valueRow}>
+        {/* Keuangan: nilai barang yang diterima sekarang + bayar tunai opsional dari wallet. */}
+        <div className="grid gap-3 rounded-xl bg-surface p-3 ring-1 ring-border/60">
+          <div className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
             <span>Nilai diterima</span>
-            <strong className={styles.value}>{fmtRp(amount)}</strong>
+            <strong className="font-mono text-lg font-semibold text-foreground tabular-nums">{fmtRp(amount)}</strong>
           </div>
-          <label className={styles.payToggle}>
-            <input
-              type="checkbox"
-              checked={payFromWallet}
-              onChange={(e) => setPayFromWallet(e.target.checked)}
-            />
+          <label className="flex min-h-10 cursor-pointer items-center gap-3 text-sm pointer-coarse:min-h-11">
+            <Checkbox checked={payFromWallet} onCheckedChange={(checked) => setPayFromWallet(checked === true)} />
             <span>Potong dari wallet (bayar tunai)</span>
           </label>
           {payFromWallet && (
-            <Select
-              label="Wallet pembayaran"
-              value={walletId}
-              onChange={(e) => setWalletId(e.target.value)}
-              options={sortedWallets.map((w) => ({
-                value: w.id,
-                label: `${w.name} · ${fmtRp(w.balance)}`,
-              }))}
-            />
+            <Field label="Wallet pembayaran">
+              <SelectBox
+                value={walletId}
+                onValueChange={setWalletId}
+                options={sortedWallets.map((w) => ({
+                  value: w.id,
+                  label: `${w.name} · ${fmtRp(w.balance)}`,
+                }))}
+              />
+            </Field>
           )}
           {!payFromWallet && (
-            <p className={styles.tempoNote}>
-              Mode tempo/hutang: pengeluaran dicatat, saldo wallet tak berubah.
-            </p>
+            <p className="text-xs text-muted-foreground">Mode tempo/hutang: pengeluaran dicatat, saldo wallet tak berubah.</p>
           )}
         </div>
       </div>
-    </Modal>
+    </FormDialog>
   );
 }
