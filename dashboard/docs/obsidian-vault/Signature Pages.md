@@ -1228,6 +1228,10 @@ menyusut di bawah ±5rem. Bar simpan memakai pola fokus yang sama dengan kalkula
 
 ## Pengaturan — Operasional
 
+**Nuara (L-55, 23 Nov 2026).** Tab Usaha dan Operasional kini dens-ui + Tailwind (berkas
+`BusinessSettings.tsx`, `OperationsSettings.tsx`), begitu pula deret tab. Tab lain menyusul di
+L-66 dan L-67 (K-22). Uraian di bawah adalah tampilan FixMaster.
+
 Halaman `/settings` punya sepuluh tab untuk owner cloud, termasuk **Nota & Struk** sejak 11 Nov 2026 (tab yang tak relevan tetap
 difilter menurut peran/mode). Tab **Operasional** mengelompokkan konfigurasi alur kerja:
 - **Layout profil** — dua kolom sampai 960 px agar ruang desktop terpakai, lalu satu

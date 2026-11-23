@@ -17,7 +17,7 @@
 | Fase | Tujuan | Langkah |
 |---|---|---|
 | A | Salinan FixMaster jalan sebagai Nuara Dashboard | L-43, L-44, L-45 |
-| B | UI dipindah ke dens-ui dengan warna Nuara, per halaman | L-46, L-47, L-58, L-48, L-49, L-59, L-60, L-50, L-61, L-51, L-62, L-52, L-63, L-53, L-64, L-54, L-65, L-55, L-56 |
+| B | UI dipindah ke dens-ui dengan warna Nuara, per halaman | L-46, L-47, L-58, L-48, L-49, L-59, L-60, L-50, L-61, L-51, L-62, L-52, L-63, L-53, L-64, L-54, L-65, L-55, L-66, L-67, L-56 |
 | C | Selisih PRD yang diputuskan Pemilik | ditentukan dari L-45 |
 | D | Rilis dan berhenti memakai FixMaster | L-57 |
 
@@ -121,7 +121,12 @@ Aturan bersama: satu langkah = satu kelompok halaman dipindah utuh, CSS Module l
   - Logika jendela waktu + pemangkasan log, anchor istilah, dan hitungan harga tidak berubah. Pelat "EVENT RECORDER", kode "TERM-nn", dan layar LCD Kalkulator dibuang (K-21).
   - Selesai jika: ketiga halaman tampil di desktop, tablet, ponsel sampai 320px tanpa luberan dan tanpa isi keluar dari kartu/baris; register Kalkulator tetap menempel di atas menu bawah di layar sempit; kontrol >= 44px di layar sentuh; probe `audit-*` dan `audit-contrast` bersih; halaman lain sama per piksel; tes, lint, build lolos.
   - Hasil 2026-11-23: lihat Catatan L-65.
-- [ ] **L-55 Pengaturan**
+- [x] **L-55 Pengaturan: kerangka, Usaha, Operasional** (`SettingsPage`: tab navigasi, `BusinessTab`, kartu templat servis, kolom, kategori, garansi, target, sewa, templat WhatsApp)
+  - Dipecah 2026-11-23 (K-22): tab Tim, Keuangan, Outlet, Navigasi, dan Sistem pindah ke L-66; Nota & Struk dan Tarif ke L-67. Selama itu `SettingsPage.module.css` tetap ada untuk tab yang belum pindah, dan `data-nu` dipasang per bagian (pola Kasir L-50). Logika simpan pengaturan tidak berubah.
+  - Selesai jika: tab Usaha dan Operasional tampil di desktop, tablet, ponsel sampai 320px tanpa luberan dan tanpa isi keluar dari kartu/baris, juga dengan teks terburuk; tab lain tidak berubah per piksel; kontrol baru >= 44px di layar sentuh; probe `audit-*` dan `audit-contrast` bersih; tes, lint, build lolos.
+  - Hasil 2026-11-23: lihat Catatan L-55.
+- [ ] **L-66 Pengaturan: Tim, Keuangan, Outlet, Navigasi, Sistem** (`TeamTab`, `WalletTab`, `OutletTab`, `MobileNavigationCard`, `SystemTab`, `DisplayCard`)
+- [ ] **L-67 Pengaturan: Nota & Struk, Tarif** (`ReceiptTab`, `QuoteRatesTab`); sesudahnya folder `features/settings` utuh di `@source` dan CSS Module-nya habis
 - [ ] **L-56 Halaman lacak pelanggan + bersih-bersih**: lacak pelanggan memakai dunia "Nota Servis Rangkap" (DBD bagian 1, S-07); hapus token, maskot VOLT, dan CSS Modules FixMaster yang tersisa.
 
 ## Fase C - Selisih PRD
@@ -181,6 +186,7 @@ Dikumpulkan 2026-11-22 dari log wawancara, catatan IPD, dan langkah L-43 s.d. L-
 | K-19 | Pemecahan L-54 (lima halaman, sekitar 2.600 baris kode + 2.100 baris CSS) | Rencana L-54, 2026-11-23 | Dipecah: L-54 Absensi + Tugas (dengan jendela templat tugas), L-65 Log Aktivitas, Glosarium, Kalkulator Biaya | Dipecah (pola K-08) | Sudah berlaku |
 | K-20 | Panel jam Absensi bergaya LCD (layar gelap, garis pindai, angka bercahaya, LED berdenyut), spine status di baris tugas, dan kotak centang mekanis (motif FixMaster) | L-54 | Panel jam = panel navy dengan angka mono putih dan titik status; telat = lencana merah muda, selesai = coretan + kotak tercentang hijau | Buang (pola K-10, K-13, K-17, K-18) | Sudah berlaku |
 | K-21 | Pelat "EVENT RECORDER" Log Aktivitas (LED REC berkedip, sekrup sudut, angka nol di depan, rel jejak bertitik), kode "TERM-nn" + LED di Kamus Istilah, dan layar LCD harga Kalkulator (angka amber bercahaya, garis pindai; motif FixMaster) | L-65 | Ringkasan jumlah = `SummaryStrip`, event bernode bulat bernada; lembar istilah bernomor polos; register harga = panel navy dengan angka mono putih | Buang (pola K-10, K-13, K-17, K-18, K-20) | Sudah berlaku |
+| K-22 | Pemecahan L-55 (Pengaturan, sekitar 4.100 baris kode + 2.170 baris CSS; `SettingsPage.tsx` saja 2.829 baris) | Rencana L-55, 2026-11-23 | Dipecah per tab: L-55 kerangka + Usaha + Operasional, L-66 Tim + Keuangan + Outlet + Navigasi + Sistem, L-67 Nota & Struk + Tarif | Dipecah (pola K-08) | Sudah berlaku |
 
 **Menunggu tindakan Pemilik (bukan keputusan).** L-44: membuat proyek Supabase tes milik Nuara (region Singapura), proyek Vercel kedua, dan DNS `app.nuaraservice.my.id`; mendaftar sebagai Pemilik dan mengundang satu akun uji. Tes integrasi belum pernah dijalankan sampai proyek itu ada.
 
@@ -260,6 +266,8 @@ Dikumpulkan 2026-11-22 dari log wawancara, catatan IPD, dan langkah L-43 s.d. L-
 - 2026-11-23 - L-54 - Ikut diperbaiki (bug FixMaster): tabel rekap dan riwayat Absensi ditumpuk lewat @media 768px, sehingga di 1025px (sidebar muncul, wadah ±665px) riwayat tujuh kolom tampil sesak; kini container query terukur (riwayat 716px, rekap 491px). Tab Template di 320px meluber 15px (chip) dan tombol Template Baru 8px; kini aksi baris turun ke baris kedua di wadah <400px. Kotak tanda selesai tugas kini berarea 44px di layar sentuh; hapus absensi dan hapus template tak bisa diketuk dua kali. Teks Tugas yang masih literal (belum lewat i18n) dibiarkan apa adanya.
 - 2026-11-23 - L-65 - Hasil: Log Aktivitas, Kamus Istilah, dan Kalkulator Biaya diukur di 12 ukuran (1920 sampai 1025 desktop, tablet sentuh 1024/834/744, iPhone 13, 360px, 320px): tanpa luberan, tanpa isi keluar dari kartu atau baris, kontrol >= 44px di layar sentuh. Register Kalkulator menempel di atas menu bawah di ponsel dan jadi kepala kartu menempel di dua kolom; angka harga tetap sebaris. `audit-contrast` bersih termasuk dua langkah baru (Kamus Istilah dengan istilah dituju, chip tarif menyala); probe `audit-mobile`, pita tablet, `audit-zoom`, zoom 1,25, dan Padat identik dengan a3ef3ee (L-54); 11 halaman lain sama per piksel (selisih hanya di wilayah derau); impeccable 0 temuan; 1223 tes / 96 berkas, lint, build lolos.
 - 2026-11-23 - L-65 - Toolbar Log Aktivitas dulu menumpuk lewat @media 640px; kini container query `@max-[641px]/log`. Aturan scroll-padding `<html>` milik Kalkulator pindah dari CSS Module ke `app.css` (kait `data-calc-page`). Tombol Pangkas log lama tak bisa diketuk dua kali. Teks Log Aktivitas yang masih literal dibiarkan apa adanya, kecuali label ringkasan yang dulu huruf kapital mono ("TERMUAT") kini huruf biasa.
+- 2026-11-23 - L-55 - Hasil: tab Usaha dan Operasional diukur di 12 ukuran (1920 sampai 1025 desktop, tablet sentuh 1024/834/744, iPhone 13, 360px, 320px), dengan data contoh dan dengan teks terburuk (nama cabang panjang, isi templat satu kalimat): tanpa luberan, tanpa isi keluar dari kartu atau baris, kontrol >= 44px di layar sentuh. Isi ketujuh tab lain (Nota & Struk, Tarif, Tim, Wallet, Outlet, Navigasi, Sistem) sama per piksel dengan 77cb16c; satu-satunya selisih adalah baris tepat di bawah chip tab. `audit-contrast` bersih termasuk langkah baru tab Operasional; probe `audit-mobile`, pita tablet, `audit-zoom`, zoom 1,25, dan Padat identik dengan 77cb16c (L-65); 12 halaman lain sama per piksel (selisih hanya di wilayah derau); impeccable 0 temuan; 1230 tes / 97 berkas, lint, build lolos.
+- 2026-11-23 - L-55 - Tab Usaha dan Operasional dikeluarkan dari `SettingsPage.tsx` ke `BusinessSettings.tsx` dan `OperationsSettings.tsx` (logika disalin apa adanya), deret tab ke `SettingsTabs.tsx`, kerangka kartu ke `settingsUi.tsx`. Hanya berkas-berkas itu yang dipindai Tailwind; `SettingsPage.tsx` dan sisa CSS Module-nya (dipangkas jadi persis kelas yang masih dipakai) tetap milik tab FixMaster sampai L-67. Chip tab setinggi 44px di semua perangkat, sama dengan tab lama, supaya isi tab lama tidak bergeser. Tombol simpan kini mati selama menyimpan; isian tambah templat kini berlabel.
 
 ## Arsip: rencana Next.js (dibatalkan 2026-11-21)
 Langkah di bawah tidak dikerjakan. Disimpan karena rujukan kriteria F-xx dan keputusan di dalamnya dipakai untuk L-45.

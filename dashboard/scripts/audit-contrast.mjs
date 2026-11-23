@@ -446,6 +446,13 @@ for (const theme of ['light']) {
       await page.locator('main button[aria-pressed]').first().click();
       await page.waitForTimeout(300);
     }],
+    // L-55: tab Operasional Pengaturan (chip templat, kolom tabel bercentang).
+    ['Pengaturan-Operasional', async () => {
+      await page.getByRole('link', { name: /^Pengaturan/ }).first().click();
+      await page.waitForTimeout(900);
+      await page.locator('main [role="group"] button', { hasText: 'Operasional' }).first().click();
+      await page.waitForTimeout(400);
+    }],
     // Kartu Tampilan (Pengaturan › Sistem) dan chip pembesaran Topbar di ketiga
     // rona LED: nominal 100%, aksen 110% + Padat, jingga 90%. Tab Sistem tidak
     // terbuka oleh menu Pengaturan di atas, jadi kartu ini perlu langkah sendiri.

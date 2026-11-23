@@ -170,3 +170,9 @@
 @source "../features/glossary";
 @source "../features/calculator";
 @source "../features/activity";
+/* Pengaturan dipindah per tab (L-55, L-66, L-67): selama folder ini masih memuat
+   tab FixMaster, hanya berkas tab yang sudah dipindah yang dipindai. */
+@source "../features/settings/settingsUi.tsx";
+@source "../features/settings/SettingsTabs.tsx";
+@source "../features/settings/BusinessSettings.tsx";
+@source "../features/settings/OperationsSettings.tsx";

@@ -13,6 +13,33 @@ Catatan keputusan desain penting + bug nyata yang ditemukan saat verifikasi.
 
 ## Keputusan desain
 
+### Pengaturan dipindah per tab, mulai dari Usaha dan Operasional (L-55, 23 Nov 2026)
+Pengaturan terlalu besar untuk satu langkah (±4.100 baris kode + 2.170 baris CSS; `SettingsPage.tsx`
+saja 2.829 baris), jadi dipecah per tab (K-22): L-55 kerangka + Usaha + Operasional, L-66 Tim,
+Wallet, Outlet, Navigasi, Sistem, L-67 Nota & Struk + Tarif.
+- **Tab yang dipindah keluar dari `SettingsPage.tsx`.** `BusinessSettings.tsx` (profil + logo,
+  target bulanan, sewa), `OperationsSettings.tsx` (templat keluhan/kelengkapan, kategori, kolom
+  tabel Servis, garansi, templat WhatsApp), `SettingsTabs.tsx` (deret tab), `settingsUi.tsx`
+  (`SettingsSection`, `SettingsCard`, `SaveFoot`, `SettingsHint`, kelas kelompok). Logikanya
+  disalin apa adanya lewat skrip; hanya JSX yang ditulis ulang. Hanya berkas-berkas ini yang
+  ada di `@source`: `SettingsPage.tsx` masih memuat tab FixMaster, dan memindainya akan
+  melahirkan utilitas dari kata di kode lama.
+- **`data-nu` per bagian** (`SettingsSection`, deret tab), bukan di akar: tab FixMaster masih
+  dirender inline di akar `styles.wrap` (pola Kasir L-50).
+- **Sisa CSS Module dipangkas jadi persis kelas yang masih dipakai** (22 kelas terhapus, termasuk
+  `planRow` yang sudah mati sejak FixMaster); tes membandingkan kelas terdefinisi dengan
+  `styles.*` di `SettingsPage.tsx`.
+- **Chip tab 44px di semua perangkat**, sama dengan tab FixMaster (yang terukur 44px juga di
+  desktop karena aturan target sentuh global). Dengan 36px atau 40px, isi tab lama bergeser 4-8px
+  dan foto per piksel tujuh tab lama tak bisa dibandingkan. Sesudahnya isi tab lama identik;
+  satu-satunya selisih adalah baris tepat di bawah chip (cincin chip).
+- Ambang kartu membaca `@container/settings`: form profil dua kolom → satu di `@max-[609px]`
+  (FixMaster @media 640px), isian garansi di `@max-[489px]` (@media 520px), kaki simpan
+  membagi tombol selebar kartu di `@max-[609px]`.
+- Chip hapus templat 20px berarea 44px (`::after -inset-3`); dengan isi satu kalimat tombolnya
+  menyusut ke 39px sampai diberi `shrink-0`.
+- Tombol simpan mati selama menyimpan (dulu hanya `loading`); isian tambah templat kini berlabel.
+
 ### Log Aktivitas, Kamus Istilah, Kalkulator Biaya pindah ke dens-ui (L-65, 23 Nov 2026)
 `ActivityLogPage`, `GlossaryPage`, dan `CalculatorPage` ditulis ulang dengan dens-ui; ketiga CSS
 Module dihapus dan `@source` memindai ketiga foldernya. Logika jendela waktu + pemangkasan log,

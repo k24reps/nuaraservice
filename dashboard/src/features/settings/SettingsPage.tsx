@@ -2,6 +2,18 @@ import { EmptyValue } from '@/components/ui/EmptyValue';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
+  Building2,
+  Calculator,
+  Menu,
+  Receipt,
+  Settings,
+  SlidersHorizontal,
+  Store,
+  Users,
+  Wallet as WalletIcon,
+  type LucideIcon,
+} from 'lucide-react';
+import {
   Card,
   CardHeader,
   CardBody,
@@ -20,20 +32,6 @@ import { newId } from '@/lib/id';
 import { fmtRp, fmtRpInput, parseRpInput } from '@/lib/format';
 import { roleAllows } from '@/config/plans';
 import {
-  getComplaintTemplates,
-  setComplaintTemplates,
-  getAccessoryTemplates,
-  setAccessoryTemplates,
-  getWarrantyServiceDays,
-  getWarrantyPartsDays,
-  setWarrantyDays,
-  getWarrantyPresets,
-  setWarrantyPresets,
-  getWaTemplateOverrides,
-  setWaTemplateOverrides,
-  getCategories,
-  setCategories,
-  seedCategoriesFromLocal,
   setMobileNavigation as saveMobileNavigation,
 } from '@/config/orgConfig';
 import { NAV_ITEMS } from '@/config/navigation';
@@ -41,18 +39,10 @@ import {
   DEFAULT_MOBILE_NAV_PATHS,
   sanitizeMobileNavPaths,
 } from '@/lib/business/navigation';
-import { translate, useT } from '@/i18n';
-import { useSettingsStore } from '@/stores/settings';
-import {
-  DEFAULT_WA_TEMPLATES,
-  WA_TEMPLATE_LABELS,
-  WA_TEMPLATE_VARS,
-  type WaTemplateKey,
-} from '@/lib/business/notify';
+import { useT } from '@/i18n';
 import { toast } from '@/stores/toast';
 import { demoGuard } from '@/stores/demo';
 import { isValidInviteEmail, canChangeRole, canDeactivate } from '@/lib/business/team';
-import { normalizePhone } from '@/lib/business/customers';
 import { createTransfer } from '@/features/finance/transferActions';
 import { CountModal } from '@/features/finance/CountModal';
 import { createFinanceEntry } from '@/data/financeEntry';
@@ -72,11 +62,13 @@ import {
   deleteMember,
   type PendingInvite,
 } from '@/data/supabase-client';
-import type { Wallet, Outlet, Role, OutletRent } from '@/data/types';
+import type { Wallet, Outlet, Role } from '@/data/types';
 import { DATASETS, downloadCsv } from './exportDatasets';
-import { uploadOrgLogo, removeOrgLogo } from '@/data/storage';
 import { createBackup, downloadBackup, restoreBackup } from './backupRestore';
 import { DisplayCard } from './DisplayCard';
+import { BusinessSettings } from './BusinessSettings';
+import { OperationsSettings } from './OperationsSettings';
+import { SettingsTabs } from './SettingsTabs';
 import { QuoteRatesTab } from './QuoteRatesTab';
 import { ReceiptTab } from './ReceiptTab';
 import { useBackupStore } from '@/stores/backup';
@@ -96,67 +88,13 @@ import {
   type BackupFrequency,
 } from '@/lib/business/backup';
 import {
-  saveServiceColumns,
-  getTarget,
-  setMonthlyTarget,
-  getRent,
-  setRent,
   getLastBackupAt,
   setLastBackupAt,
   setBackupEmail,
 } from '@/config/orgConfig';
-import {
-  SERVICE_COLUMNS,
-  resolveServiceColumns,
-  type ServiceColumnId,
-} from '@/lib/business/serviceColumns';
 import styles from './SettingsPage.module.css';
 import { interpolate } from '@/lib/business/notify';
 import type { TranslationKey } from '@/i18n';
-
-/**
- * Downscale a picked image to a PNG Blob (max 256 px) without using
- * fetch(data:URL) — that call is blocked by CSP connect-src in production.
- * Uses canvas.toBlob() directly instead.
- */
-async function fileToLogoBlob(file: File): Promise<Blob> {
-  const dataUrl = await new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-    const el = new Image();
-    el.onload = () => resolve(el);
-    el.onerror = reject;
-    el.src = dataUrl;
-  });
-  // Logo yang sangat memanjang dikecilkan jadi seutas garis di nota dan di
-  // sidebar — ukurannya lolos (≤500KB), hasilnya yang tidak terbaca.
-  const ratio = Math.max(img.width, img.height) / Math.max(1, Math.min(img.width, img.height));
-  if (ratio > 4) {
-    // Di luar komponen: tak ada hook, jadi bahasa dibaca langsung dari store.
-    throw new Error(translate(useSettingsStore.getState().language, 'settingsPage.logoRatio'));
-  }
-  const MAX = 256;
-  const scale = Math.min(1, MAX / Math.max(img.width, img.height));
-  const w = Math.round(img.width * scale);
-  const h = Math.round(img.height * scale);
-  const canvas = document.createElement('canvas');
-  canvas.width = w;
-  canvas.height = h;
-  const ctx = canvas.getContext('2d');
-  // Fallback: if canvas context unavailable, upload original file as-is.
-  if (!ctx) return file;
-  ctx.drawImage(img, 0, 0, w, h);
-  return new Promise<Blob>((resolve, reject) =>
-    canvas.toBlob(
-      (b) => (b ? resolve(b) : reject(new Error('canvas.toBlob returned null'))),
-      'image/png',
-    ),
-  );
-}
 
 type Tab =
   | 'usaha'
@@ -213,24 +151,24 @@ export function SettingsPage() {
   const TABS: {
     id: Tab;
     label: string;
-    icon: string;
+    icon: LucideIcon;
     ownerOnly?: boolean;
     cloudOnly?: boolean;
   }[] = [
-    { id: 'usaha', label: t('settingsPage.tabBusiness'), icon: 'fa-store' },
-    { id: 'operasional', label: t('settingsPage.tabOps'), icon: 'fa-sliders' },
-    { id: 'nota', label: t('receipt.tab'), icon: 'fa-receipt' },
-    { id: 'tarif', label: t('quoteRates.tab'), icon: 'fa-calculator', ownerOnly: true },
-    { id: 'tim', label: t('settingsPage.tabTeam'), icon: 'fa-users', ownerOnly: true },
-    { id: 'keuangan', label: t('settingsPage.tabWallet'), icon: 'fa-wallet', ownerOnly: true },
-    { id: 'outlet', label: t('settingsPage.tabOutlet'), icon: 'fa-shop', ownerOnly: true },
+    { id: 'usaha', label: t('settingsPage.tabBusiness'), icon: Store },
+    { id: 'operasional', label: t('settingsPage.tabOps'), icon: SlidersHorizontal },
+    { id: 'nota', label: t('receipt.tab'), icon: Receipt },
+    { id: 'tarif', label: t('quoteRates.tab'), icon: Calculator, ownerOnly: true },
+    { id: 'tim', label: t('settingsPage.tabTeam'), icon: Users, ownerOnly: true },
+    { id: 'keuangan', label: t('settingsPage.tabWallet'), icon: WalletIcon, ownerOnly: true },
+    { id: 'outlet', label: t('settingsPage.tabOutlet'), icon: Building2, ownerOnly: true },
     {
       id: 'navigasi',
       label: t('settings.mobileNav.tab'),
-      icon: 'fa-bars',
+      icon: Menu,
       ownerOnly: true,
     },
-    { id: 'sistem', label: t('settingsPage.tabSystem'), icon: 'fa-gear' },
+    { id: 'sistem', label: t('settingsPage.tabSystem'), icon: Settings },
   ];
   const visibleTabs = TABS.filter(
     (item) => (!item.ownerOnly || isOwner) && (!item.cloudOnly || isSupabaseConfigured),
@@ -238,36 +176,10 @@ export function SettingsPage() {
 
   return (
     <div className={styles.wrap}>
-      <div className={styles.tabs} role="group" aria-label={t('settingsPage.sectionsAria')}>
-        {visibleTabs.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            className={[styles.tab, tab === item.id ? styles.tabActive : ''].join(' ')}
-            aria-pressed={tab === item.id}
-            onClick={() => setTab(item.id)}
-          >
-            <Icon name={item.icon} aria-hidden /> {item.label}
-          </button>
-        ))}
-      </div>
+      <SettingsTabs tabs={visibleTabs} value={tab} onChange={setTab} label={t('settingsPage.sectionsAria')} />
 
-      {tab === 'usaha' && (
-        <>
-          <BusinessTab />
-          {isOwner && <MonthlyTargetCard />}
-          {isOwner && <RentCard />}
-        </>
-      )}
-      {tab === 'operasional' && (
-        <>
-          <ServiceTemplatesCard />
-          <DeviceCategoriesCard />
-          <ServiceColumnsCard />
-          <WarrantyCard />
-          <WhatsAppTemplatesCard />
-        </>
-      )}
+      {tab === 'usaha' && <BusinessSettings isOwner={isOwner} />}
+      {tab === 'operasional' && <OperationsSettings />}
       {tab === 'nota' && <ReceiptTab />}
       {tab === 'tarif' && isOwner && <QuoteRatesTab />}
       {tab === 'tim' && isOwner && <TeamTab employees={employees} outlets={outlets} />}
@@ -434,775 +346,6 @@ function MobileNavigationEditor({ initial }: { initial: string[] }) {
             iconLeft={<Icon name="check" aria-hidden />}
           >
             {t('common.save')}
-          </Button>
-        </div>
-      </CardBody>
-    </Card>
-  );
-}
-
-function BusinessTab() {
-  const t = useT();
-  const org = useSessionStore((s) => s.org);
-  const setOrg = useSessionStore((s) => s.setOrg);
-  const [name, setName] = useState(org?.name ?? '');
-  const [address, setAddress] = useState(org?.address ?? '');
-  const [phone, setPhone] = useState(org?.phone ?? '');
-  const [busy, setBusy] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
-  // Sama dengan Target dan Sewa: tombol simpan hanya menyala bila ada yang
-  // berubah. Dulu tab Usaha membuka dengan tiga tombol amber sekaligus.
-  const dirty =
-    name.trim() !== (org?.name ?? '') ||
-    address.trim() !== (org?.address ?? '') ||
-    phone.trim() !== (org?.phone ?? '');
-
-  const save = async () => {
-    if (!org) return;
-    // Nama, alamat, dan telepon ini tercetak di nota yang dibawa pulang
-    // pelanggan dan tampil di halaman lacak publik — dulu ketiganya diterima
-    // apa adanya, termasuk nomor yang jelas bukan nomor.
-    if (!name.trim()) return toast.error(t('settingsPage.namaUsahaWajibDiisi'));
-    if (name.trim().length > 60) return toast.error(t('settingsPage.namaUsahaTerlaluPanjang'));
-    if (address.trim().length > 160)
-      return toast.error(t('settingsPage.alamatTerlaluPanjangUntuk'));
-    if (phone.trim() && normalizePhone(phone).length < 8)
-      return toast.error(t('settingsPage.noTeleponTidakValid'));
-
-    setBusy(true);
-    const updated = {
-      ...org,
-      name: name.trim(),
-      address: address.trim(),
-      phone: phone.trim(),
-    };
-    try {
-      await repository.setSingleton('organization', updated);
-      setOrg(updated);
-      logActivity({
-        action: 'settings.update',
-        entityType: 'organization',
-        entityId: org.id,
-        entityLabel: updated.name,
-        meta: { address: updated.address, phone: updated.phone },
-      });
-      toast.success(t('settingsPage.profilUsahaDisimpan'));
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : t('settingsPage.profileFailed'));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const onPickLogo = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = ''; // allow re-picking the same file
-    if (!file || !org) return;
-    if (!file.type.startsWith('image/')) return toast.error(t('settingsPage.fileHarusBerupaGambar'));
-    if (file.size > 500 * 1024) return toast.error(t('settingsPage.ukuranLogoMaksimal500kb'));
-    try {
-      // Downscale to PNG Blob via canvas (no fetch(data:URL) — CSP blocks it).
-      // Cloud mode: uploads to `org-logos` bucket, returns public CDN URL.
-      // Local mode: falls back to a data URL stored in the org row.
-      const blob = await fileToLogoBlob(file);
-      const logoDataUrl = await uploadOrgLogo(org.id, blob);
-      const updated = { ...org, logoDataUrl };
-      await repository.setSingleton('organization', updated);
-      setOrg(updated);
-      toast.success(t('settingsPage.logoDiperbarui'));
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Unknown error';
-      toast.error(`Gagal upload logo: ${msg}`);
-      console.error('[logo upload]', err);
-    }
-  };
-
-  const removeLogo = async () => {
-    if (!org) return;
-    try {
-      await removeOrgLogo(org.id); // delete bucket objects in cloud mode
-    } catch {
-      // Non-critical: still clear the reference below even if delete failed.
-    }
-    const updated = { ...org, logoDataUrl: null };
-    await repository.setSingleton('organization', updated);
-    setOrg(updated);
-    toast.success(t('settingsPage.logoDihapus'));
-  };
-
-  return (
-    <Card>
-      <CardHeader icon={<Icon name="store" aria-hidden />} title={t('settingsPage.profilUsaha')} />
-      <CardBody>
-        <div className={styles.form}>
-          <div className={styles.logoRow}>
-            <span className={styles.logoPreview}>
-              {org?.logoDataUrl ? (
-                <img src={org.logoDataUrl} alt="Logo toko" />
-              ) : (
-                <span className={styles.logoFallback}>
-                  {(org?.name ?? 'F').charAt(0).toUpperCase()}
-                </span>
-              )}
-            </span>
-            <div className={styles.logoMeta}>
-              <strong>{t('settingsPage.logoToko')}</strong>
-              <small>{t('settingsPage.pngJpgMaks500kb')}</small>
-              <small>{t('settingsPage.logoPrintBw')}</small>
-              <div className={styles.logoActions}>
-                <Button
-                  variant="secondary"
-                  onClick={() => fileRef.current?.click()}
-                  iconLeft={<Icon name="download" aria-hidden />}
-                >
-                  {org?.logoDataUrl ? t('settingsPage.changeLogo') : t('settingsPage.uploadLogo')}
-                </Button>
-                {org?.logoDataUrl && (
-                  <Button
-                    variant="ghost"
-                    onClick={removeLogo}
-                    iconLeft={<Icon name="trash" aria-hidden />}
-                  >
-                    {t('settingsPage.hapus')}
-                  </Button>
-                )}
-              </div>
-              <input
-                ref={fileRef}
-                type="file"
-                accept="image/*"
-                onChange={onPickLogo}
-                hidden
-              />
-            </div>
-          </div>
-          <Input
-            label={t('settingsPage.namaUsaha')}
-            value={name}
-            autoCapWords
-            onChange={(e) => setName(e.target.value)}
-          />
-          <Input
-            label={t('settingsPage.alamat')}
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-          />
-          <Input
-            label={t('settingsPage.noTelepon')}
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-          />
-        </div>
-        <div className={styles.saveFoot}>
-          <Button onClick={save} loading={busy} disabled={!dirty}>
-            {t('settingsPage.simpanPerubahan')}
-          </Button>
-        </div>
-      </CardBody>
-    </Card>
-  );
-}
-
-/**
- * Manage reusable complaint & accessory templates used as quick-picks in
- * the service form. Stored in orgConfig (localStorage), so we keep local
- * state in sync after each mutation.
- */
-function ServiceTemplatesCard() {
-  const t = useT();
-  const [complaints, setComplaints] = useState<string[]>(() => getComplaintTemplates());
-  const [accessories, setAccessories] = useState<string[]>(() => getAccessoryTemplates());
-  const [busy, setBusy] = useState(false);
-
-  // Template kini tersimpan di baris organisasi (tersinkron), jadi penyimpanan
-  // bisa gagal — daftar di layar hanya berubah setelah servernya menerima.
-  const persist = async (next: string[], save: (v: string[]) => Promise<void>, apply: (v: string[]) => void) => {
-    setBusy(true);
-    try {
-      await save(next);
-      apply(next);
-    } catch {
-      toast.error(t('settingsPage.gagalMenyimpanTemplate'));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const addComplaint = (value: string) =>
-    void persist([...complaints, value], setComplaintTemplates, setComplaints);
-  const removeComplaint = (value: string) =>
-    void persist(complaints.filter((c) => c !== value), setComplaintTemplates, setComplaints);
-  const addAccessory = (value: string) =>
-    void persist([...accessories, value], setAccessoryTemplates, setAccessories);
-  const removeAccessory = (value: string) =>
-    void persist(accessories.filter((a) => a !== value), setAccessoryTemplates, setAccessories);
-
-  return (
-    <Card>
-      <CardHeader
-        icon={<Icon name="clipboard-list" aria-hidden />}
-        title={t('settingsPage.templateServis')}
-      />
-      <CardBody>
-        <p className={styles.tplHint}>
-          Pilihan cepat keluhan &amp; kelengkapan saat membuat servis baru.
-        </p>
-        <StringListEditor
-          label={t('settingsPage.templateKeluhan')}
-          placeholder={t('settingsPage.misMatiTotal')}
-          items={complaints}
-          onAdd={addComplaint}
-          onRemove={removeComplaint}
-          disabled={busy}
-        />
-        <StringListEditor
-          label={t('settingsPage.templateKelengkapan')}
-          placeholder={t('settingsPage.misCharger')}
-          items={accessories}
-          onAdd={addAccessory}
-          onRemove={removeAccessory}
-          disabled={busy}
-        />
-      </CardBody>
-    </Card>
-  );
-}
-
-/**
- * Device categories (e.g. "Laptop", "HP / Smartphone") offered as the category
- * dropdown when creating a service. Stored on the organization row
- * (settings.deviceCategories, migration 0032) so they sync across devices.
- */
-/**
- * Kolom tabel Servis yang ditampilkan. Tersimpan di baris organisasi, jadi semua
- * perangkat toko melihat tabel yang sama. No. Servis, Status, dan Aksi selalu ada.
- */
-function ServiceColumnsCard() {
-  const t = useT();
-  const org = useSessionStore((s) => s.org);
-  const columns = resolveServiceColumns(org?.settings?.serviceColumns);
-  const [busy, setBusy] = useState(false);
-
-  const toggle = async (id: ServiceColumnId) => {
-    const next = columns.includes(id) ? columns.filter((c) => c !== id) : [...columns, id];
-    setBusy(true);
-    try {
-      await saveServiceColumns(next);
-    } catch {
-      toast.error(t('settingsPage.gagalMenyimpanKolomTabel'));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <Card>
-      <CardHeader icon={<Icon name="clipboard-list" aria-hidden />} title={t('settingsPage.kolomTabelServis')} />
-      <CardBody>
-        <p className={styles.tplHint}>
-          {t('settingsPage.pPilihKolomYangTampil')}
-        </p>
-        <div className={styles.columnList}>
-          {SERVICE_COLUMNS.map((c) => (
-            <label key={c.id} className={styles.columnOption}>
-              <input
-                type="checkbox"
-                checked={columns.includes(c.id)}
-                onChange={() => void toggle(c.id)}
-                disabled={busy}
-              />
-              <span className={styles.columnText}>
-                <strong>{t(c.labelKey)}</strong>
-                <small>{t(c.hintKey)}</small>
-              </span>
-            </label>
-          ))}
-        </div>
-      </CardBody>
-    </Card>
-  );
-}
-
-function DeviceCategoriesCard() {
-  const t = useT();
-  // Read reactively from the org slice so a save here (and realtime updates
-  // from other devices) re-render the list immediately.
-  const org = useSessionStore((s) => s.org);
-  const categories = org?.settings?.deviceCategories ?? getCategories();
-  const [busy, setBusy] = useState(false);
-
-  // One-time lift of any legacy per-device list into the cloud copy.
-  useEffect(() => {
-    void seedCategoriesFromLocal();
-  }, []);
-
-  const persist = async (next: string[]) => {
-    setBusy(true);
-    try {
-      await setCategories(next);
-    } catch {
-      toast.error(t('settingsPage.gagalMenyimpanKategori'));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const addCategory = (value: string) => {
-    if (categories.includes(value)) return;
-    void persist([...categories, value]);
-  };
-  const removeCategory = (value: string) => {
-    void persist(categories.filter((c) => c !== value));
-  };
-
-  return (
-    <Card>
-      <CardHeader icon={<Icon name="laptop" aria-hidden />} title={t('settingsPage.kategoriPerangkat')} />
-      <CardBody>
-        <p className={styles.tplHint}>
-          {t('settingsPage.pJenisPerangkatYangDilayani')}
-        </p>
-        <StringListEditor
-          label={t('settingsPage.kategori')}
-          placeholder={t('settingsPage.misTablet')}
-          items={categories}
-          onAdd={addCategory}
-          onRemove={removeCategory}
-          disabled={busy}
-        />
-      </CardBody>
-    </Card>
-  );
-}
-
-function StringListEditor({
-  label,
-  placeholder,
-  items,
-  onAdd,
-  onRemove,
-  disabled = false,
-}: {
-  label: string;
-  placeholder: string;
-  items: string[];
-  onAdd: (value: string) => void;
-  onRemove: (value: string) => void;
-  disabled?: boolean;
-}) {
-  const t = useT();
-  const [value, setValue] = useState('');
-  const commit = () => {
-    const v = value.trim();
-    if (!v) return;
-    if (items.includes(v)) {
-      toast.warning(t('settingsPage.templateSudahAda'));
-      return;
-    }
-    onAdd(v);
-    setValue('');
-  };
-  return (
-    <div className={styles.tplGroup}>
-      <span className={styles.tplLabel}>{label}</span>
-      {items.length > 0 && (
-        <div className={styles.tplChips}>
-          {items.map((item) => (
-            <span key={item} className={styles.tplChip}>
-              {item}
-              <button
-                onClick={() => onRemove(item)}
-                aria-label={`Hapus ${item}`}
-                title={t('settingsPage.hapus')}
-                disabled={disabled}
-              >
-                <Icon name="times" aria-hidden />
-              </button>
-            </span>
-          ))}
-        </div>
-      )}
-      <div className={styles.addRow}>
-        <Input
-          placeholder={placeholder}
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && commit()}
-          disabled={disabled}
-        />
-        <Button
-          onClick={commit}
-          iconLeft={<Icon name="plus" aria-hidden />}
-          disabled={disabled}
-        >
-          {t('settingsPage.tambah')}
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-/**
- * Default warranty lengths (service & parts) prefilled in StatusModal when a
- * job is finished, plus quick-pick duration presets. Stored in orgConfig.
- */
-function WarrantyCard() {
-  const t = useT();
-  const [svcDays, setSvcDays] = useState(() => String(getWarrantyServiceDays()));
-  const [partsDays, setPartsDays] = useState(() => String(getWarrantyPartsDays()));
-  const [presets, setPresets] = useState<number[]>(() => getWarrantyPresets());
-  const [presetInput, setPresetInput] = useState('');
-
-  const [saving, setSaving] = useState(false);
-
-  const saveDefaults = async () => {
-    setSaving(true);
-    try {
-      // Clamp to non-negative: a "number" input still accepts "-5".
-      await setWarrantyDays(Number(svcDays) || 0, Number(partsDays) || 0);
-      toast.success(t('settingsPage.defaultGaransiDisimpan'));
-    } catch {
-      toast.error(t('settingsPage.gagalMenyimpanDefaultGaransi'));
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const addPreset = async () => {
-    const n = Math.max(0, Math.round(Number(presetInput) || 0));
-    if (!n) return toast.warning(t('settingsPage.masukkanJumlahHariYang'));
-    if (presets.includes(n)) return toast.warning(t('settingsPage.presetSudahAda'));
-    const next = [...presets, n].sort((a, b) => a - b);
-    try {
-      await setWarrantyPresets(next);
-      setPresets(next);
-      setPresetInput('');
-    } catch {
-      toast.error(t('settingsPage.gagalMenyimpanPreset'));
-    }
-  };
-  const removePreset = async (n: number) => {
-    const next = presets.filter((p) => p !== n);
-    try {
-      await setWarrantyPresets(next);
-      setPresets(next);
-    } catch {
-      toast.error(t('settingsPage.gagalMenyimpanPreset'));
-    }
-  };
-
-  return (
-    <Card>
-      <CardHeader icon={<Icon name="shield-halved" aria-hidden />} title={t('settingsPage.garansi')} />
-      <CardBody>
-        <p className={styles.tplHint}>
-          {t('settingsPage.warrantyIntro')}{' '}
-          <strong>{t('settingsPage.warrantyDone')}</strong>. {t('settingsPage.warrantyPerService')}
-        </p>
-        <div className={styles.warrantyDefaults}>
-          <Input
-            label={t('settingsPage.garansiJasaHari')}
-            type="number"
-            inputMode="numeric"
-            value={svcDays}
-            onChange={(e) => setSvcDays(e.target.value)}
-          />
-          <Input
-            label={t('settingsPage.garansiSparepartHari')}
-            type="number"
-            inputMode="numeric"
-            value={partsDays}
-            onChange={(e) => setPartsDays(e.target.value)}
-          />
-        </div>
-        <div className={styles.saveFoot}>
-          <Button onClick={saveDefaults} loading={saving}>
-            {t('settingsPage.simpanDefault')}
-          </Button>
-        </div>
-
-        <div className={styles.tplGroup}>
-          <span className={styles.tplLabel}>{t('settingsPage.presetDurasiQuickPick')}</span>
-          {presets.length > 0 && (
-            <div className={styles.tplChips}>
-              {presets.map((p) => (
-                <span key={p} className={styles.tplChip}>
-                  {p} hari
-                  <button
-                    onClick={() => void removePreset(p)}
-                    aria-label={`Hapus ${p} hari`}
-                    title={t('settingsPage.hapus')}
-                  >
-                    <Icon name="times" aria-hidden />
-                  </button>
-                </span>
-              ))}
-            </div>
-          )}
-          <div className={styles.addRow}>
-            <Input
-              placeholder={t('settingsPage.mis60')}
-              type="number"
-              inputMode="numeric"
-              value={presetInput}
-              onChange={(e) => setPresetInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && void addPreset()}
-            />
-            <Button onClick={() => void addPreset()} iconLeft={<Icon name="plus" aria-hidden />}>
-              {t('settingsPage.tambah')}
-            </Button>
-          </div>
-        </div>
-      </CardBody>
-    </Card>
-  );
-}
-
-/**
- * Target bulanan (Dashboard). Wizard onboarding berjanji "bisa diubah nanti",
- * tapi sampai 28 Sep 2026 tak ada tempat untuk mengubahnya. Isian anggaran
- * overhead ditiadakan 29 Sep 2026: break-even kini membaca catatan Keuangan.
- */
-function MonthlyTargetCard() {
-  const t = useT();
-  const current = getTarget();
-  const [revenue, setRevenue] = useState(() => (current.revenue ? fmtRpInput(String(current.revenue)) : ''));
-  const [units, setUnits] = useState(() => (current.serviceCount ? String(current.serviceCount) : ''));
-  const [busy, setBusy] = useState(false);
-  const next = {
-    revenue: parseRpInput(revenue),
-    serviceCount: Math.max(0, parseInt(units.replace(/\D/g, ''), 10) || 0),
-    // Angka lama toko yang dulu mengisinya dibiarkan; tak dibaca lagi.
-    overheadBudget: current.overheadBudget,
-  };
-  const dirty = next.revenue !== current.revenue || next.serviceCount !== current.serviceCount;
-
-  const save = async () => {
-    if (demoGuard()) return;
-    setBusy(true);
-    try {
-      await setMonthlyTarget(next);
-      toast.success(t('settingsPage.targetBulananDisimpan'));
-    } catch {
-      toast.error(t('settingsPage.gagalMenyimpanTarget'));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <Card>
-      <CardHeader icon={<Icon name="bullseye" aria-hidden />} title={t('settingsPage.targetBulanan')} />
-      <CardBody>
-        <p className={styles.tplHint}>
-          {t('settingsPage.pDipakaiGaugeTargetDi')}
-        </p>
-        <div className={styles.targetGrid}>
-          <Input
-            label={t('settingsPage.targetPendapatanBulan')}
-            inputMode="numeric"
-            value={revenue}
-            onChange={(e) => setRevenue(fmtRpInput(e.target.value))}
-            placeholder="50.000.000"
-          />
-          <Input
-            label={t('settingsPage.targetUnitServisSelesai')}
-            inputMode="numeric"
-            value={units}
-            onChange={(e) => setUnits(e.target.value.replace(/\D/g, ''))}
-            placeholder="60"
-          />
-        </div>
-        <div className={styles.saveFoot}>
-          <Button onClick={save} disabled={busy || !dirty}>
-            {t('settingsPage.simpanTarget')}
-          </Button>
-        </div>
-      </CardBody>
-    </Card>
-  );
-}
-
-/**
- * Sewa tempat per cabang untuk overhead Laporan. Bulanan = dari catatan Sewa di
- * Keuangan; tahunan = nominal ÷ 12 tiap bulan, dan catatan Sewa cabang itu
- * tidak dihitung lagi (pembayarannya tetap dicatat supaya saldo kas benar).
- */
-function RentCard() {
-  const t = useT();
-  const { data: outlets } = useCollection('outlets');
-  const current = getRent();
-  const [draft, setDraft] = useState<Record<string, { mode: OutletRent['mode']; yearly: string }>>(() =>
-    Object.fromEntries(
-      Object.entries(current).map(([id, r]) => [id, { mode: r.mode, yearly: r.yearly ? fmtRpInput(String(r.yearly)) : '' }]),
-    ),
-  );
-  const [busy, setBusy] = useState(false);
-  const rowOf = (id: string) => draft[id] ?? { mode: 'bulanan' as const, yearly: '' };
-  const normalize = (r: OutletRent | undefined): OutletRent =>
-    r?.mode === 'tahunan' ? { mode: 'tahunan', yearly: r.yearly } : { mode: 'bulanan', yearly: 0 };
-  const next: Record<string, OutletRent> = Object.fromEntries(
-    outlets.map((o) => {
-      const r = rowOf(o.id);
-      return [o.id, normalize({ mode: r.mode, yearly: parseRpInput(r.yearly) })];
-    }),
-  );
-  const dirty = outlets.some((o) => JSON.stringify(next[o.id]) !== JSON.stringify(normalize(current[o.id])));
-  const missing = outlets.some((o) => next[o.id].mode === 'tahunan' && next[o.id].yearly <= 0);
-  const patch = (id: string, change: Partial<{ mode: OutletRent['mode']; yearly: string }>) =>
-    setDraft((d) => ({ ...d, [id]: { ...rowOf(id), ...change } }));
-
-  const save = async () => {
-    if (demoGuard()) return;
-    setBusy(true);
-    try {
-      await setRent(next);
-      toast.success(t('settingsPage.rentSaved'));
-    } catch {
-      toast.error(t('settingsPage.rentSaveFailed'));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  if (outlets.length === 0) return null;
-  return (
-    <Card>
-      <CardHeader icon={<Icon name="store" aria-hidden />} title={t('settingsPage.rentTitle')} />
-      <CardBody>
-        <p className={styles.tplHint}>{t('settingsPage.rentHint')}</p>
-        <div className={styles.rentRows}>
-          {outlets.map((o) => {
-            const r = rowOf(o.id);
-            const yearly = parseRpInput(r.yearly);
-            return (
-              <div key={o.id} className={styles.rentRow}>
-                <span className={styles.rentName}>{o.name}</span>
-                <Select
-                  aria-label={interpolate(t('settingsPage.rentModeFor'), { outlet: o.name })}
-                  value={r.mode}
-                  onChange={(e) => patch(o.id, { mode: e.target.value as OutletRent['mode'] })}
-                  options={[
-                    { value: 'bulanan', label: t('settingsPage.rentMonthly') },
-                    { value: 'tahunan', label: t('settingsPage.rentYearly') },
-                  ]}
-                />
-                {r.mode === 'tahunan' ? (
-                  <>
-                    <Input
-                      aria-label={interpolate(t('settingsPage.rentYearlyFor'), { outlet: o.name })}
-                      inputMode="numeric"
-                      value={r.yearly}
-                      onChange={(e) => patch(o.id, { yearly: fmtRpInput(e.target.value) })}
-                      placeholder="24.000.000"
-                    />
-                    <span className={styles.rentReadout}>
-                      {yearly > 0 ? interpolate(t('settingsPage.rentPerMonth'), { amount: fmtRp(yearly / 12) }) : <EmptyValue />}
-                    </span>
-                  </>
-                ) : (
-                  <span className={[styles.rentReadout, styles.rentFromFinance].join(' ')}>
-                    {t('settingsPage.rentFromFinance')}
-                  </span>
-                )}
-              </div>
-            );
-          })}
-        </div>
-        <div className={styles.saveFoot}>
-          <span className={styles.tplHint}>{missing ? t('settingsPage.rentYearlyMissing') : ''}</span>
-          <Button onClick={save} disabled={busy || !dirty || missing}>
-            {t('settingsPage.rentSave')}
-          </Button>
-        </div>
-      </CardBody>
-    </Card>
-  );
-}
-
-/**
- * Per-key WhatsApp message template editor. Saves overrides to orgConfig;
- * blank fields fall back to the built-in default via resolveWaTemplates.
- */
-function WhatsAppTemplatesCard() {
-  const t = useT();
-  const overrides = getWaTemplateOverrides();
-  const keys = Object.keys(DEFAULT_WA_TEMPLATES) as WaTemplateKey[];
-  const [drafts, setDrafts] = useState<Record<string, string>>(() => {
-    const init: Record<string, string> = {};
-    for (const k of keys) init[k] = overrides[k] ?? DEFAULT_WA_TEMPLATES[k];
-    return init;
-  });
-
-  const [saving, setSaving] = useState(false);
-
-  const save = async () => {
-    const next: Record<string, string> = {};
-    for (const k of keys) {
-      const v = drafts[k]?.trim();
-      // Only persist as override if it differs from default & is non-empty.
-      if (v && v !== DEFAULT_WA_TEMPLATES[k]) next[k] = v;
-    }
-    setSaving(true);
-    try {
-      await setWaTemplateOverrides(next);
-      toast.success(t('settingsPage.templateWhatsappDisimpan'));
-    } catch {
-      toast.error(t('settingsPage.gagalMenyimpanTemplateWhatsapp'));
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const resetKey = (k: WaTemplateKey) => {
-    setDrafts((d) => ({ ...d, [k]: DEFAULT_WA_TEMPLATES[k] }));
-  };
-
-  return (
-    <Card>
-      <CardHeader
-        icon={<Icon name="whatsapp" aria-hidden />}
-        title={t('settingsPage.templateWhatsapp')}
-      />
-      <CardBody>
-        <p className={styles.tplHint}>
-          Variabel tersedia:{' '}
-          {WA_TEMPLATE_VARS.map((v) => (
-            <code key={v} className={styles.varChip}>{`{${v}}`}</code>
-          ))}
-          <br />
-          <code className={styles.varChip}>{`{keluhan}`}</code>,{' '}
-          <code className={styles.varChip}>{`{kelengkapan}`}</code>,{' '}
-          <code className={styles.varChip}>{`{alamat}`}</code>,{' '}
-          <code className={styles.varChip}>{`{garansi}`}</code> dan{' '}
-          <code className={styles.varChip}>{`{rincian_bayar}`}</code> membawa barisnya
-          sendiri. Barisnya hilang otomatis kalau datanya kosong, jadi tidak perlu
-          ditulis label lagi di depannya.
-        </p>
-        {keys.map((k) => (
-          <div key={k} className={styles.tplGroup}>
-            <div className={styles.waHead}>
-              <span className={styles.tplLabel}>{WA_TEMPLATE_LABELS[k]}</span>
-              <button
-                className={styles.waReset}
-                onClick={() => resetKey(k)}
-                type="button"
-              >
-                {t('settingsPage.resetDefault')}
-              </button>
-            </div>
-            <textarea
-              className={styles.waTextarea}
-              // Default kini multi-baris — 3 baris memotongnya jadi tak terbaca.
-              rows={10}
-              value={drafts[k]}
-              onChange={(e) => setDrafts((d) => ({ ...d, [k]: e.target.value }))}
-            />
-          </div>
-        ))}
-        <div className={styles.saveFoot}>
-          <Button onClick={save} loading={saving}>
-            {t('settingsPage.simpanTemplate')}
           </Button>
         </div>
       </CardBody>
