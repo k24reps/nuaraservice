@@ -34,7 +34,7 @@ function Field({
   const describedBy = [errorId, hintId].filter(Boolean).join(" ") || undefined
 
   return (
-    <div data-slot="field" className={cn("grid gap-1.5", className)}>
+    <div data-slot="field" className={cn("grid content-start gap-1.5", className)}>
       {label && <Label htmlFor={id}>{label}</Label>}
       {React.cloneElement(children, {
         id,

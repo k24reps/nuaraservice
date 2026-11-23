@@ -142,7 +142,5 @@
 @source "../features/onboarding";
 @source "../dev";
 @source "../features/services";
-/* Folder pos masih memuat PosHistory dan InventoryModal FixMaster (L-61),
-   jadi berkasnya disebut satu per satu sampai folder itu bersih. */
-@source "../features/pos/PosPage.tsx";
-@source "../features/pos/PosCatalog.tsx";
+@source "../features/pos";
+@source "../features/inventory";

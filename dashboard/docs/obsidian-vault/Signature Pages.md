@@ -397,9 +397,11 @@ tetap berlaku, motif bench-nya tidak (K-13). Panel total navy (`bg-primary`) men
 angka mono putih yang tetap menyesuaikan ukuran dengan jumlah karakter, baris kedua Sisa (kuning
 `highlight`) / Kembalian / Uang pas, chip cabang di pita bawahnya. Tanpa digit hantu, garis pindai,
 LED berdenyut, perforasi, atau tuts mekanis. Kartu katalog memberi tanda menipis/habis lewat warna
-cincin kartu + titik stok, bukan spine kiri. Tab memakai gaya garis bawah dens. Riwayat
-(`PosHistory`) dan `InventoryModal` masih FixMaster sampai L-61. Foto `kasir-stok-dark.png` di
-bawah masih tampilan FixMaster (dibuat ulang di mesin lokal, lihat AGENTS §5).
+cincin kartu + titik stok, bukan spine kiri. Tab memakai gaya garis bawah dens. Sejak L-61
+(23 Nov) riwayat (`PosHistory`: baris dua baris, tuts ikon dens, jendela batal `FormDialog`) dan
+form barang stok (`InventoryModal`: `Field`, `RadioGroup` asal stok masuk) juga dens-ui. Foto
+`kasir-stok-dark.png` di bawah masih tampilan FixMaster (dibuat ulang di mesin lokal, lihat
+AGENTS §5).
 
 **Satu menu untuk jual dan stok (10 Nov 2026).** Kasir dan Inventori membaca koleksi yang sama
 (`inventory`), jadi keduanya dilebur. Menu bernama **Kasir & Stok** (`/pos`; label pendek "Kasir"

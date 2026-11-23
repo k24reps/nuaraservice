@@ -13,6 +13,28 @@ Catatan keputusan desain penting + bug nyata yang ditemukan saat verifikasi.
 
 ## Keputusan desain
 
+### Riwayat penjualan dan form barang stok pindah ke dens-ui, folder Kasir & Stok selesai (L-61, 23 Nov 2026)
+`PosHistory` (tab Transaksi Terakhir + jendela batal) dan `InventoryModal` (barang baru, ubah,
+tambah stok, hapus) ditulis ulang dengan dens-ui; dua CSS Module terakhir dihapus dan `@source`
+kini memindai `features/pos` dan `features/inventory` utuh. Logika batal, kirim ulang WA, cetak
+ulang, simpan stok, pembelian (modal rata-rata + kas), dan hapus barang tidak disentuh.
+- **`data-nu` kembali ke akar Kasir.** Pemasangan per bagian di L-50 hanya karena `PosHistory`
+  lama dirender inline; kini semuanya dens, jadi akar halaman memegang satu `data-nu` (dikunci
+  `posLayout.test.ts`).
+- **Baris riwayat** tetap dua baris dengan tuts di kanan dan turun ke barisnya sendiri di wadah
+  <=432px, kini lewat `grid-template-areas` + container query `@max-[433px]/hist`. Tuts = tombol
+  ikon dens `outline` (40px, 44px di layar sentuh); lencana Dibatalkan = `destructive-soft`.
+- **Jendela batal** memakai `FormDialog`; fokus awal di tombol **Kembali** (`data-autofocus`),
+  bukan kolom alasan: jendela ini memindah uang dan stok, dan di ponsel keyboard yang muncul
+  menutupi tombolnya. FixMaster dulu memfokus jendelanya sendiri.
+- **Asal stok masuk** (dibeli sekarang / koreksi) memakai `RadioGroup` dens di dalam kartu
+  `<label>`; kartu terpilih bercincin brand (`has-[[data-state=checked]]`). Radio tersembunyi
+  13px milik FixMaster (target sentuh terlalu kecil) hilang.
+- **Bug `Field` yang ditemukan di sini:** akar `Field` (`grid gap-1.5`) meregang setinggi sel
+  tetangga di baris dua kolom, sehingga label dan isian bergeser turun bila petunjuk di kolom
+  sebelah lebih panjang (Stok vs Stok minimum: 6px). Kini `grid content-start`. Layar masuk,
+  wizard, form Servis Baru, dan modal Servis terukur identik per piksel setelah perubahan ini.
+
 ### Halaman Kasir dan katalog pindah ke dens-ui (L-50, 22 Nov 2026)
 `PosPage` dan `PosCatalog` ditulis ulang dengan Tailwind + dens-ui; `PosPage.module.css` dan
 `PosCatalog.module.css` dihapus. Logika transaksi (keranjang, tender campur, diskon, cabang,

@@ -1,5 +1,12 @@
 import { useState } from 'react';
-import { Card, Input, Button, Badge, Icon, Modal, LoadState, loadPending } from '@/components/ui';
+import { CircleX, History, LoaderCircle, Printer } from 'lucide-react';
+import { LoadState, loadPending } from '@/components/ui';
+import { Badge } from '@/components/dens/badge';
+import { Button } from '@/components/dens/button';
+import { FormDialog } from '@/components/dens/form-dialog';
+import { TextInput } from '@/components/dens/text-input';
+import { WhatsAppIcon } from '@/components/dens/whatsapp-icon';
+import { cn } from '@/lib/utils';
 import type { LoadQuery } from '@/components/ui/loadPending';
 import { repository } from '@/data';
 import { voidSale } from '@/data/supabase-client';
@@ -15,7 +22,6 @@ import { toast } from '@/stores/toast';
 import type { InventoryItem, Organization, Sale } from '@/data/types';
 import { printSaleReceipt } from './printSaleReceipt';
 import { saleWaMessage } from './saleWaMessage';
-import styles from './PosHistory.module.css';
 
 interface PosHistoryProps {
   recentSales: Sale[];
@@ -113,77 +119,106 @@ export function PosHistory({ recentSales, salesLoad, walletName, org, isMgr, mon
 
   return (
     <>
-      <Card className={styles.history} id="pos-panel" role="tabpanel" aria-labelledby="pos-tab-history">
-        <div className={styles.historyHead}>
-          <h2>
-            <Icon name="clock-rotate-left" aria-hidden /> {t('pos.tabHistory')}
+      <section
+        id="pos-panel"
+        role="tabpanel"
+        aria-labelledby="pos-tab-history"
+        className="grid gap-3 rounded-2xl bg-card px-5 py-4 text-card-foreground shadow-panel ring-1 ring-border/60 compact:px-4"
+      >
+        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+          <h2 className="inline-flex items-center gap-2 text-sm font-semibold [&_svg]:size-4 [&_svg]:text-muted-foreground">
+            <History aria-hidden /> {t('pos.tabHistory')}
           </h2>
           {/* Riwayat mengikuti cabang aktif — dulu tanpa tanda, sehingga cabang
               tanpa penjualan tampak seperti data hilang. */}
           {branchName && (
-            <span className={styles.historyScope}>{t('pos.historyBranch').replace('{name}', branchName)}</span>
+            <span className="text-xs text-muted-foreground">{t('pos.historyBranch').replace('{name}', branchName)}</span>
           )}
         </div>
         {loadPending(salesLoad) ? (
           <LoadState queries={[salesLoad]} />
         ) : recentSales.length === 0 ? (
-          <p className={styles.empty}>{t('pos.noSales')}</p>
+          <p className="py-8 text-center text-sm text-muted-foreground">{t('pos.noSales')}</p>
         ) : (
           groupSalesByDay(recentSales).map((day) => (
-            <section key={day.date} className={styles.historyDay} aria-label={fmtDate(day.date)}>
-              <div className={styles.historyDayHead}>
+            <section key={day.date} className="grid gap-2 [&+&]:mt-1" aria-label={fmtDate(day.date)}>
+              {/* Kepala hari: tanggal + jumlah transaksi + total (tanpa yang batal).
+                  Di 320px keduanya tak muat sebaris: ringkasan turun utuh, bukan
+                  dua kolom yang masing-masing patah. */}
+              <div className="flex flex-wrap justify-between gap-x-3 gap-y-0.5 border-b border-dashed border-border px-3 pb-1.5 text-xs font-semibold text-muted-foreground">
                 <span>{fmtDate(day.date)}</span>
                 <span>
-                  {interpolate(t('pos.dayCount'), { n: String(day.count) })} · {fmtRp(day.total)}
+                  {interpolate(t('pos.dayCount'), { n: String(day.count) })} ·{' '}
+                  <span className="font-mono tabular-nums">{fmtRp(day.total)}</span>
                 </span>
               </div>
-              <ul className={styles.historyList}>
+              {/* Satu transaksi = dua baris: nomor + jam ... total, lalu rincian;
+                  tuts di kanan selama muat. Ambang diukur dari baris terburuk di
+                  layar sentuh: 26 bingkai + 117 nomor & jam + 118 "Rp 999.999.999"
+                  + 148 tiga tuts 44px + 24 jeda = 433px, jadi di wadah <=432px
+                  tuts turun ke barisnya sendiri. Ambang muat/tidak muat: wajib
+                  container query. */}
+              <ul className="@container/hist m-0 grid list-none gap-2 p-0">
                 {day.rows.map((s) => (
-                  <li key={s.id} className={[styles.historyRow, s.voided ? styles.voided : ''].join(' ')}>
-                    <strong className={styles.historyNo}>
+                  <li
+                    key={s.id}
+                    data-voided={s.voided || undefined}
+                    className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-3 gap-y-0.5 rounded-xl px-3 py-2 ring-1 ring-border/70 [grid-template-areas:'no_total_actions'_'meta_meta_actions'] data-voided:opacity-55 @max-[433px]/hist:grid-cols-[minmax(0,1fr)_auto] @max-[433px]/hist:[grid-template-areas:'no_total'_'meta_meta'_'actions_actions']"
+                  >
+                    <strong className="min-w-0 font-mono text-sm font-semibold [grid-area:no] [overflow-wrap:anywhere]">
                       {s.saleNo}
-                      <span className={styles.historyTime}>
+                      <span className="ml-2 font-normal text-muted-foreground">
                         {s.createdAt
                           ? new Date(s.createdAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
                           : ''}
                       </span>
                     </strong>
-                    <span className={styles.historyTotal}>{fmtRp(s.total)}</span>
-                    <small className={styles.historyMeta}>
+                    <span
+                      className={cn(
+                        'justify-self-end font-mono text-sm font-semibold whitespace-nowrap tabular-nums [grid-area:total]',
+                        s.voided && 'line-through',
+                      )}
+                    >
+                      {fmtRp(s.total)}
+                    </span>
+                    <small className="min-w-0 text-xs text-muted-foreground [grid-area:meta]">
                       {interpolate(t('pos.itemCount'), { n: String(s.lines.length) })}
                       {s.payments.length > 0 && ` · ${s.payments.map((p) => walletName(p.walletId) || EMPTY_VALUE).join(' + ')}`}
                       {s.cashierName ? ` · ${s.cashierName}` : ''}
                       {s.customerName ? ` · ${s.customerName}` : ''}
                     </small>
-                    <div className={styles.historyActions}>
+                    <div className="flex items-center justify-end gap-2 [grid-area:actions] empty:hidden @max-[433px]/hist:mt-2 @max-[433px]/hist:border-t @max-[433px]/hist:border-dashed @max-[433px]/hist:border-border @max-[433px]/hist:pt-2">
                       {s.customerId && !s.voided && (
-                        <button
-                          type="button"
-                          className={styles.iconBtn}
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="text-muted-foreground shadow-none hover:text-foreground"
                           onClick={() => void resendWa(s)}
                           aria-label={t('pos.resendWa').replace('{no}', s.saleNo)}
                           title={t('pos.resendWa').replace('{no}', s.saleNo)}
                         >
-                          <Icon name="whatsapp" aria-hidden />
-                        </button>
+                          <WhatsAppIcon className="size-4" />
+                        </Button>
                       )}
                       {org && (
-                        <button
-                          type="button"
-                          className={styles.iconBtn}
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="text-muted-foreground shadow-none hover:text-foreground"
                           onClick={() => printSaleReceipt(s, org, { reprint: true, walletName, outlets })}
                           aria-label={interpolate(t('pos.printAria'), { no: s.saleNo })}
                           title={t('pos.printTitle')}
                         >
-                          <Icon name="print" aria-hidden />
-                        </button>
+                          <Printer aria-hidden />
+                        </Button>
                       )}
                       {s.voided ? (
-                        <Badge tone="danger">{t('pos.voidedBadge')}</Badge>
+                        <Badge variant="destructive-soft">{t('pos.voidedBadge')}</Badge>
                       ) : !isMgr || s.date < monthStart ? null : (
-                        <button
-                          type="button"
-                          className={styles.voidBtn}
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="text-muted-foreground shadow-none hover:border-destructive/40 hover:bg-destructive-soft hover:text-destructive"
                           onClick={() => {
                             setVoidTarget(s);
                             setVoidReason('');
@@ -191,8 +226,8 @@ export function PosHistory({ recentSales, salesLoad, walletName, org, isMgr, mon
                           aria-label={interpolate(t('pos.voidAria'), { no: s.saleNo })}
                           title={t('pos.voidTitle')}
                         >
-                          <Icon name="circle-xmark" aria-hidden />
-                        </button>
+                          <CircleX aria-hidden />
+                        </Button>
                       )}
                     </div>
                   </li>
@@ -201,29 +236,40 @@ export function PosHistory({ recentSales, salesLoad, walletName, org, isMgr, mon
             </section>
           ))
         )}
-      </Card>
+      </section>
 
-      <Modal
+      <FormDialog
         open={voidTarget !== null}
         onClose={() => setVoidTarget(null)}
         title={interpolate(t('pos.voidModalTitle'), { no: voidTarget?.saleNo ?? '' })}
+        description={
+          <>
+            {t('pos.voidBody')} <strong className="font-semibold text-foreground">{t('pos.voidedBadge')}</strong>{' '}
+            {t('pos.voidBodyTail')}
+          </>
+        }
         size="sm"
         footer={
           <>
-            <Button variant="secondary" onClick={() => setVoidTarget(null)}>
+            {/* Fokus awal di Kembali, bukan kolom alasan: jendela ini membatalkan uang
+                dan stok, dan di ponsel keyboard yang muncul menutupi tombolnya. */}
+            <Button variant="outline" onClick={() => setVoidTarget(null)} data-autofocus>
               {t('common.back')}
             </Button>
-            <Button variant="danger" onClick={confirmVoid} loading={voidBusy}>
+            <Button variant="destructive" onClick={confirmVoid} disabled={voidBusy} aria-busy={voidBusy || undefined}>
+              {voidBusy && <LoaderCircle aria-hidden className="animate-spin motion-reduce:animate-none" />}
               {t('pos.voidConfirm').replace('{no}', voidTarget?.saleNo ?? '')}
             </Button>
           </>
         }
       >
-        <p style={{ color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 'var(--space-3)' }}>
-          {t('pos.voidBody')} <strong>{t('pos.voidedBadge')}</strong> {t('pos.voidBodyTail')}
-        </p>
-        <Input placeholder={t('pos.voidReason')} value={voidReason} onChange={(e) => setVoidReason(e.target.value)} />
-      </Modal>
+        <TextInput
+          placeholder={t('pos.voidReason')}
+          aria-label={t('pos.voidReason')}
+          value={voidReason}
+          onChange={(e) => setVoidReason(e.target.value)}
+        />
+      </FormDialog>
     </>
   );
 }

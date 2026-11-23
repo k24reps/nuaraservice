@@ -630,11 +630,12 @@ export function PosPage() {
 
   return (
     <div
+      data-nu
       className={cn(
         // Posisi diam register = margin topbar (14px) + topbar + padding atas
         // konten. Register menempel di titik yang SAMA, jadi ia tak pernah
         // bergeser dan tingginya bisa dihitung tanpa mengukur DOM.
-        'flex flex-col gap-4 [--pos-register-top:calc(14px+var(--topbar-height)+var(--space-6))]',
+        'flex flex-col gap-4 bg-transparent [--pos-register-top:calc(14px+var(--topbar-height)+var(--space-6))]',
         // Ponsel: ruang untuk dock keranjang di atas menu bawah.
         'phone:pb-[calc(var(--mobile-nav-height)+76px+env(safe-area-inset-bottom))]',
         // Register setinggi layar, sejajar tab (bukan di bawahnya). Dulu register
@@ -646,9 +647,7 @@ export function PosPage() {
           'min-[1025px]:grid min-[1025px]:grid-cols-[minmax(0,1fr)_minmax(320px,400px)] min-[1025px]:grid-rows-[auto_1fr] min-[1025px]:items-start',
       )}
     >
-      {/* data-nu per bagian, bukan di akar: Riwayat (PosHistory) masih CSS
-          FixMaster sampai L-61 dan tak boleh kena reset dens. */}
-      <div data-nu className="flex gap-5 border-b border-border bg-transparent" role="tablist">
+      <div className="flex gap-5 border-b border-border" role="tablist">
         {(
           [
             ['pos', 'pos-tab-register', ShoppingCart, t('pos.tabRegister')],
@@ -677,7 +676,6 @@ export function PosPage() {
 
       {tab === 'pos' && (
       <div
-        data-nu
         // minmax, bukan 400px mati: kolom keranjang boleh mengembalikan ruang
         // saat wadahnya sempit. Ambang 1 vs 2 kolom terikat KEHADIRAN SIDEBAR (di
         // <=1024px sidebar hilang sehingga wadah justru melebar), jadi tak bisa
@@ -685,7 +683,7 @@ export function PosPage() {
         // 125% di jendela 1097px dulu meluber 31px). minmax(0, 1fr), bukan 1fr:
         // minimum 1fr = isi terpanjang, dan baris chip kategori melebarkan
         // seluruh kolom (13 kategori = 1266px di layar 390px).
-        className="grid grid-cols-[minmax(0,1fr)_minmax(320px,400px)] items-start gap-4 bg-transparent drawer:grid-cols-[minmax(0,1fr)] min-[1025px]:contents"
+        className="grid grid-cols-[minmax(0,1fr)_minmax(320px,400px)] items-start gap-4 drawer:grid-cols-[minmax(0,1fr)] min-[1025px]:contents"
         id="pos-panel"
         role="tabpanel"
         aria-labelledby="pos-tab-register"
@@ -1275,7 +1273,6 @@ export function PosPage() {
 
       {tab === 'pos' && cart.length > 0 && !done && !cartInView && (
         <button
-          data-nu
           ref={measureDock}
           type="button"
           className="fixed inset-x-4 bottom-[calc(var(--mobile-nav-height)+var(--space-4)+env(safe-area-inset-bottom))] z-(--z-sticky) hidden grid-cols-[1fr_auto_auto] items-center gap-3 rounded-2xl bg-primary px-4 py-2.5 text-left text-primary-foreground shadow-raised outline-none focus-visible:ring-2 focus-visible:ring-highlight focus-visible:ring-offset-2 phone:grid [&_svg]:size-4"

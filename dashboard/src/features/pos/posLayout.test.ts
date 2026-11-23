@@ -2,14 +2,13 @@ import { describe, expect, it } from 'vitest';
 import pageTsx from './PosPage.tsx?raw';
 import catalogTsx from './PosCatalog.tsx?raw';
 import historyTsx from './PosHistory.tsx?raw';
-import historyCss from './PosHistory.module.css?raw';
+import inventoryTsx from '../inventory/InventoryModal.tsx?raw';
 import appCss from '@/styles/app.css?raw';
 
 // Halaman Kasir dipecah per bagian; aturannya berlaku untuk semuanya.
 const tsx = [pageTsx, catalogTsx, historyTsx].join('\n');
-// Sejak L-50 PosPage dan PosCatalog memakai kelas Tailwind; PosHistory masih
-// CSS FixMaster sampai L-61.
-const posModules = Object.keys(import.meta.glob('./*.module.css'));
+// Sejak L-61 seluruh folder pos dan inventory memakai kelas Tailwind.
+const cssModules = Object.keys(import.meta.glob(['./*.module.css', '../inventory/*.module.css']));
 
 /**
  * Mekanisme tata letak Kasir yang pernah rusak di ponsel. Piksel tak bisa
@@ -18,14 +17,23 @@ const posModules = Object.keys(import.meta.glob('./*.module.css'));
  * kembali diam-diam.
  */
 describe('tata letak Kasir', () => {
-  it('kelas Tailwind Kasir dibuat: berkasnya disebut @source, CSS module-nya hilang', () => {
-    // Tanpa @source kelas di berkas ini tak pernah dibuat dan halaman tampil
-    // tanpa gaya; folder pos belum bisa disebut utuh selama PosHistory lama.
-    expect(appCss).toContain('@source "../features/pos/PosPage.tsx";');
-    expect(appCss).toContain('@source "../features/pos/PosCatalog.tsx";');
-    expect(posModules).toEqual(['./PosHistory.module.css']);
-    expect(pageTsx).not.toContain('styles.');
-    expect(catalogTsx).not.toContain('styles.');
+  it('kelas Tailwind Kasir & Stok dibuat: folder utuh di @source, tanpa CSS Module', () => {
+    // Tanpa @source kelas di folder ini tak pernah dibuat dan halaman tampil
+    // tanpa gaya. Selama L-50 berkasnya disebut satu per satu karena PosHistory
+    // dan InventoryModal masih FixMaster.
+    expect(appCss).toContain('@source "../features/pos";');
+    expect(appCss).toContain('@source "../features/inventory";');
+    expect(appCss).not.toContain('@source "../features/pos/');
+    expect(cssModules).toEqual([]);
+    for (const src of [pageTsx, catalogTsx, historyTsx, inventoryTsx]) {
+      expect(src).not.toContain('styles.');
+      // Dari pustaka lama hanya penanda muat dan helper kategori yang boleh.
+      for (const [, names] of src.matchAll(/import \{([^}]*)\} from '@\/components\/ui';/g)) {
+        for (const n of names.split(',').map((x) => x.trim()).filter(Boolean)) {
+          expect(['LoadState', 'loadPending', 'countCategories', 'categoryOf']).toContain(n);
+        }
+      }
+    }
   });
 
   it('kolom katalog boleh menyempit di bawah lebar baris chip kategori', () => {
@@ -102,11 +110,14 @@ describe('tata letak Kasir', () => {
 
   it('baris riwayat dua baris, tuts turun lewat container query', () => {
     // Satu baris flex menggencet info di 320px. Ambang menjaga muat/tidak
-    // muat, jadi wajib @container (AGENTS.md §3), bukan @media.
-    expect(historyCss).toMatch(/\.historyList \{[^}]*container-type: inline-size/);
-    expect(historyCss).toMatch(/\.historyRow \{[^}]*display: grid/);
-    expect(historyCss).toContain('@container (max-width: 432px)');
-    expect(historyTsx).toContain('className={styles.historyActions}');
+    // muat, jadi wajib @container (AGENTS.md §4), bukan @media.
+    // @max-[433px] = lebar < 433, sama dengan max-width: 432px dulu.
+    expect(historyTsx).toContain('@container/hist ');
+    expect(historyTsx).toContain("[grid-template-areas:'no_total_actions'_'meta_meta_actions']");
+    expect(historyTsx).toContain("@max-[433px]/hist:[grid-template-areas:'no_total'_'meta_meta'_'actions_actions']");
+    expect(historyTsx).toContain('@max-[433px]/hist:grid-cols-[minmax(0,1fr)_auto]');
+    // Tuts aksi = tombol ikon dens (40px, 44px di layar sentuh), bukan kelas sendiri.
+    expect(historyTsx.match(/size="icon"/g)).toHaveLength(3);
   });
 
   it('teks 320px: total pas lebar, nominal turun, live region sempit, tanpa literal', () => {
@@ -128,11 +139,24 @@ describe('tata letak Kasir', () => {
     }
   });
 
-  it('Riwayat lama di luar lingkup dens: data-nu per bagian, bukan di akar halaman', () => {
-    // Reset [data-nu] * (padding, border, font) mengecilkan tombol cetak/batal
-    // PosHistory di ponsel. Akar halaman memegang tab Riwayat, jadi tanpa data-nu.
-    expect(pageTsx).toMatch(/ {2}return \(\n {4}<div\n {6}className=\{cn\(/);
-    expect(pageTsx.match(/^\s*(<div |<button\n\s*)?data-nu\b/gm)).toHaveLength(3);
+  it('data-nu satu kali, di akar halaman Kasir', () => {
+    // Selama L-50 dipasang per bagian karena PosHistory lama dirender inline dan
+    // kena reset dens. Sejak L-61 semuanya dens, jadi kembali ke akar.
+    expect(pageTsx).toMatch(/ {2}return \(\n {4}<div\n {6}data-nu\n {6}className=\{cn\(/);
+    expect(pageTsx.match(/\bdata-nu\b/g)).toHaveLength(1);
+    expect(historyTsx).not.toContain('data-nu');
+  });
+
+  it('form barang stok: fokus awal lewat data-autofocus, asal stok masuk = RadioGroup', () => {
+    // autoFocus React mematahkan pengembalian fokus ke tombol pembuka.
+    expect(inventoryTsx).not.toMatch(/\bautoFocus\b/);
+    expect(inventoryTsx).toContain('data-autofocus={!restock || undefined}');
+    expect(inventoryTsx).toContain('data-autofocus={restock || undefined}');
+    expect(inventoryTsx).toContain('<RadioGroup');
+    expect(inventoryTsx).toContain('has-[[data-state=checked]]:ring-2');
+    // Dua kolom ditentukan lebar jendela, bukan layar.
+    expect(inventoryTsx).toContain("'grid gap-4 @sm/form:grid-cols-2'");
+    expect(inventoryTsx).toContain('@container/form ');
   });
 
   it('motif bench FixMaster dibuang: tanpa digit hantu LCD', () => {

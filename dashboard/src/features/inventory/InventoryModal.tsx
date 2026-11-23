@@ -1,6 +1,12 @@
 import { useState } from 'react';
-import { Modal, Input, Button, Select, FormFields, FormRow, FormError, Icon } from '@/components/ui';
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { LoaderCircle, Trash2 } from 'lucide-react';
+import { Button } from '@/components/dens/button';
+import { ConfirmDialog } from '@/components/dens/confirm-dialog';
+import { Field, FormMessage } from '@/components/dens/field';
+import { FormDialog } from '@/components/dens/form-dialog';
+import { RadioGroup, RadioGroupItem } from '@/components/dens/radio-group';
+import { SelectBox } from '@/components/dens/select-box';
+import { TextInput } from '@/components/dens/text-input';
 import { useFormFault } from '@/hooks/useFormFault';
 import { repository } from '@/data';
 import { useCollection } from '@/hooks/useCollection';
@@ -18,7 +24,6 @@ import { useResetOnOpen } from '@/hooks/useResetOnOpen';
 import type { InventoryItem } from '@/data/types';
 import { useT } from '@/i18n';
 import { interpolate } from '@/lib/business/notify';
-import styles from './InventoryModal.module.css';
 
 interface InventoryModalProps {
   open: boolean;
@@ -233,127 +238,147 @@ export function InventoryModal({ open, onClose, editing, categories, restock = f
     }
   };
 
+  // Dua kolom selama jendela cukup lebar (container query: zoom aplikasi ikut dihitung).
+  const row = 'grid gap-4 @sm/form:grid-cols-2';
+  const money = 'font-mono tabular-nums placeholder:font-sans';
+
   return (
     <>
-    <Modal
+    <FormDialog
       open={open}
       onClose={onClose}
       title={editing ? t(restock ? 'inventory.restockTitle' : 'inventory.editTitle') : t('inventory.newTitle')}
       footer={
         <>
+          {/* Hapus didorong ke kiri, jauh dari Simpan. */}
           {editing && canDelete && (
             <Button
               variant="ghost"
-              className={styles.deleteBtn}
-              iconLeft={<Icon name="trash" aria-hidden />}
+              className="mr-auto text-destructive hover:bg-destructive-soft hover:text-destructive compact:mr-0"
               onClick={requestDelete}
               disabled={busy}
             >
+              <Trash2 aria-hidden />
               {t('inventory.hapus')}
             </Button>
           )}
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="outline" onClick={onClose}>
             {t('inventory.batal')}
           </Button>
-          <Button onClick={save} loading={busy}>
+          <Button onClick={save} disabled={busy} aria-busy={busy || undefined}>
+            {busy && <LoaderCircle aria-hidden className="animate-spin motion-reduce:animate-none" />}
             {t('inventory.simpan')}
           </Button>
         </>
       }
     >
-      <FormFields>
-        <FormError>{error}</FormError>
-        <Input invalid={invalid('name')} label={t('inventory.namaSparepartProduk')} value={name} autoCapWords onChange={(e) => setName(e.target.value)} autoFocus={!restock} />
-        <Input
-          label={t('inventory.kategori')}
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-          list="inv-categories"
-          placeholder={t('inventory.contohRamLcdBaterai')}
-        />
+      <div className="@container/form grid gap-4">
+        <FormMessage>{error}</FormMessage>
+        <Field label={t('inventory.namaSparepartProduk')} invalid={invalid('name')}>
+          <TextInput
+            capitalize="words"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            data-autofocus={!restock || undefined}
+          />
+        </Field>
+        <Field label={t('inventory.kategori')}>
+          <TextInput
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            list="inv-categories"
+            placeholder={t('inventory.contohRamLcdBaterai')}
+          />
+        </Field>
         <datalist id="inv-categories">
           {categories.map((c) => (
             <option key={c} value={c} />
           ))}
         </datalist>
         {outlets.length > 1 && (
-          <Select
-            label={t('inventory.cabangPemilikStok')}
-            invalid={invalid('outlet')}
-            value={outletId}
-            onChange={(e) => setOutletId(e.target.value)}
-            options={[
-              { value: '', label: 'Semua cabang (stok bersama)' },
-              ...outlets.map((o) => ({ value: o.id, label: o.name })),
-            ]}
-            hint={t('inventory.dipilihSalahSatuCabang')}
-          />
+          <Field label={t('inventory.cabangPemilikStok')} invalid={invalid('outlet')} hint={t('inventory.dipilihSalahSatuCabang')}>
+            <SelectBox
+              value={outletId}
+              onValueChange={setOutletId}
+              options={[
+                { value: '', label: 'Semua cabang (stok bersama)' },
+                ...outlets.map((o) => ({ value: o.id, label: o.name })),
+              ]}
+            />
+          </Field>
         )}
-        <FormRow>
-          <Input
-            label={t('inventory.stok')}
-            invalid={invalid('stock')}
-            type="number"
-            value={stock}
-            onChange={(e) => setStock(e.target.value)}
-            hint={editing ? t('inventory.deltaHint') : undefined}
-            autoFocus={restock}
-            // Angka lama terpilih: ketik stok baru langsung menimpanya.
-            onFocus={restock ? (e) => e.currentTarget.select() : undefined}
-          />
-          <Input
-            label={t('inventory.stokMinimum')}
-            type="number"
-            value={minStock}
-            onChange={(e) => setMinStock(e.target.value)}
-            hint={t('inventory.untukPeringatanStokMenipis')}
-          />
-        </FormRow>
+        <div className={row}>
+          <Field label={t('inventory.stok')} invalid={invalid('stock')} hint={editing ? t('inventory.deltaHint') : undefined}>
+            <TextInput
+              type="number"
+              className={money}
+              value={stock}
+              onChange={(e) => setStock(e.target.value)}
+              data-autofocus={restock || undefined}
+              // Angka lama terpilih: ketik stok baru langsung menimpanya.
+              onFocus={restock ? (e) => e.currentTarget.select() : undefined}
+            />
+          </Field>
+          <Field label={t('inventory.stokMinimum')} hint={t('inventory.untukPeringatanStokMenipis')}>
+            <TextInput type="number" className={money} value={minStock} onChange={(e) => setMinStock(e.target.value)} />
+          </Field>
+        </div>
         {added > 0 && (
-          <fieldset className={styles.stockIn}>
-            <legend>{interpolate(t('inventory.inTitle'), { qty: String(added) })}</legend>
-            <div className={styles.inChoices}>
+          <fieldset className="m-0 grid min-w-0 gap-3 rounded-xl border border-dashed border-border bg-surface/60 p-3">
+            <legend className="px-1.5 text-xs font-semibold text-muted-foreground">
+              {interpolate(t('inventory.inTitle'), { qty: String(added) })}
+            </legend>
+            <RadioGroup
+              value={inSource ?? ''}
+              onValueChange={(v) => {
+                setInSource(v as 'buy' | 'adjust');
+                setError('');
+              }}
+              className="grid grid-cols-[repeat(auto-fit,minmax(12rem,1fr))] gap-2"
+            >
               {(['buy', 'adjust'] as const).map((k) => (
-                <label key={k} className={[styles.inChoice, inSource === k ? styles.inChoiceOn : ''].join(' ')}>
-                  <input
-                    type="radio"
-                    name="inventory-in-source"
-                    checked={inSource === k}
-                    onChange={() => {
-                      setInSource(k);
-                      setError('');
-                    }}
-                  />
-                  <span>
-                    <strong>{t(k === 'buy' ? 'inventory.inBuy' : editing ? 'inventory.inAdjust' : 'inventory.inExisting')}</strong>
-                    <small>{t(k === 'buy' ? 'inventory.inBuyHint' : editing ? 'inventory.inAdjustHint' : 'inventory.inExistingHint')}</small>
+                // Seluruh kartu = area ketuk; cincin brand menandai pilihan.
+                <label
+                  key={k}
+                  className="flex cursor-pointer gap-3 rounded-xl bg-card p-3 ring-1 ring-border transition-colors hover:bg-accent has-[[data-state=checked]]:ring-2 has-[[data-state=checked]]:ring-primary"
+                >
+                  <RadioGroupItem value={k} className="mt-0.5" />
+                  <span className="grid min-w-0 gap-0.5">
+                    <strong className="text-sm font-semibold">
+                      {t(k === 'buy' ? 'inventory.inBuy' : editing ? 'inventory.inAdjust' : 'inventory.inExisting')}
+                    </strong>
+                    <small className="text-xs leading-snug text-muted-foreground">
+                      {t(k === 'buy' ? 'inventory.inBuyHint' : editing ? 'inventory.inAdjustHint' : 'inventory.inExistingHint')}
+                    </small>
                   </span>
                 </label>
               ))}
-            </div>
+            </RadioGroup>
             {buying && (
               <>
-                <FormRow>
-                  <Input
-                    label={t('inventory.unitCost')}
-                    invalid={invalid('unitCost')}
-                    inputMode="numeric"
-                    value={unitCost}
-                    onChange={(e) => setUnitCost(fmtRpInput(e.target.value))}
-                    placeholder="60.000"
-                    hint={t('inventory.unitCostHint')}
-                  />
-                  <Select
-                    label={t('inventory.payFrom')}
-                    value={walletPick || 'none'}
-                    onChange={(e) => setPayWalletId(e.target.value)}
-                    options={[
-                      ...wallets.map((w) => ({ value: w.id, label: `${w.name} · ${fmtRp(w.balance)}` })),
-                      { value: 'none', label: t('inventory.payNone') },
-                    ]}
-                  />
-                </FormRow>
-                <p className={styles.inReadout}>
+                <div className={row}>
+                  <Field label={t('inventory.unitCost')} invalid={invalid('unitCost')} hint={t('inventory.unitCostHint')}>
+                    <TextInput
+                      capitalize="none"
+                      className={money}
+                      inputMode="numeric"
+                      value={unitCost}
+                      onChange={(e) => setUnitCost(fmtRpInput(e.target.value))}
+                      placeholder="60.000"
+                    />
+                  </Field>
+                  <Field label={t('inventory.payFrom')}>
+                    <SelectBox
+                      value={walletPick || 'none'}
+                      onValueChange={setPayWalletId}
+                      options={[
+                        ...wallets.map((w) => ({ value: w.id, label: `${w.name} · ${fmtRp(w.balance)}` })),
+                        { value: 'none', label: t('inventory.payNone') },
+                      ]}
+                    />
+                  </Field>
+                </div>
+                <p className="font-mono text-xs text-muted-foreground tabular-nums">
                   {interpolate(t('inventory.inReadout'), {
                     stock: String((editing?.stock ?? 0) + added),
                     cost: fmtRp(previewCost),
@@ -365,46 +390,61 @@ export function InventoryModal({ open, onClose, editing, categories, restock = f
               </>
             )}
             {editing && inSource === 'adjust' && (
-              <Input
-                label={interpolate(t('inventory.deltaReason'), { delta: `+${stockDelta}` })}
-                value={stockReason}
-                onChange={(e) => setStockReason(e.target.value)}
-                placeholder={t('inventory.contohHasilStokOpname')}
-              />
+              <Field label={interpolate(t('inventory.deltaReason'), { delta: `+${stockDelta}` })}>
+                <TextInput
+                  value={stockReason}
+                  onChange={(e) => setStockReason(e.target.value)}
+                  placeholder={t('inventory.contohHasilStokOpname')}
+                />
+              </Field>
             )}
           </fieldset>
         )}
         {editing && stockDelta < 0 && (
-          <Input
-            label={interpolate(t('inventory.deltaReason'), { delta: String(stockDelta) })}
-            value={stockReason}
-            onChange={(e) => setStockReason(e.target.value)}
-            placeholder={t('inventory.contohHasilStokOpname')}
-          />
+          <Field label={interpolate(t('inventory.deltaReason'), { delta: String(stockDelta) })}>
+            <TextInput
+              value={stockReason}
+              onChange={(e) => setStockReason(e.target.value)}
+              placeholder={t('inventory.contohHasilStokOpname')}
+            />
+          </Field>
         )}
-        <FormRow>
-          <Input
-            label={t('inventory.hargaModalHpp')}
-            value={buying ? fmtRpInput(String(Math.round(previewCost))) : costPrice}
-            onChange={(e) => setCostPrice(fmtRpInput(e.target.value))}
-            placeholder="60.000"
-            disabled={buying}
-            hint={buying ? t('inventory.costFromPurchase') : undefined}
+        <div className={row}>
+          <Field label={t('inventory.hargaModalHpp')} hint={buying ? t('inventory.costFromPurchase') : undefined}>
+            <TextInput
+              capitalize="none"
+              className={money}
+              inputMode="numeric"
+              value={buying ? fmtRpInput(String(Math.round(previewCost))) : costPrice}
+              onChange={(e) => setCostPrice(fmtRpInput(e.target.value))}
+              placeholder="60.000"
+              disabled={buying}
+            />
+          </Field>
+          <Field label={t('inventory.hargaJual')}>
+            <TextInput
+              capitalize="none"
+              className={money}
+              inputMode="numeric"
+              value={sellPrice}
+              onChange={(e) => setSellPrice(fmtRpInput(e.target.value))}
+              placeholder="100.000"
+            />
+          </Field>
+        </div>
+        <Field label={t('inventory.garansiBawaanHari')} hint={t('inventory.isianAwalGaransiSaat')}>
+          <TextInput
+            type="number"
+            inputMode="numeric"
+            className={money}
+            min={0}
+            value={warrantyDays}
+            onChange={(e) => setWarrantyDays(e.target.value)}
+            placeholder={t('inventory.kosongkanGaransiPartToko')}
           />
-          <Input label={t('inventory.hargaJual')} value={sellPrice} onChange={(e) => setSellPrice(fmtRpInput(e.target.value))} placeholder="100.000" />
-        </FormRow>
-        <Input
-          label={t('inventory.garansiBawaanHari')}
-          type="number"
-          inputMode="numeric"
-          min={0}
-          value={warrantyDays}
-          onChange={(e) => setWarrantyDays(e.target.value)}
-          placeholder={t('inventory.kosongkanGaransiPartToko')}
-          hint={t('inventory.isianAwalGaransiSaat')}
-        />
-      </FormFields>
-    </Modal>
+        </Field>
+      </div>
+    </FormDialog>
     <ConfirmDialog
       open={confirmingDelete}
       title={t('inventory.hapusSparepart')}

@@ -293,6 +293,27 @@ for (const theme of ['light']) {
     }],
     ['Kasir-Kembalian', () => page.locator('#pos-quick-cash button').last().click()],
     ['Kasir-Lunas', () => page.getByRole('button', { name: /^Proses/ }).click()],
+    // Riwayat, jendela batal, dan form barang stok pindah ke dens-ui di L-61.
+    ['Kasir-Riwayat', async () => {
+      await page.locator('#pos-tab-history').click();
+      await page.waitForTimeout(500);
+    }],
+    ['Kasir-Batal', async () => {
+      await page.locator('#pos-panel button[aria-label^="Batalkan"]').first().click();
+      await page.waitForTimeout(400);
+    }],
+    ['Stok-Ubah', async () => {
+      await page.keyboard.press('Escape');
+      await page.locator('#pos-tab-register').click();
+      await page.waitForTimeout(500);
+      await page.locator('main article button[aria-label^="Ubah"]').first().click();
+      await page.waitForTimeout(400);
+    }],
+    ['Stok-Beli', async () => {
+      await page.locator('[role="dialog"] input[type="number"]').first().fill('99');
+      await page.locator('[role="dialog"] [role="radio"]').first().click();
+      await page.waitForTimeout(300);
+    }],
     // Kartu Tampilan (Pengaturan › Sistem) dan chip pembesaran Topbar di ketiga
     // rona LED: nominal 100%, aksen 110% + Padat, jingga 90%. Tab Sistem tidak
     // terbuka oleh menu Pengaturan di atas, jadi kartu ini perlu langkah sendiri.
