@@ -62,7 +62,7 @@ tetap relevan, tetapi bagian merek, harga, dan infrastruktur FixMaster tidak ber
 - **Tiga syarat halaman yang dipindah** (tanpa ini kelas Tailwind tidak terbentuk atau gaya
   lama merembes): (1) elemen akarnya diberi atribut `data-nu`; (2) foldernya ditambah ke daftar
   `@source` di `src/styles/app.css`, atau berkasnya saja bila folder itu masih memuat halaman
-  FixMaster (seperti `features/services` selama L-48 s.d. L-60); (3) foto per piksel halaman lain + probe
+  FixMaster (seperti `features/services` selama L-48 s.d. L-60, `features/pos` selama L-50 s.d. L-61); (3) foto per piksel halaman lain + probe
   `audit-*` sama dengan sebelum langkah.
 - **Pengganti komponen FixMaster** sudah ada di `src/components/dens/` dengan API yang sama
   (`SummaryStrip`, `FilterChips`, `TextInput`, `SelectBox`, `FormDialog`, `ConfirmDialog`,
@@ -70,6 +70,9 @@ tetap relevan, tetapi bagian merek, harga, dan infrastruktur FixMaster tidak ber
   yang baru. Fokus awal jendela lewat `data-autofocus`, bukan `autoFocus` (lihat form-dialog.tsx).
   Komponen dens yang juga dipakai di dalam halaman/modal FixMaster: akarnya `data-nu bg-transparent`
   (tanpa `data-nu` reset dens tidak berlaku; `[data-nu]` sendiri memberi latar halaman).
+  Sebaliknya, bila halaman yang dipindah masih merender komponen FixMaster inline (bukan lewat
+  portal), pasang `data-nu` per bagian, bukan di akar: reset `[data-nu] *` mengubah komponen lama
+  (Kasir L-50: tombol `PosHistory` mengecil).
 - **Arsitektur CSS Fase B** (`src/styles/app.css`): layer `theme` < `legacy` (global.css) <
   `nu-base` (reset dens-ui) < `utilities`; CSS Module tidak berlayer dan selalu menang.
   Preflight Tailwind sengaja TIDAK global (`dens-base.css`, terbatas ke `[data-slot]`/`[data-nu]`):

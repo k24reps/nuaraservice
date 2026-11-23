@@ -1,6 +1,6 @@
 # IPD (Implementation Plan Document) - Nuara Dashboard
 
-> Versi: 0.8 | Diperbarui: 2026-11-22 | Merujuk: PRD, TRD, AFD, DBD, `dashboard/AGENTS.md`
+> Versi: 0.9 | Diperbarui: 2026-11-22 | Merujuk: PRD, TRD, AFD, DBD, `dashboard/AGENTS.md`
 <!-- Versi 0.2 (42 langkah Next.js dari nol) dibatalkan 2026-11-21 (wawancara P13). Langkahnya disimpan di bagian Arsip dengan tanda [DIBATALKAN]; rujukan kriteria F-xx di sana tetap berguna untuk daftar selisih. -->
 
 ## Cara memakai
@@ -17,7 +17,7 @@
 | Fase | Tujuan | Langkah |
 |---|---|---|
 | A | Salinan FixMaster jalan sebagai Nuara Dashboard | L-43, L-44, L-45 |
-| B | UI dipindah ke dens-ui dengan warna Nuara, per halaman | L-46, L-47, L-58, L-48, L-49, L-59, L-60, L-50 s.d. L-56 |
+| B | UI dipindah ke dens-ui dengan warna Nuara, per halaman | L-46, L-47, L-58, L-48, L-49, L-59, L-60, L-50, L-61, L-51 s.d. L-56 |
 | C | Selisih PRD yang diputuskan Pemilik | ditentukan dari L-45 |
 | D | Rilis dan berhenti memakai FixMaster | L-57 |
 
@@ -80,8 +80,12 @@ Aturan bersama: satu langkah = satu kelompok halaman dipindah utuh, CSS Module l
   - Hasil 2026-11-22: lihat Catatan L-59.
 - [x] **L-60 Servis: modal kirim WA/nota, pemilih sparepart, garansi sparepart, klaim garansi** (`NotifyModal`, `SparepartPickerModal`, `PartWarrantyModal`, `WarrantyClaimModal`; `PartWarrantyFields` sudah di L-59)
   - Sesudah langkah ini seluruh folder `features/services` memakai dens-ui: tak ada CSS Module tersisa, dan `@source` memindai folder utuh.
-  - Hasil 2026-11-22: lihat Catatan L-60.; sesudahnya seluruh folder `features/services` masuk `@source`
-- [ ] **L-50 Kasir & Stok**
+  - Hasil 2026-11-22: lihat Catatan L-60.
+- [x] **L-50 Kasir & Stok: halaman Kasir dan katalog** (`PosPage`, `PosCatalog`)
+  - Dipecah 2026-11-22 (K-12): riwayat penjualan dan form barang stok pindah ke L-61. Logika transaksi (keranjang, tender campur, diskon, cabang, dock) tidak berubah; panel LCD diganti panel total navy (K-13).
+  - Selesai jika: Kasir tampil di desktop, tablet, ponsel (sampai 320px) tanpa luberan dalam semua keadaan (kosong, keranjang, uang kurang, kembalian, lunas); total sebaris; bar Proses terlihat tanpa menggulir di desktop dan menempel di atas menu bawah di ponsel; kontrol >= 44px di layar sentuh; probe `audit-*` dan `audit-contrast` bersih; halaman lain dan tab Riwayat sama per piksel; tes, lint, build lolos.
+  - Hasil 2026-11-22: lihat Catatan L-50.
+- [ ] **L-61 Kasir & Stok: riwayat penjualan dan form barang stok** (`PosHistory`, `InventoryModal`); sesudahnya folder `features/pos` dan `features/inventory` utuh di `@source`
 - [ ] **L-51 Pelanggan dan Supplier**
 - [ ] **L-52 Keuangan**
 - [ ] **L-53 Dashboard dan Laporan**
@@ -136,6 +140,8 @@ Dikumpulkan 2026-11-22 dari log wawancara, catatan IPD, dan langkah L-43 s.d. L-
 | K-09 | Tata letak detail tiket: DBD 4 menulis dua kolom (info + aksi di kiri, riwayat di kanan) | L-49 | Susunan FixMaster: kepala tiket, tahap, kisi kartu (pelanggan, penerimaan, sparepart, biaya, log), bar aksi menempel di bawah | Pertahankan FixMaster sampai Fase C; isinya sama, hanya urutan | Fase C |
 | K-10 | Label "REPAIR TICKET" (bahasa Inggris) dan cap status miring di kepala tiket (motif FixMaster) | L-49 | Dibuang; status tampil sebagai lencana tahap seperti di daftar | Buang | Sudah berlaku |
 | K-11 | `PartWarrantyFields` (isian garansi per part) dipindah di L-59, bukan L-60 | L-59: dipakai di dalam modal Ubah Status; versi FixMaster akan kena reset gaya dens di dalam dialog dens | Dipindah di L-59; modal Garansi part (FixMaster, L-60) sudah memakai isian baru | Dipindah | Sudah berlaku |
+| K-12 | Pemecahan L-50 (Kasir & Stok, sekitar 2.100 baris kode + 1.700 baris CSS) | Rencana L-50, 2026-11-22 | Dipecah: L-50 halaman Kasir + katalog, L-61 riwayat penjualan + form barang stok | Dipecah (pola K-08) | Sudah berlaku |
+| K-13 | Panel total Kasir bergaya LCD (layar gelap, digit hantu "888", garis pindai, LED berdenyut) beserta perforasi struk, tuts qty mekanis, dan LED di tuts bayar (motif FixMaster) | L-50 | Diganti panel total navy dengan angka mono putih (ukurannya tetap menyesuaikan jumlah digit), garis putus, tuts bulat, dan cincin pilihan | Buang (pola K-10) | Sudah berlaku |
 
 **Menunggu tindakan Pemilik (bukan keputusan).** L-44: membuat proyek Supabase tes milik Nuara (region Singapura), proyek Vercel kedua, dan DNS `app.nuaraservice.my.id`; mendaftar sebagai Pemilik dan mengundang satu akun uji. Tes integrasi belum pernah dijalankan sampai proyek itu ada.
 
@@ -195,6 +201,8 @@ Dikumpulkan 2026-11-22 dari log wawancara, catatan IPD, dan langkah L-43 s.d. L-
 - 2026-11-22 - L-59 - Cap miring di Tiket Jadi diganti lencana dengan teks yang sama (pola K-10). Komponen dens yang dipakai di dalam modal FixMaster (isian garansi part) diberi akar `data-nu` + `bg-transparent`: tanpa `data-nu` tombolnya mewarisi gaya tombol lama, dan `[data-nu]` sendiri memberi latar halaman abu-abu.
 - 2026-11-22 - L-60 - Hasil: empat modal diukur di 1440px dan iPhone 13 (pemilih sparepart: daftar stok, hasil kosong, tab pembelian luar; kirim WA; garansi part; klaim garansi dengan kerugian) tanpa luberan dan tanpa isi keluar dari jendela, kontrol >= 44px di layar sentuh, fokus awal di kolom cari/keluhan, fokus kembali ke tombol pemicu. `audit-contrast` bersih dan kini ikut memeriksa pemilih sparepart dan kirim WA; log `audit-mobile` dan `audit-zoom` identik dengan L-59; 13 halaman sama per piksel dengan L-59 (selisih hanya di wilayah derau dan 1 piksel anti-alias ikon sidebar); impeccable 0 temuan; 1157 tes / 86 berkas, lint, build lolos.
 - 2026-11-22 - L-60 - Spine warna status di strip tiket pemilih sparepart diganti lencana `STATUS_BADGE` (pola K-10). Kotak centang klaim garansi memakai `Checkbox` dens di dalam label sebaris, jadi seluruh baris bisa diketuk.
+- 2026-11-22 - L-50 - Hasil: Kasir diukur di 13 ukuran (1920 sampai 1025 desktop, 1024, tablet sentuh 1024/834/744, iPhone 13, 360px, 320px) x 5 keadaan (kosong, keranjang, uang kurang, kembalian, lunas), juga di zoom 125% dan kerapatan Padat: tanpa luberan, tanpa isi keluar dari kartu atau baris, total sebaris (33px di 320px), bar Proses terlihat tanpa menggulir di desktop (1366x768: bawahnya 736px), dock menyerahkan tempat ke bar Proses di ponsel, kontrol >= 44px di layar sentuh. Jaring pengaman di 1280x600 (diskon + tiga pembayaran): kolom nominal yang difokus mendarat di antara total dan bar Proses. `audit-contrast` bersih di lima langkah Kasir; probe `audit-mobile`, pita tablet, `audit-zoom`, zoom 1,25, dan Padat sama dengan 1de179d (L-60) kecuali baris chip kategori /pos yang meluap lebih pendek (320px: 27 vs 51px, 360px dan 1097px: tak meluap lagi); 12 halaman lain sama per piksel (selisih hanya di wilayah derau dan 1 piksel anti-alias bayangan topbar); tab Riwayat (masih FixMaster) sama per piksel kecuali digit menit jam demo; impeccable 0 temuan; 1161 tes / 86 berkas, lint, build lolos.
+- 2026-11-22 - L-50 - Putaran verifikasi menemukan tiga hal yang langsung diperbaiki: (1) tab Kasir/Riwayat 43px dan kolom qty 32px di layar sentuh (FixMaster 44px), kini 44px; (2) `data-nu` di akar halaman membuat reset dens mengenai `PosHistory` yang dirender inline (tombol cetak/batal mengecil di ponsel), jadi `data-nu` dipasang per bagian (tab, panel Kasir, dock) dan dikunci tes; (3) bar Proses baru 84px dan register sampai 170px, jadi `scroll-padding` jaring pengaman dinaikkan dari 128/80 ke 176/88px (dengan angka lama kolom ketiga mendarat 4px di balik bar). `audit-contrast.mjs` kini mencari kartu, tuts bayar, dan nominal cepat lewat struktur dan id, bukan kelas CSS Module.
 
 ## Arsip: rencana Next.js (dibatalkan 2026-11-21)
 Langkah di bawah tidak dikerjakan. Disimpan karena rujukan kriteria F-xx dan keputusan di dalamnya dipakai untuk L-45.

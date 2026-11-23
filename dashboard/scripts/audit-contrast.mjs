@@ -277,21 +277,21 @@ for (const theme of ['light']) {
     ['Kasir-Keranjang', async () => {
       await page.getByRole('link', { name: /^Kasir/ }).first().click();
       await page.waitForTimeout(900);
-      await page.locator('main article button[class*="addArea"]:not([disabled])').first().click();
-      const opt = page.locator('[role="dialog"] button[class*="outletOpt"]').first();
+      await page.locator('main article > button:not([disabled])').first().click();
+      const opt = page.locator('[role="dialog"] button[aria-pressed]').first();
       if (await opt.isVisible({ timeout: 1500 }).catch(() => false)) {
         await opt.click();
         await page.waitForTimeout(600);
         if ((await page.locator('#pos-cart li').count()) === 0) {
-          await page.locator('main article button[class*="addArea"]:not([disabled])').first().click();
+          await page.locator('main article > button:not([disabled])').first().click();
         }
       }
     }],
     ['Kasir-Kurang', async () => {
-      await page.locator('button[class*="tenderKey"]').first().click();
+      await page.locator('#pos-tender-keys button').first().click();
       await page.locator('#pos-cart input[inputmode="numeric"]').last().fill('1000');
     }],
-    ['Kasir-Kembalian', () => page.locator('[class*="quickCash"] button').last().click()],
+    ['Kasir-Kembalian', () => page.locator('#pos-quick-cash button').last().click()],
     ['Kasir-Lunas', () => page.getByRole('button', { name: /^Proses/ }).click()],
     // Kartu Tampilan (Pengaturan › Sistem) dan chip pembesaran Topbar di ketiga
     // rona LED: nominal 100%, aksen 110% + Padat, jingga 90%. Tab Sistem tidak

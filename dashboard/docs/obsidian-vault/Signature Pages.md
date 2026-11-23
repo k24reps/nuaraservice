@@ -392,6 +392,15 @@ Dua route publik standalone (`/privacy`, `/terms`, di luar `AuthGate`) agar bisa
 
 ## Kasir & Stok — Register Readout
 
+**Nuara (L-50, 22 Nov 2026).** Halaman Kasir dan katalog kini dens-ui + Tailwind; alur di bawah
+tetap berlaku, motif bench-nya tidak (K-13). Panel total navy (`bg-primary`) menggantikan LCD:
+angka mono putih yang tetap menyesuaikan ukuran dengan jumlah karakter, baris kedua Sisa (kuning
+`highlight`) / Kembalian / Uang pas, chip cabang di pita bawahnya. Tanpa digit hantu, garis pindai,
+LED berdenyut, perforasi, atau tuts mekanis. Kartu katalog memberi tanda menipis/habis lewat warna
+cincin kartu + titik stok, bukan spine kiri. Tab memakai gaya garis bawah dens. Riwayat
+(`PosHistory`) dan `InventoryModal` masih FixMaster sampai L-61. Foto `kasir-stok-dark.png` di
+bawah masih tampilan FixMaster (dibuat ulang di mesin lokal, lihat AGENTS §5).
+
 **Satu menu untuk jual dan stok (10 Nov 2026).** Kasir dan Inventori membaca koleksi yang sama
 (`inventory`), jadi keduanya dilebur. Menu bernama **Kasir & Stok** (`/pos`; label pendek "Kasir"
 di nav bawah ponsel lewat `shortLabelKey`). `/inventory` dialihkan ke `/pos` dengan query tetap
@@ -422,7 +431,7 @@ ikut, sehingga markah lama dan `?stock=low|out` dari peringatan Dashboard tetap 
 
 - **Bayar via & kembalian tunai (0095, 28 Sep 2026).** Pad tender berlabel **Bayar via** (bukan "wallet"/"baris") dan hanya menawarkan wallet bersama + wallet cabang aktif. Kembalian selalu dipotong dari pembayaran **tunai** (`changeRowIndex`), berapa pun urutan ketukannya — aturan tertulis "Kembalian selalu diambil dari Tunai (uang tunai)."; chip nominal cepat mengisi baris tunai. Tanpa wallet bertanda tunai: perilaku lama (baris terakhir). LCD menulis "{n} jenis barang".
 
-Panel keranjang jadi **mesin kasir**: layar LCD total bergaya segment-display (digit mono, glow amber, ghost "88.888", scanline, indikator LIVE), badan **struk thermal monospace** dengan garis titik-titik, **perforasi sobek**, footer checkout. Tombol qty mekanis (turun saat ditekan).
+*(FixMaster, sebelum L-50)* Panel keranjang jadi **mesin kasir**: layar LCD total bergaya segment-display (digit mono, glow amber, ghost "88.888", scanline, indikator LIVE), badan **struk thermal monospace** dengan garis titik-titik, **perforasi sobek**, footer checkout. Tombol qty mekanis (turun saat ditekan).
 
 **Tab bar (11 Jun 2026).** Halaman dipecah jadi dua tab bergaya bench (mono uppercase, underline brand saat aktif): **Kasir** (grid produk + register) dan **Transaksi Terakhir** (riwayat + void, manager-only, dengan badge jumlah). Sebelumnya panel riwayat menumpuk di bawah register dan mengganggu alur kasir; kini terpisah sehingga layar kasir bersih dan riwayat punya ruang sendiri. Modal void diangkat ke level halaman agar bisa dipanggil dari tab manapun.
 

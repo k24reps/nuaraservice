@@ -1,5 +1,28 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
-import { Card, Input, Button, Icon, Modal } from '@/components/ui';
+import {
+  ArrowRight,
+  ArrowUp,
+  ChevronDown,
+  CircleCheck,
+  History,
+  LoaderCircle,
+  Minus,
+  Plus,
+  Printer,
+  RotateCcw,
+  Search,
+  ShoppingCart,
+  Tag,
+  UserPlus,
+  Users,
+  X,
+} from 'lucide-react';
+import { Badge } from '@/components/dens/badge';
+import { Button } from '@/components/dens/button';
+import { FormDialog } from '@/components/dens/form-dialog';
+import { TextInput } from '@/components/dens/text-input';
+import { WhatsAppIcon } from '@/components/dens/whatsapp-icon';
+import { cn } from '@/lib/utils';
 import { useCollection } from '@/hooks/useCollection';
 import { repository } from '@/data';
 import { processSale } from '@/data/supabase-client';
@@ -38,7 +61,6 @@ import { CustomerModal } from '@/features/customers/CustomerModal';
 import { toast } from '@/stores/toast';
 import { useSessionStore, resolveCreateOutlet, mustPickOutlet } from '@/stores/session';
 import type { Customer, InventoryItem, Sale, PaymentAllocation } from '@/data/types';
-import styles from './PosPage.module.css';
 import { useListNav } from '@/hooks/useListNav';
 
 export function PosPage() {
@@ -183,7 +205,6 @@ export function PosPage() {
   const totalQty = cart.reduce((n, c) => n + c.qty, 0);
   const nextNo = useMemo(() => nextDocNumber('INV', sales.map((s) => s.saleNo)), [sales]);
   const totalText = fmtRp(done ? done.sale.total : total);
-  const totalGhost = totalText.replace(/[0-9]/g, '8');
 
   // Cabang berganti dari mana pun (register, sidebar, menu ponsel): stok di
   // keranjang milik cabang lama, jadi keranjang dikosongkan dan diberi tahu —
@@ -568,24 +589,23 @@ export function PosPage() {
   };
 
   const outletButtons = (
-    <div className={styles.outletList}>
+    <div className="grid grid-cols-[repeat(auto-fill,minmax(min(12.5rem,100%),1fr))] gap-2">
       {reachableOutlets.map((o) => (
         <button
           key={o.id}
           type="button"
-          className={styles.outletOpt}
+          className="flex min-h-11 items-center gap-2.5 rounded-xl bg-card px-3.5 text-left text-sm font-medium ring-1 ring-border outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring aria-pressed:bg-accent aria-pressed:ring-2 aria-pressed:ring-primary"
           aria-pressed={o.id === activeOutletId}
           onClick={() => chooseOutlet(o.id)}
         >
-          <span className={styles.outletLed} aria-hidden />
-          <span className={styles.outletOptName}>{o.name}</span>
-          {o.isPrimary && <span className={styles.outletOptTag}>{t('pos.outletMain')}</span>}
+          <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">{o.name}</span>
+          {o.isPrimary && <Badge variant="secondary">{t('pos.outletMain')}</Badge>}
         </button>
       ))}
     </div>
   );
 
-  // Baris kedua LCD: yang harus dilihat kasir berikutnya — sisa, kembalian, pas.
+  // Baris kedua total: yang harus dilihat kasir berikutnya — sisa, kembalian, pas.
   const lcdSub: { label: string; value: string; tone: 'due' | 'change' | 'exact' } | null = done
     ? done.change > 0
       ? { label: t('pos.lcdChange'), value: fmtRp(done.change), tone: 'change' }
@@ -600,39 +620,77 @@ export function PosPage() {
           ? { label: t('pos.lcdDue'), value: fmtRp(settle.due), tone: 'due' }
           : { label: t('pos.lcdExact'), value: '', tone: 'exact' };
 
+  // Kolom yang dituju (fokus, ketukan bar, tuts bayar) mendarat di atas bar
+  // Proses yang menempel, bukan di baliknya. 96px ≈ tinggi bar + jeda; di ponsel
+  // bar duduk di atas menu bawah.
+  const clearOfBar = 'drawer:scroll-mb-24 phone:scroll-mb-[calc(var(--mobile-nav-height)+var(--space-2)+96px)]';
+  const clearOfBarInside =
+    'drawer:[&_:is(input,button)]:scroll-mb-24 phone:[&_:is(input,button)]:scroll-mb-[calc(var(--mobile-nav-height)+var(--space-2)+96px)]';
+  const money = 'font-mono tabular-nums';
+
   return (
-    <div className={[styles.page, tab === 'pos' ? styles.pagePos : ''].join(' ')}>
-      <div className={styles.tabs} role="tablist">
-        <button
-          type="button"
-          role="tab"
-          id="pos-tab-register"
-          aria-selected={tab === 'pos'}
-          aria-controls={tab === 'pos' ? 'pos-panel' : undefined}
-          className={[styles.tab, tab === 'pos' ? styles.tabActive : ''].join(' ')}
-          onClick={() => setTab('pos')}
-        >
-          <Icon name="cart-shopping" aria-hidden /> {t('pos.tabRegister')}
-        </button>
-        {/* Kasir juga perlu tab ini — di situlah struk dicetak ulang. Pembatalan
-            tetap milik manager (tombolnya di bawah). */}
-        <button
-          type="button"
-          role="tab"
-          id="pos-tab-history"
-          aria-selected={tab === 'history'}
-          aria-controls={tab === 'history' ? 'pos-panel' : undefined}
-          className={[styles.tab, tab === 'history' ? styles.tabActive : ''].join(' ')}
-          onClick={() => setTab('history')}
-        >
-          <Icon name="clock-rotate-left" aria-hidden /> {t('pos.tabHistory')}
-          {recentSales.length > 0 && <span className={styles.tabCount}>{recentSales.length}</span>}
-        </button>
+    <div
+      className={cn(
+        // Posisi diam register = margin topbar (14px) + topbar + padding atas
+        // konten. Register menempel di titik yang SAMA, jadi ia tak pernah
+        // bergeser dan tingginya bisa dihitung tanpa mengukur DOM.
+        'flex flex-col gap-4 [--pos-register-top:calc(14px+var(--topbar-height)+var(--space-6))]',
+        // Ponsel: ruang untuk dock keranjang di atas menu bawah.
+        'phone:pb-[calc(var(--mobile-nav-height)+76px+env(safe-area-inset-bottom))]',
+        // Register setinggi layar, sejajar tab (bukan di bawahnya). Dulu register
+        // mulai di bawah tab tapi tingginya dihitung seolah sudah menempel, jadi
+        // saat halaman dibuka Proses jatuh 39px di bawah layar (1366×768).
+        // Kolom sama dengan tata letak di bawah; tata letak itu hanya "dibuka"
+        // (contents) agar tab duduk di kolom kiri saja.
+        tab === 'pos' &&
+          'min-[1025px]:grid min-[1025px]:grid-cols-[minmax(0,1fr)_minmax(320px,400px)] min-[1025px]:grid-rows-[auto_1fr] min-[1025px]:items-start',
+      )}
+    >
+      {/* data-nu per bagian, bukan di akar: Riwayat (PosHistory) masih CSS
+          FixMaster sampai L-61 dan tak boleh kena reset dens. */}
+      <div data-nu className="flex gap-5 border-b border-border bg-transparent" role="tablist">
+        {(
+          [
+            ['pos', 'pos-tab-register', ShoppingCart, t('pos.tabRegister')],
+            ['history', 'pos-tab-history', History, t('pos.tabHistory')],
+          ] as const
+        ).map(([id, domId, Glyph, label]) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            id={domId}
+            aria-selected={tab === id}
+            aria-controls={tab === id ? 'pos-panel' : undefined}
+            className="-mb-px inline-flex min-h-10 items-center gap-1.5 border-b-2 border-transparent px-0.5 text-sm font-semibold whitespace-nowrap text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring aria-selected:border-foreground aria-selected:text-foreground pointer-coarse:min-h-11 [&_svg]:size-4 [&_svg]:shrink-0"
+            onClick={() => setTab(id)}
+          >
+            <Glyph aria-hidden /> {label}
+            {/* Kasir juga perlu tab Riwayat: di situlah struk dicetak ulang.
+                Pembatalan tetap milik manager. */}
+            {id === 'history' && recentSales.length > 0 && (
+              <span className="text-xs font-medium tabular-nums text-muted-foreground">{recentSales.length}</span>
+            )}
+          </button>
+        ))}
       </div>
 
       {tab === 'pos' && (
-      <div className={styles.layout} id="pos-panel" role="tabpanel" aria-labelledby="pos-tab-register">
-        <div className={styles.products}>
+      <div
+        data-nu
+        // minmax, bukan 400px mati: kolom keranjang boleh mengembalikan ruang
+        // saat wadahnya sempit. Ambang 1 vs 2 kolom terikat KEHADIRAN SIDEBAR (di
+        // <=1024px sidebar hilang sehingga wadah justru melebar), jadi tak bisa
+        // dijadikan container query; ruang sempit diserap trek-nya sendiri (zoom
+        // 125% di jendela 1097px dulu meluber 31px). minmax(0, 1fr), bukan 1fr:
+        // minimum 1fr = isi terpanjang, dan baris chip kategori melebarkan
+        // seluruh kolom (13 kategori = 1266px di layar 390px).
+        className="grid grid-cols-[minmax(0,1fr)_minmax(320px,400px)] items-start gap-4 bg-transparent drawer:grid-cols-[minmax(0,1fr)] min-[1025px]:contents"
+        id="pos-panel"
+        role="tabpanel"
+        aria-labelledby="pos-tab-register"
+      >
+        <div className="flex min-w-0 flex-col gap-4 min-[1025px]:col-start-1 min-[1025px]:row-start-2">
           <PosCatalog
             inventory={inventory}
             inventoryLoad={inventoryLoad}
@@ -644,47 +702,73 @@ export function PosPage() {
           />
         </div>
 
-      <Card id="pos-cart" className={styles.cartPanel}>
+      <section
+        id="pos-cart"
+        aria-label={t('pos.cart')}
+        className={cn(
+          'relative flex flex-col overflow-clip rounded-2xl bg-card text-card-foreground shadow-panel ring-1 ring-border/60',
+          // Dock ponsel menggulir ke sini; tanpa ini total mendarat di bawah header.
+          'scroll-mt-[calc(var(--topbar-height)+var(--space-3))]',
+          // Desktop: register setinggi layar di kolom kanan; total dan bar Proses
+          // menempel, hanya struk yang menggulir. Jaring pengaman: bila bagian
+          // bayar sendiri lebih tinggi dari layar (tiga tender + diskon di layar
+          // pendek), seluruh register menggulir, dan kolom yang difokus mendarat
+          // di antara total dan bar Proses (scroll-padding ≈ tinggi keduanya:
+          // register 140px, 170px dengan baris sisa; bar 84px).
+          'min-[1025px]:sticky min-[1025px]:top-(--pos-register-top) min-[1025px]:col-start-2 min-[1025px]:row-span-2 min-[1025px]:row-start-1 min-[1025px]:h-[calc(var(--app-vh)-var(--pos-register-top)-var(--space-4))] min-[1025px]:overflow-y-auto min-[1025px]:overscroll-contain min-[1025px]:[scroll-padding-block:176px_88px]',
+        )}
+      >
         {/* Pembaca layar hanya mendengar angka uangnya. Dulu aria-live
             membungkus seluruh register, jadi tiap ubah qty membacakan ulang
             cabang, nomor faktur, dan jumlah baris. */}
-        <p className="fm-visually-hidden" aria-live="polite" aria-atomic="true">
+        <p className="sr-only" aria-live="polite" aria-atomic="true">
           {done ? `${t('pos.lcdPaid')}. ` : ''}
           {t('common.total')} {totalText}
           {lcdSub ? `. ${lcdSub.label} ${lcdSub.value}` : ''}
         </p>
-        <div className={styles.register}>
-          <div className={styles.registerTop}>
-            {done ? (
-              <span className={styles.paidTag}>{t('pos.lcdPaid')}</span>
-            ) : (
-              <span className={styles.live}>{t('pos.lcdLive')}</span>
-            )}
+        <div className="@container/reg relative bg-primary px-5 pt-4 pb-3 text-primary-foreground min-[1025px]:sticky min-[1025px]:top-0 min-[1025px]:z-[2]">
+          <div className="mb-2 flex items-center justify-between text-xs font-medium text-primary-foreground/80">
+            <span className="inline-flex items-center gap-1.5">
+              <span aria-hidden className={cn('size-2 rounded-full', done ? 'bg-highlight' : 'bg-primary-foreground/50')} />
+              {done ? t('pos.lcdPaid') : t('pos.lcdLive')}
+            </span>
             <span>{t('common.total')}</span>
           </div>
-          {/* Ukuran angka mengikuti jumlah karakter supaya total 9 digit tetap
-              sebaris di 320px (lihat .lcd). */}
-          <div className={styles.lcd} style={{ '--lcd-chars': totalText.length } as CSSProperties}>
-            <span className={styles.lcdGhost} aria-hidden>{totalGhost}</span>
+          {/* Angka total selalu sebaris: di 320px "Rp 140.460.000" pada 2,35rem
+              patah dua baris. Lebar satu karakter mono ≈ 0,6em, jadi ukuran =
+              lebar wadah / jumlah karakter, dibatasi 2,35rem. */}
+          <div
+            className="text-right font-mono text-[length:min(2.35rem,calc(100cqi/(var(--lcd-chars,12)*0.62)))] leading-[1.05] font-semibold whitespace-nowrap tabular-nums"
+            style={{ '--lcd-chars': totalText.length } as CSSProperties}
+          >
             {totalText}
           </div>
           {lcdSub && (
-            <div className={[styles.lcdSub, styles[lcdSub.tone]].join(' ')}>
+            <div
+              className={cn(
+                'mt-1.5 flex items-baseline justify-between gap-3 text-sm',
+                lcdSub.tone === 'due' && 'font-semibold text-highlight',
+                lcdSub.tone === 'change' && 'font-semibold',
+                lcdSub.tone === 'exact' && 'text-primary-foreground/80',
+              )}
+            >
               <span>{lcdSub.label}</span>
-              <span>{lcdSub.value}</span>
+              <span className={cn(money, 'text-base')}>{lcdSub.value}</span>
             </div>
           )}
-          <div className={styles.registerMeta}>
+          {/* Nama cabang lebih penting daripada hitungan baris: bila tak muat
+              sebaris, hitungan yang turun, bukan nama cabang yang dielipsis. */}
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-primary-foreground/15 pt-2 font-mono text-xs text-primary-foreground/80">
             {reachableOutlets.length > 1 ? (
               <button
                 type="button"
-                className={styles.outletChip}
+                className="-mx-1.5 inline-flex min-h-8 items-center gap-1.5 rounded-full px-1.5 font-sans font-medium text-primary-foreground outline-none transition-colors hover:bg-primary-foreground/10 focus-visible:ring-2 focus-visible:ring-highlight pointer-coarse:min-h-11 [&_svg]:size-3.5"
                 onClick={() => setOutletModal(true)}
                 aria-label={t('pos.outletChip').replace('{name}', activeOutlet?.name ?? t('pos.pickBranch'))}
               >
-                <span className={activeOutlet ? styles.outletLedOn : styles.outletLed} aria-hidden />
+                <span aria-hidden className={cn('size-2 rounded-full', activeOutlet ? 'bg-highlight' : 'bg-primary-foreground/50')} />
                 {activeOutlet?.name ?? t('pos.pickBranch')}
-                <Icon name="chevron-down" aria-hidden />
+                <ChevronDown aria-hidden />
               </button>
             ) : (
               <span>{done ? done.sale.saleNo : nextNo}</span>
@@ -698,125 +782,155 @@ export function PosPage() {
         </div>
 
         {done ? (
-          <div className={styles.donePanel}>
-            <p className={styles.doneTitle}>
-              <span className={styles.doneLed} aria-hidden /> {t('pos.doneTitle')}
-              <span className={styles.doneNo}>{done.sale.saleNo}</span>
+          <div className="grid gap-3 p-5">
+            <p className="flex flex-wrap items-center gap-2 font-semibold">
+              <span aria-hidden className="size-2 rounded-full bg-success-foreground" /> {t('pos.doneTitle')}
+              <span className="font-mono text-sm font-normal text-muted-foreground">{done.sale.saleNo}</span>
             </p>
-            <p className={styles.doneChange}>
+            <p className="text-sm text-muted-foreground [&_strong]:font-mono [&_strong]:font-semibold [&_strong]:text-foreground">
               {done.change > 0
                 ? t('pos.doneChange')
                     .split('{amount}')
                     .flatMap((part, i) => (i ? [<strong key={i}>{fmtRp(done.change)}</strong>, part] : [part]))
                 : t('pos.doneExact')}
             </p>
-            <div className={styles.doneActions}>
+            <div className="flex flex-wrap gap-2 [&>*]:flex-1">
               {org && (
                 <Button
-                  variant="secondary"
-                  iconLeft={<Icon name="print" aria-hidden />}
+                  variant="outline"
                   onClick={() => printSaleReceipt(done.sale, org, { change: done.change, walletName, outlets })}
                 >
+                  <Printer aria-hidden />
                   {t('pos.printReceipt')}
                 </Button>
               )}
               {done.phone && (
-                <a
-                  className={styles.waBtn}
-                  href={waLink(done.phone, saleWaMessage(t('pos.waMessage'), org?.name ?? '', done.sale))}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  <Icon name="whatsapp" aria-hidden /> {t('pos.sendWa')}
-                </a>
+                <Button asChild variant="outline">
+                  <a
+                    href={waLink(done.phone, saleWaMessage(t('pos.waMessage'), org?.name ?? '', done.sale))}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <WhatsAppIcon className="size-4" /> {t('pos.sendWa')}
+                  </a>
+                </Button>
               )}
             </div>
             {/* Tanpa autoFocus: Enter yang menyelesaikan transaksi dulu ikut
                 "menekan" tombol ini, sehingga LUNAS & kembalian hilang sebelum
                 terbaca. Fokus pindah ke kolom cari; Enter kosong di sana (atau
                 pindaian berikutnya) memulai transaksi baru. */}
-            <Button
-              fullWidth
-              onClick={newSale}
-            >
+            <Button className="w-full" onClick={newSale}>
               {t('pos.newSale')}
             </Button>
           </div>
         ) : (
         <>
-        <div className={styles.cartHeader}>
-          <h2>
-            <Icon name="cart-shopping" aria-hidden /> {t('pos.cart')}
+        <div className="flex min-h-12 items-center justify-between gap-3 px-5 pt-3">
+          <h2 className="inline-flex items-center gap-2 text-sm font-semibold [&_svg]:size-4 [&_svg]:text-muted-foreground">
+            <ShoppingCart aria-hidden /> {t('pos.cart')}
           </h2>
           {cart.length > 0 && (
-            <button type="button" className={styles.clearBtn} onClick={clearCart}>
+            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-destructive" onClick={clearCart}>
               {t('pos.clearCart')}
-            </button>
+            </Button>
           )}
         </div>
 
-        <div className={styles.cartItems}>
+        {/* Struk yang terpotong di tepi bawah memudar, tanda masih ada baris lagi. */}
+        <div className="px-5 min-[1025px]:min-h-[104px] min-[1025px]:flex-[1_1_0] min-[1025px]:overflow-y-auto min-[1025px]:overscroll-contain min-[1025px]:scroll-fade-b">
           {cart.length === 0 ? (
-            <>
-            <p className={styles.emptyCart}>
-              {outletNotice ? t('pos.outletChanged') : cleared ? t('pos.cleared') : t('pos.cartEmpty')}
-            </p>
-            {cleared && !outletNotice && (
-              <button type="button" className={styles.restoreBtn} onClick={restoreCart}>
-                <Icon name="repeat" aria-hidden />{' '}
-                {t('pos.restoreCart').replace('{n}', String(cleared.cart.reduce((n, c) => n + c.qty, 0)))}
-              </button>
-            )}
-            </>
+            <div className="grid justify-items-center gap-3 py-8 text-center">
+              <p className="text-sm text-muted-foreground">
+                {outletNotice ? t('pos.outletChanged') : cleared ? t('pos.cleared') : t('pos.cartEmpty')}
+              </p>
+              {cleared && !outletNotice && (
+                <Button variant="outline" size="sm" onClick={restoreCart}>
+                  <RotateCcw aria-hidden />
+                  {t('pos.restoreCart').replace('{n}', String(cleared.cart.reduce((n, c) => n + c.qty, 0)))}
+                </Button>
+              )}
+            </div>
           ) : (
-            cart.map((c) => (
-              <div key={c.itemId} className={styles.cartItem}>
-                <strong className={styles.cartItemName}>{c.name}</strong>
-                <small className={styles.cartItemUnit}>{fmtRp(c.sellPrice)} ×{'\u00a0'}{c.qty}</small>
-                <div className={styles.qtyControl}>
-                  <button type="button" onClick={() => setQty(c.itemId, c.qty - 1)} aria-label={interpolate(t('pos.qtyMinus'), { name: c.name })}>
-                    <Icon name="minus" aria-hidden />
-                  </button>
-                  {/* Qty bisa diketik — 12 kabel data bukan 11 ketukan "+". */}
-                  <input
-                    className={styles.qtyInput}
-                    inputMode="numeric"
-                    aria-label={t('pos.qtyLabel').replace('{name}', c.name)}
-                    value={c.qty}
-                    onFocus={(e) => e.currentTarget.select()}
-                    onChange={(e) => {
-                      const n = parseInt(e.target.value.replace(/\D/g, ''), 10);
-                      if (!Number.isNaN(n) && n > 0) setQty(c.itemId, n);
-                    }}
-                  />
-                  <button type="button" onClick={() => setQty(c.itemId, c.qty + 1)} aria-label={interpolate(t('pos.qtyPlus'), { name: c.name })}>
-                    <Icon name="plus" aria-hidden />
-                  </button>
-                </div>
-                <span className={styles.lineTotal}>{fmtRp(c.sellPrice * c.qty)}</span>
-              </div>
-            ))
+            // Dua baris: nama selebar struk, lalu harga satuan dan tuts qty. Satu
+            // baris dulu memeras nama jadi "Keyb…"; tuts qty 44px di baris kedua
+            // bersama total memeras harga satuan sampai tertimpa.
+            <ul className="m-0 grid list-none divide-y divide-border/70 p-0">
+              {cart.map((c) => (
+                <li key={c.itemId} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5 py-3">
+                  <strong className="text-sm font-semibold [overflow-wrap:anywhere]">{c.name}</strong>
+                  <span className={cn(money, 'self-start text-right text-sm font-semibold whitespace-nowrap')}>
+                    {fmtRp(c.sellPrice * c.qty)}
+                  </span>
+                  <small className={cn(money, 'min-w-0 text-xs text-muted-foreground')}>
+                    {fmtRp(c.sellPrice)} ×{' '}{c.qty}
+                  </small>
+                  <div className="flex items-center justify-self-end rounded-full ring-1 ring-border">
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      className="rounded-full"
+                      onClick={() => setQty(c.itemId, c.qty - 1)}
+                      aria-label={interpolate(t('pos.qtyMinus'), { name: c.name })}
+                    >
+                      <Minus aria-hidden />
+                    </Button>
+                    {/* Qty bisa diketik — 12 kabel data bukan 11 ketukan "+". */}
+                    <input
+                      className={cn(
+                        money,
+                        'h-8 w-10 rounded-md bg-transparent pointer-coarse:h-11 pointer-coarse:w-11 text-center text-sm font-semibold outline-none hover:bg-surface focus-visible:ring-2 focus-visible:ring-ring',
+                      )}
+                      inputMode="numeric"
+                      aria-label={t('pos.qtyLabel').replace('{name}', c.name)}
+                      value={c.qty}
+                      onFocus={(e) => e.currentTarget.select()}
+                      onChange={(e) => {
+                        const n = parseInt(e.target.value.replace(/\D/g, ''), 10);
+                        if (!Number.isNaN(n) && n > 0) setQty(c.itemId, n);
+                      }}
+                    />
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      className="rounded-full"
+                      onClick={() => setQty(c.itemId, c.qty + 1)}
+                      aria-label={interpolate(t('pos.qtyPlus'), { name: c.name })}
+                    >
+                      <Plus aria-hidden />
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
           )}
         </div>
 
         {cart.length > 0 && (
           <>
-            <div className={styles.tearLine} aria-hidden />
-            <div className={styles.checkout}>
+            <div aria-hidden className="mx-5 border-t border-dashed border-border" />
+            <div className={cn('grid gap-3 px-5 pt-4', clearOfBarInside)}>
             {showCust && (
-            <div className={styles.customerBox} ref={custBoxRef}>
+            <div className="relative" ref={custBoxRef}>
               {customer ? (
-                <div className={styles.customerChip}>
-                  <Icon name="users" aria-hidden />
-                  <span>{customer.name}</span>
-                  <button type="button" onClick={() => openCust()} aria-label={t('pos.custRemove')}>
-                    <Icon name="xmark" aria-hidden />
-                  </button>
+                <div className="flex min-h-10 items-center gap-2 rounded-xl bg-surface pl-3.5 text-sm ring-1 ring-border/60 [&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:text-muted-foreground">
+                  <Users aria-hidden />
+                  <span className="min-w-0 flex-1 font-medium [overflow-wrap:anywhere]">{customer.name}</span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-muted-foreground"
+                    onClick={() => openCust()}
+                    aria-label={t('pos.custRemove')}
+                  >
+                    <X aria-hidden />
+                  </Button>
                 </div>
               ) : (
                 <>
-                  <Input
+                  <TextInput
                     ref={custInputRef}
+                    capitalize="none"
                     placeholder={t('pos.custOptional')}
                     aria-label={t('pos.custOptional')}
                     value={custQuery}
@@ -839,18 +953,22 @@ export function PosPage() {
                     aria-autocomplete="list"
                     aria-controls="pos-customer-suggest"
                     aria-activedescendant={custNav.active >= 0 ? `pos-cust-${custNav.active}` : undefined}
-                    iconLeft={<Icon name="magnifying-glass" aria-hidden />}
+                    start={<Search aria-hidden />}
                   />
                   {/* Saran selalu menjelaskan dirinya: kurang huruf, masih mencari,
                       tidak ditemukan — dan selalu menawarkan pelanggan baru. Dulu
                       kolom ini diam saja bila tak ada yang cocok, dan Kasir tak bisa
                       membuat pelanggan. */}
                   {custListOpen && (
-                    <ul className={styles.custSuggest} id="pos-customer-suggest" role="listbox">
+                    <ul
+                      className="absolute inset-x-0 top-[calc(100%+4px)] z-20 m-0 grid max-h-64 list-none gap-0.5 overflow-y-auto rounded-xl bg-popover p-1 text-popover-foreground shadow-raised ring-1 ring-border/70"
+                      id="pos-customer-suggest"
+                      role="listbox"
+                    >
                       {serverSearch && custQuery.trim().length < 3 ? (
-                        <li className={styles.custHint}>{t('pos.custMinChars')}</li>
+                        <li className="px-2.5 py-2 text-xs text-muted-foreground">{t('pos.custMinChars')}</li>
                       ) : custMatches.length === 0 ? (
-                        <li className={styles.custHint}>
+                        <li className="px-2.5 py-2 text-xs text-muted-foreground">
                           {serverSearch && custPending
                             ? t('pos.custSearching')
                             : t('pos.custNotFound').replace('{q}', custQuery.trim())}
@@ -864,13 +982,14 @@ export function PosPage() {
                               role="option"
                               aria-selected={i === custNav.active}
                               tabIndex={-1}
+                              className="grid w-full gap-0.5 rounded-lg px-2.5 py-2 text-left outline-none hover:bg-accent aria-selected:bg-accent pointer-coarse:min-h-11"
                               onClick={() => {
                                 setCustomer(c);
                                 setCustQuery('');
                               }}
                             >
-                              <strong>{c.name}</strong>
-                              <small>{c.phone || t('pos.custNoPhone')}</small>
+                              <strong className="text-sm font-medium">{c.name}</strong>
+                              <small className="font-mono text-xs text-muted-foreground">{c.phone || t('pos.custNoPhone')}</small>
                             </button>
                           </li>
                         ))
@@ -881,10 +1000,10 @@ export function PosPage() {
                           id={`pos-cust-${custOptions}`}
                           role="option"
                           aria-selected={custNav.active === custOptions}
-                          className={styles.custAdd}
+                          className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm font-semibold text-primary outline-none hover:bg-accent aria-selected:bg-accent pointer-coarse:min-h-11 [&_svg]:size-4"
                           onClick={() => setCustModal(true)}
                         >
-                          <Icon name="plus" aria-hidden /> {t('pos.custAdd')}
+                          <Plus aria-hidden /> {t('pos.custAdd')}
                         </button>
                       </li>
                     </ul>
@@ -895,99 +1014,136 @@ export function PosPage() {
             )}
 
             {showDisc && (
-            <div className={styles.discountRow}>
-              <Input
+            <div className="flex items-center gap-2">
+              <TextInput
                 ref={discInputRef}
+                capitalize="none"
+                className="min-w-0 flex-1"
                 placeholder={t('pos.discount')}
                 aria-label={t('pos.discount')}
                 inputMode="numeric"
                 value={discount}
                 onChange={(e) => setDiscount(fmtRpInput(e.target.value))}
               />
-              <div className={styles.discountToggle}>
-                <button
-                  type="button"
-                  aria-pressed={discountType === 'amount'}
-                  aria-label={t('pos.discountAmount')}
-                  className={discountType === 'amount' ? styles.activeToggle : ''}
-                  onClick={() => setDiscountType('amount')}
-                >
-                  Rp
-                </button>
-                <button
-                  type="button"
-                  aria-pressed={discountType === 'percent'}
-                  aria-label={t('pos.discountPercent')}
-                  className={discountType === 'percent' ? styles.activeToggle : ''}
-                  onClick={() => setDiscountType('percent')}
-                >
-                  %
-                </button>
+              <div className="flex shrink-0 gap-0.5 rounded-full bg-muted p-1 ring-1 ring-inset ring-border/60" role="group">
+                {(['amount', 'percent'] as const).map((k) => (
+                  <button
+                    key={k}
+                    type="button"
+                    aria-pressed={discountType === k}
+                    aria-label={t(k === 'amount' ? 'pos.discountAmount' : 'pos.discountPercent')}
+                    className="min-h-8 min-w-10 rounded-full px-2.5 font-mono text-sm font-semibold text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring aria-pressed:bg-card aria-pressed:text-foreground aria-pressed:shadow-[0_1px_2px_rgb(6_32_54/0.08)] pointer-coarse:min-h-11"
+                    onClick={() => setDiscountType(k)}
+                  >
+                    {k === 'amount' ? 'Rp' : '%'}
+                  </button>
+                ))}
               </div>
             </div>
             )}
 
+            {/* Pelanggan & diskon terlipat: tuts tambahan bergaris putus, bahasa
+                yang sama dengan nominal cepat di bawahnya. */}
             {(!showCust || !showDisc) && (
-              <div className={styles.extras}>
+              <div className="flex gap-2">
                 {!showCust && (
-                  <button type="button" className={styles.extraKey} onClick={openCust} aria-label={t('pos.custAddAria')}>
-                    <Icon name="user-plus" aria-hidden /> {t('pos.custShort')}
-                  </button>
+                  <Button
+                    variant="outline"
+                    className="min-w-0 flex-1 border-dashed shadow-none"
+                    onClick={openCust}
+                    aria-label={t('pos.custAddAria')}
+                  >
+                    <UserPlus aria-hidden /> {t('pos.custShort')}
+                  </Button>
                 )}
                 {!showDisc && (
-                  <button type="button" className={styles.extraKey} onClick={openDisc} aria-label={t('pos.discountAddAria')}>
-                    <Icon name="tag" aria-hidden /> {t('pos.discount')}
-                  </button>
+                  <Button
+                    variant="outline"
+                    className="min-w-0 flex-1 border-dashed shadow-none"
+                    onClick={openDisc}
+                    aria-label={t('pos.discountAddAria')}
+                  >
+                    <Tag aria-hidden /> {t('pos.discount')}
+                  </Button>
                 )}
               </div>
             )}
 
             {discountOver && (
-              <p className={styles.discountWarn}>
+              <p className="text-xs text-warning-foreground">
                 {interpolate(t('pos.staffDiscountNote'), { pct: String(STAFF_MAX_DISCOUNT_PCT), amount: fmtRp(maxDiscount) })}
               </p>
             )}
 
-            {/* Tanpa diskon, subtotal = total = angka LCD; rincian ini hanya
+            {/* Tanpa diskon, subtotal = total = angka di atas; rincian ini hanya
                 mengulang angka yang sama dua kali lagi. */}
             {discountValue > 0 && (
-              <div className={styles.summary}>
-                <div><span>{t('pos.subtotal')}</span><span>{fmtRp(subtotal)}</span></div>
-                <div className={styles.discountLine}>
-                  <span>{t('pos.discount')}</span><span>−{fmtRp(discountValue)}</span>
+              <dl className="m-0 grid gap-1 text-sm">
+                <div className="flex justify-between gap-3">
+                  <dt className="text-muted-foreground">{t('pos.subtotal')}</dt>
+                  <dd className={cn('m-0', money)}>{fmtRp(subtotal)}</dd>
                 </div>
-                <div className={styles.totalLine}><span>{t('common.total')}</span><span>{fmtRp(total)}</span></div>
-              </div>
+                <div className="flex justify-between gap-3 text-success-foreground">
+                  <dt>{t('pos.discount')}</dt>
+                  <dd className={cn('m-0', money)}>−{fmtRp(discountValue)}</dd>
+                </div>
+                <div className="flex justify-between gap-3 border-t border-border/70 pt-1 font-semibold">
+                  <dt>{t('common.total')}</dt>
+                  <dd className={cn('m-0', money)}>{fmtRp(total)}</dd>
+                </div>
+              </dl>
             )}
 
-            <div className={styles.payments}>
-              <div className={styles.paymentsHeader}>
-                <span>{t('pos.tender')}</span>
+            <div className="@container/pay grid gap-2">
+              <div className="flex items-baseline justify-between gap-3 @max-[271px]/pay:flex-wrap">
+                <span className="text-xs font-semibold text-muted-foreground">{t('pos.tender')}</span>
                 {tender.length === 0 && (
-                  <span id="pos-tender-hint" className={styles.tenderHint}>{t('pos.tenderHint')}</span>
+                  <span
+                    id="pos-tender-hint"
+                    className="flex-1 text-right text-xs text-muted-foreground @max-[271px]/pay:basis-full @max-[271px]/pay:text-left"
+                  >
+                    {t('pos.tenderHint')}
+                  </span>
                 )}
               </div>
-              <div id="pos-tender-keys" className={styles.tenderKeys} role="group" aria-label={t('pos.tenderKeys')}>
+              <div
+                id="pos-tender-keys"
+                className="grid grid-cols-[repeat(auto-fill,minmax(5.5rem,1fr))] gap-2"
+                role="group"
+                aria-label={t('pos.tenderKeys')}
+              >
                 {wallets.map((w) => (
                   <button
                     key={w.id}
                     type="button"
-                    className={styles.tenderKey}
+                    className="flex min-h-11 items-center rounded-xl bg-card px-3 text-left text-sm font-medium ring-1 ring-border outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring aria-pressed:bg-accent aria-pressed:ring-2 aria-pressed:ring-primary"
                     aria-pressed={tender.some((p) => p.walletId === w.id)}
                     onClick={() => pickWallet(w.id)}
                   >
-                    <span className={styles.tenderLed} aria-hidden />
-                    {w.name}
+                    <span className="min-w-0 [overflow-wrap:anywhere]">{w.name}</span>
                   </button>
                 ))}
               </div>
               {tender.map((p) => {
                 const name = walletName(p.walletId);
                 return (
-                  <div key={p.walletId} className={styles.paymentRow}>
-                    <label htmlFor={`tender-${p.walletId}`}>{name}</label>
-                    <Input
+                  // Label 90px menyisakan terlalu sedikit untuk nominal di wadah
+                  // sempit: di <=270px (90 label + jeda + tuts hapus + kolom yang
+                  // memuat "888.888.888") label naik ke barisnya sendiri.
+                  <div
+                    key={p.walletId}
+                    className="grid grid-cols-[90px_minmax(0,1fr)_auto] items-center gap-2 text-sm @max-[271px]/pay:grid-cols-[minmax(0,1fr)_auto] @max-[271px]/pay:gap-y-1"
+                  >
+                    <label
+                      htmlFor={`tender-${p.walletId}`}
+                      className="truncate font-medium @max-[271px]/pay:col-span-full @max-[271px]/pay:text-xs @max-[271px]/pay:text-muted-foreground"
+                    >
+                      {name}
+                    </label>
+                    <TextInput
                       id={`tender-${p.walletId}`}
+                      capitalize="none"
+                      className={cn(money, 'text-right')}
                       aria-label={t('pos.tenderAmount').replace('{wallet}', name)}
                       inputMode="numeric"
                       autoFocus={finePointer}
@@ -1001,19 +1157,20 @@ export function PosPage() {
                       }}
                       placeholder="0"
                     />
-                    <button
-                      type="button"
-                      className={styles.tenderRemove}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-muted-foreground hover:bg-destructive-soft hover:text-destructive"
                       onClick={() => removeTender(p.walletId)}
                       aria-label={t('pos.tenderRemove').replace('{wallet}', name)}
                     >
-                      <Icon name="xmark" aria-hidden />
-                    </button>
+                      <X aria-hidden />
+                    </Button>
                   </div>
                 );
               })}
               {tender.length > 1 && changeTender && (
-                <p className={styles.tenderRule}>
+                <p className="text-xs text-muted-foreground">
                   {t(cashIds.has(changeTender.walletId) ? 'pos.changeRuleCash' : 'pos.changeRule').replace(
                     '{wallet}',
                     walletName(changeTender.walletId),
@@ -1021,78 +1178,115 @@ export function PosPage() {
                 </p>
               )}
               {quickCash.length > 1 && changeTender && (
-                <div className={styles.quickCash} role="group" aria-label={t('pos.cashQuick')}>
+                <div id="pos-quick-cash" className="flex flex-wrap gap-1.5" role="group" aria-label={t('pos.cashQuick')}>
                   {quickCash.map((v, i) => (
-                    <button key={v} type="button" onClick={() => setTenderAmount(changeTender.walletId, v)}>
+                    <button
+                      key={v}
+                      type="button"
+                      className="inline-flex min-h-8 items-center rounded-full border border-dashed border-border px-3 font-mono text-xs text-muted-foreground tabular-nums outline-none transition-colors hover:border-solid hover:border-primary/40 hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring pointer-coarse:min-h-11"
+                      onClick={() => setTenderAmount(changeTender.walletId, v)}
+                    >
                       {i === 0 ? t('pos.exact') : fmtRp(v)}
                     </button>
                   ))}
                 </div>
               )}
               {/* Sebelum ada tuts yang ditekan, petunjuk di kepala bagian sudah
-                  bilang apa yang harus dilakukan. Di desktop LCD selalu
+                  bilang apa yang harus dilakukan. Di desktop total selalu
                   terlihat dan baris keduanya sudah menyebut sisa/kembalian/pas,
-                  jadi status hanya tampil bila membawa info lebih (statusExtra):
-                  dompet kembalian saat bayar campur, lebih bayar, nominal 0. */}
+                  jadi status hanya tampil bila membawa info lebih: dompet
+                  kembalian saat bayar campur, lebih bayar, nominal 0. */}
               {tender.length > 0 && (
                 <div
                   id="pos-pay-status"
-                  className={[
-                    styles.paymentStatus,
-                    settle.ok ? styles.ok : settle.paid === 0 ? styles.idle : styles.bad,
-                    tender.length > 1 || settle.excess || settle.paid === 0 ? styles.statusExtra : '',
-                  ].join(' ')}
+                  className={cn(
+                    'flex items-center gap-2 rounded-xl px-3 py-2 text-sm',
+                    clearOfBar,
+                    settle.ok
+                      ? 'bg-success text-success-foreground'
+                      : settle.paid === 0
+                        ? 'bg-surface text-muted-foreground'
+                        : 'bg-warning text-warning-foreground',
+                    !(tender.length > 1 || settle.excess || settle.paid === 0) && 'min-[1025px]:hidden',
+                  )}
                 >
-                  <span className={styles.statusLed} aria-hidden />
+                  <span aria-hidden className="size-2 shrink-0 rounded-full bg-current" />
                   {statusText}
                 </div>
               )}
             </div>
             </div>
 
-            {/* Di luar .checkout supaya bisa menempel ke tepi bawah seluruh
-                register, bukan hanya ke bagian bayar. */}
-            <div className={styles.payBar}>
+            {/* Bar Proses = penunjuk uang: aksi di kiri, angka di kanan (TOTAL,
+                SISA, KEMBALIAN). Saat kasir menerima uang total sudah tergulir ke
+                atas, jadi angka yang ditunggu pelanggan ada di bar yang menempel
+                ini. Di luar bagian bayar supaya menempel ke tepi bawah seluruh
+                register; di desktop isi di baliknya memudar ke arahnya. */}
+            <div
+              className={cn(
+                'bg-card px-5 pt-3 pb-4',
+                'min-[1025px]:sticky min-[1025px]:bottom-0 min-[1025px]:z-[1] min-[1025px]:scroll-fade-above',
+                // Kolom tunggal: bar menempel ke layar (panel clip, bukan wadah
+                // gulir); di ponsel duduk tepat di atas menu bawah.
+                'drawer:sticky drawer:bottom-[env(safe-area-inset-bottom)] drawer:z-[2]',
+                'phone:bottom-[calc(var(--mobile-nav-height)+var(--space-2)+env(safe-area-inset-bottom))]',
+              )}
+            >
               <Button
-                fullWidth
-                className={styles.payBtn}
+                size="lg"
+                variant={barReady ? 'default' : 'secondary'}
+                className="h-auto min-h-12 w-full justify-start px-4 py-2.5 text-left has-[>svg]:px-4"
                 data-state={bar.kind}
                 onClick={barReady ? checkout : guidePay}
-                loading={busy}
+                disabled={busy}
+                aria-busy={busy || undefined}
                 aria-disabled={!barReady || undefined}
                 aria-describedby={tender.length ? 'pos-pay-status' : 'pos-tender-hint'}
-                iconLeft={busy ? undefined : <Icon name={barReady ? 'circle-check' : 'arrow-up'} aria-hidden />}
               >
-                <span className={styles.payAction}>{payAction}</span>
-                {payReadout && (
-                  <span className={styles.payReadout}>
-                    <small>{payReadout.caption}</small>
-                    <strong>{payReadout.value}</strong>
-                  </span>
+                {busy ? (
+                  <LoaderCircle aria-hidden className="animate-spin motion-reduce:animate-none" />
+                ) : barReady ? (
+                  <CircleCheck aria-hidden />
+                ) : (
+                  <ArrowUp aria-hidden />
                 )}
+                <span className="flex min-w-0 flex-1 items-center justify-between gap-3">
+                  <span className="leading-tight whitespace-normal">{payAction}</span>
+                  {payReadout && (
+                    <span className="flex shrink-0 flex-col items-end leading-tight whitespace-nowrap">
+                      <small className={cn('text-xs font-semibold', !barReady && 'text-muted-foreground')}>
+                        {payReadout.caption}
+                      </small>
+                      <strong className={cn(money, 'text-sm font-semibold', bar.kind === 'due' && 'text-warning-foreground')}>
+                        {payReadout.value}
+                      </strong>
+                    </span>
+                  )}
+                </span>
               </Button>
             </div>
           </>
         )}
         </>
         )}
-      </Card>
+      </section>
       </div>
       )}
 
       {tab === 'pos' && cart.length > 0 && !done && !cartInView && (
         <button
+          data-nu
           ref={measureDock}
           type="button"
-          className={styles.mobileCartDock}
+          className="fixed inset-x-4 bottom-[calc(var(--mobile-nav-height)+var(--space-4)+env(safe-area-inset-bottom))] z-(--z-sticky) hidden grid-cols-[1fr_auto_auto] items-center gap-3 rounded-2xl bg-primary px-4 py-2.5 text-left text-primary-foreground shadow-raised outline-none focus-visible:ring-2 focus-visible:ring-highlight focus-visible:ring-offset-2 phone:grid [&_svg]:size-4"
           onClick={() => document.getElementById('pos-cart')?.scrollIntoView({ behavior: 'smooth' })}
           aria-label={interpolate(t('pos.dockAria'), { qty: String(totalQty), total: totalText })}
         >
-          <span>
-            <Icon name="cart-shopping" aria-hidden /> {interpolate(t('pos.units'), { n: String(totalQty) })}
+          <span className="inline-flex items-center gap-2 font-semibold">
+            <ShoppingCart aria-hidden /> {interpolate(t('pos.units'), { n: String(totalQty) })}
           </span>
-          <strong>{totalText}</strong>
-          <Icon name="arrow-right" aria-hidden />
+          <strong className={cn(money, 'font-semibold')}>{totalText}</strong>
+          <ArrowRight aria-hidden />
         </button>
       )}
 
@@ -1120,22 +1314,20 @@ export function PosPage() {
         }}
       />
 
-      <Modal
+      <FormDialog
         open={outletModal}
         onClose={() => {
           setOutletModal(false);
           setPendingItem(null);
         }}
         title={t(pendingItem ? 'pos.outletPickTitle' : 'pos.outletSwitchTitle')}
+        description={
+          pendingItem ? t('pos.outletPickBody') : cart.length > 0 ? t('pos.outletSwitchCartNote') : undefined
+        }
         size="sm"
       >
-        {pendingItem ? (
-          <p className={styles.outletPickBody}>{t('pos.outletPickBody')}</p>
-        ) : (
-          cart.length > 0 && <p className={styles.outletPickBody}>{t('pos.outletSwitchCartNote')}</p>
-        )}
         {outletButtons}
-      </Modal>
+      </FormDialog>
     </div>
   );
 }

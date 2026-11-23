@@ -1,18 +1,13 @@
 import { useMemo, useState, type RefObject } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import {
-  Card,
-  Input,
-  Button,
-  EmptyState,
-  Icon,
-  LoadState,
-  loadPending,
-  CategoryChips,
-  countCategories,
-  categoryOf,
-  PageSummary,
-} from '@/components/ui';
+import { Boxes, Pencil, Plus, Search } from 'lucide-react';
+import { LoadState, loadPending, countCategories, categoryOf } from '@/components/ui';
+import { Button } from '@/components/dens/button';
+import { EmptyState } from '@/components/dens/empty-state';
+import { FilterChips } from '@/components/dens/filter-chips';
+import { SummaryStrip } from '@/components/dens/summary-strip';
+import { TextInput } from '@/components/dens/text-input';
+import { cn } from '@/lib/utils';
 import type { LoadQuery } from '@/components/ui/loadPending';
 import { fmtRp } from '@/lib/format';
 import { pickOnEnter } from '@/lib/business/pos';
@@ -29,7 +24,6 @@ import { useSessionStore } from '@/stores/session';
 import { InventoryModal } from '@/features/inventory/InventoryModal';
 import { useT } from '@/i18n';
 import type { InventoryItem } from '@/data/types';
-import styles from './PosCatalog.module.css';
 
 /** Kartu per halaman. Dulu dipotong mati di 50 tanpa tanda ada sisanya. */
 const PAGE = 60;
@@ -145,9 +139,11 @@ export function PosCatalog({
 
   const stateLabel = { out: t('inventory.statOut'), low: t('inventory.statLow'), ok: '' };
 
+  const panel = 'overflow-hidden rounded-2xl bg-card text-card-foreground shadow-panel ring-1 ring-border/60';
+
   return (
     <>
-      <PageSummary
+      <SummaryStrip
         label={t('pos.stockFilterAria')}
         items={[
           { label: t('pos.statAll'), value: summary.total, onSelect: pickStock('all'), pressed: stockFilter === 'all' },
@@ -168,37 +164,43 @@ export function PosCatalog({
           ...(isMgr ? [{ label: t('inventory.statValue'), value: fmtRp(summary.value), wide: true }] : []),
         ]}
       />
-      <div className={styles.toolbar}>
-        <Input
-          ref={searchRef}
-          placeholder={t('pos.searchPlaceholder')}
-          aria-label={t('pos.searchPlaceholder')}
-          value={query}
-          autoFocus={finePointer}
-          noAutoCap
-          onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              // Enter yang ditahan tidak boleh ikut menutup LUNAS.
-              if (!e.repeat) onSearchEnter();
-            }
-          }}
-          iconLeft={<Icon name="magnifying-glass" aria-hidden />}
-        />
-        {finePointer && <kbd className={styles.kbd} aria-hidden>/</kbd>}
+      <div className="flex items-center gap-2">
+        <div className="relative min-w-0 flex-1">
+          <TextInput
+            ref={searchRef}
+            placeholder={t('pos.searchPlaceholder')}
+            aria-label={t('pos.searchPlaceholder')}
+            value={query}
+            autoFocus={finePointer}
+            capitalize="none"
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                // Enter yang ditahan tidak boleh ikut menutup LUNAS.
+                if (!e.repeat) onSearchEnter();
+              }
+            }}
+            start={<Search aria-hidden />}
+            className={finePointer ? 'pr-10' : undefined}
+          />
+          {finePointer && (
+            <kbd
+              aria-hidden
+              className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded-md px-1.5 font-mono text-xs text-muted-foreground ring-1 ring-border"
+            >
+              /
+            </kbd>
+          )}
+        </div>
         {canManage && (
-          <Button
-            variant="secondary"
-            iconLeft={<Icon name="plus" aria-hidden />}
-            onClick={() => openModal(null)}
-            aria-label={t('pos.addItemAria')}
-          >
+          <Button variant="outline" className="shrink-0" onClick={() => openModal(null)} aria-label={t('pos.addItemAria')}>
+            <Plus aria-hidden />
             {t('pos.addItem')}
           </Button>
         )}
       </div>
-      <CategoryChips
+      <FilterChips
         categories={categoryCounts}
         total={categoryTotal}
         value={activeCategory}
@@ -206,79 +208,92 @@ export function PosCatalog({
         label={t('pos.categoryLabel')}
       />
       {loadPending(inventoryLoad) ? (
-        <Card>
+        <div className={panel}>
           <LoadState queries={[inventoryLoad]} />
-        </Card>
+        </div>
       ) : rows.length === 0 ? (
-        <Card>
+        <div className={panel}>
           {inventory.length === 0 ? (
             <EmptyState
-              icon={<Icon name="boxes-stacked" aria-hidden />}
+              icon={<Boxes aria-hidden />}
               title={t('pos.noStockTitle')}
               description={canManage ? t('inventory.emptyFirst') : t('pos.noStockBody')}
               action={
                 canManage && (
-                  <Button onClick={() => openModal(null)} iconLeft={<Icon name="plus" aria-hidden />}>
+                  <Button onClick={() => openModal(null)}>
+                    <Plus aria-hidden />
                     {t('pos.addItemAria')}
                   </Button>
                 )
               }
             />
           ) : (
-            <EmptyState
-              icon={<Icon name="magnifying-glass" aria-hidden />}
-              title={t('pos.noMatchTitle')}
-              description={t('pos.noMatchBody')}
-            />
+            <EmptyState icon={<Search aria-hidden />} title={t('pos.noMatchTitle')} description={t('pos.noMatchBody')} />
           )}
-        </Card>
+        </div>
       ) : (
         <>
           {/* Satu tampilan saja: kartu. Nama turun baris utuh, jadi nomor model
               di ujungnya (A1989, Pro Max) tetap terbaca. Kartu = <article>;
-              tombol tambah dan tuts kelola bersaudara, tak pernah bersarang. */}
-          <div className={styles.productGrid}>
+              tombol tambah dan tuts kelola bersaudara, tak pernah bersarang.
+              Ponsel: dua kolom tetap (selera, bukan muat/tidak muat). */}
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(10rem,1fr))] gap-3 phone:grid-cols-2">
             {visible.map((item) => {
               const st = stockState(item);
               const branch = branchOf?.(item);
               return (
-                <article key={item.id} className={styles.productCard} data-state={st}>
+                <article
+                  key={item.id}
+                  data-state={st}
+                  className={cn(
+                    'flex min-w-0 flex-col overflow-hidden rounded-2xl bg-card shadow-panel ring-1 ring-border/60',
+                    // Hanya keadaan yang menuntut tindakan yang berwarna: menipis, habis.
+                    st === 'low' && 'ring-warning-foreground/45',
+                    st === 'out' && 'ring-destructive/40',
+                  )}
+                >
                   <button
                     type="button"
-                    className={styles.addArea}
+                    className="flex min-h-28 flex-1 flex-col gap-1.5 p-3.5 text-left outline-none transition-colors hover:bg-accent/60 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring disabled:cursor-not-allowed disabled:hover:bg-transparent [&:disabled>*]:opacity-55 phone:p-3"
                     onClick={() => onAdd(item)}
                     disabled={st === 'out'}
                   >
-                    <span className={styles.productName}>{item.name}</span>
-                    {branch && <span className={styles.branch}>{branch}</span>}
-                    <span className={styles.productMeta}>
-                      <span className={styles.readout}>
-                        <span className={styles.led} aria-hidden />
-                        <span className={styles.count}>{item.stock}</span>
+                    <span className="text-sm font-semibold leading-snug [overflow-wrap:anywhere]">{item.name}</span>
+                    {branch && <span className="text-xs text-muted-foreground">{branch}</span>}
+                    <span className="mt-auto flex flex-wrap items-end justify-between gap-x-2 gap-y-1">
+                      <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <span
+                          aria-hidden
+                          className={cn(
+                            'size-2 shrink-0 rounded-full',
+                            st === 'out' ? 'bg-destructive' : st === 'low' ? 'bg-warning-foreground' : 'bg-success-foreground',
+                          )}
+                        />
+                        <span className="font-mono font-semibold tabular-nums text-foreground">{item.stock}</span>
                         <span>· {interpolate(t('pos.minStock'), { n: String(item.minStock) })}</span>
-                        {stateLabel[st] && <span className="fm-visually-hidden">{stateLabel[st]}</span>}
+                        {stateLabel[st] && <span className="sr-only">{stateLabel[st]}</span>}
                       </span>
-                      <strong>{fmtRp(item.sellPrice)}</strong>
+                      <strong className="font-mono text-sm font-semibold tabular-nums">{fmtRp(item.sellPrice)}</strong>
                     </span>
                   </button>
                   {canManage && (
-                    <div className={styles.keys}>
+                    <div className="flex border-t border-border/70">
                       <button
                         type="button"
-                        className={styles.key}
+                        className="inline-flex min-h-10 flex-1 items-center justify-center gap-1.5 text-xs font-medium text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring pointer-coarse:min-h-11 [&_svg]:size-3.5"
                         onClick={() => openModal(item)}
                         aria-label={interpolate(t('pos.editItemAria'), { name: item.name })}
                       >
-                        <Icon name="pen" aria-hidden /> {t('inventory.edit')}
+                        <Pencil aria-hidden /> {t('inventory.edit')}
                       </button>
                       {st !== 'ok' && (
                         <button
                           type="button"
-                          className={[styles.key, styles.keyStock].join(' ')}
+                          className="inline-flex min-h-10 flex-1 items-center justify-center gap-1.5 border-l border-border/70 text-xs font-semibold text-warning-foreground outline-none transition-colors hover:bg-warning focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring pointer-coarse:min-h-11 [&_svg]:size-3.5"
                           onClick={() => openModal(item, true)}
                           aria-label={interpolate(t('pos.restockAria'), { name: item.name })}
                         >
-                          <Icon name="plus" aria-hidden /> {t('pos.restock')}
+                          <Plus aria-hidden /> {t('pos.restock')}
                         </button>
                       )}
                     </div>
@@ -288,11 +303,11 @@ export function PosCatalog({
             })}
           </div>
           {rows.length > limit && (
-            <div className={styles.more}>
-              <span className={styles.moreReadout}>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <span className="font-mono text-xs text-muted-foreground">
                 {interpolate(t('pos.shownOf'), { shown: String(limit), total: String(rows.length) })}
               </span>
-              <Button variant="secondary" onClick={() => setShown({ key: filterKey, n: limit + PAGE })}>
+              <Button variant="outline" onClick={() => setShown({ key: filterKey, n: limit + PAGE })}>
                 {interpolate(t('pos.showMore'), { n: String(Math.min(PAGE, rows.length - limit)) })}
               </Button>
             </div>

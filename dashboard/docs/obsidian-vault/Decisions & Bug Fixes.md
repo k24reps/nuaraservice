@@ -13,6 +13,35 @@ Catatan keputusan desain penting + bug nyata yang ditemukan saat verifikasi.
 
 ## Keputusan desain
 
+### Halaman Kasir dan katalog pindah ke dens-ui (L-50, 22 Nov 2026)
+`PosPage` dan `PosCatalog` ditulis ulang dengan Tailwind + dens-ui; `PosPage.module.css` dan
+`PosCatalog.module.css` dihapus. Logika transaksi (keranjang, tender campur, diskon, cabang,
+dock) tidak disentuh. `PosHistory` dan `InventoryModal` masih FixMaster sampai L-61 (K-12), jadi
+`@source` menyebut dua berkas itu satu per satu.
+- **Panel total navy menggantikan LCD** (K-13): layar gelap, digit hantu "888", garis pindai,
+  dan LED berdenyut dibuang. Angka total tetap mono dan tetap menyesuaikan ukuran dengan jumlah
+  karakter (`--lcd-chars` + `100cqi` dalam container `reg`), jadi 9 digit sebaris di 320px.
+  Garis sobek berlubang jadi garis putus; tuts qty mekanis jadi tuts bulat dens; LED di tuts
+  bayar jadi cincin `aria-pressed`.
+- **`data-nu` per bagian, bukan di akar.** Akar halaman juga memegang tab Riwayat, dan
+  `PosHistory` (CSS FixMaster) yang dirender inline di dalam `[data-nu]` kena reset dens
+  (`padding: 0`, `border: 0`, font Figtree): tombol cetak/batal di ponsel mengecil dan panel
+  9px lebih pendek (terukur). Karena itu `data-nu` dipasang di tab, panel Kasir, dan dock.
+  Modal FixMaster (`InventoryModal`, `CustomerModal`) aman karena dirender lewat portal.
+- **Jaring pengaman register.** Bar Proses baru 84px (dulu 79) dan register 140-170px (dulu
+  122-150), jadi `scroll-padding-block` naik dari 128/80 ke 176/88px. Dengan angka lama kolom
+  tender ketiga di 1280×600 mendarat 4px di balik bar.
+- **Pudar gulir** pindah ke utilitas `scroll-fade-b` (struk terpotong di bawah) dan
+  `scroll-fade-above` (isi di balik bar yang menempel) di app.css, pola yang sama dengan
+  `scroll-fade-x`.
+- **Margin gulir di atas bar Proses** kini dari wadah bagian bayar
+  (`drawer:[&_:is(input,button)]:scroll-mb-24`), bukan kelas per kontrol; tombol di daftar saran
+  pelanggan dan tuts Rp/% ikut terlindungi.
+- Tombol Proses benar-benar `disabled` hanya saat memproses (cegah transaksi ganda); saat belum
+  siap tetap `aria-disabled` dan menuntun ke kolom yang kurang.
+- `audit-contrast.mjs` mencari kartu, tuts bayar, dan nominal cepat lewat struktur/id
+  (`main article > button`, `#pos-tender-keys`, `#pos-quick-cash`), bukan kelas CSS Module.
+
 ### Modal Servis tersisa pindah ke dens-ui, folder Servis selesai (L-60, 22 Nov 2026)
 `NotifyModal`, `SparepartPickerModal`, `PartWarrantyModal`, `WarrantyClaimModal` ditulis ulang
 dengan `FormDialog`; dua CSS Module terakhir di `features/services` dihapus dan `@source` kini

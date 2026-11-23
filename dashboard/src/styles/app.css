@@ -81,6 +81,57 @@
   }
 }
 
+/* Daftar yang terpotong di tepi bawah memudar, tanda masih ada baris lagi
+   (struk Kasir). Pudar hilang di ujung guliran; tanpa luapan, timeline tak
+   aktif dan mask tetap di posisi dasar (tanpa pudar). Disalin dari
+   PosPage.module.css FixMaster. */
+@keyframes fade-b-edge {
+  from {
+    mask-size: 100% 100%;
+  }
+  to {
+    mask-size: 100% calc(100% + var(--space-6));
+  }
+}
+@utility scroll-fade-b {
+  @supports (animation-timeline: scroll()) {
+    mask-image: linear-gradient(to bottom, black calc(100% - var(--space-6)), transparent);
+    mask-size: 100% calc(100% + var(--space-6));
+    mask-repeat: no-repeat;
+    animation: fade-b-edge linear both;
+    animation-timeline: scroll(self);
+  }
+}
+
+/* Bar yang menempel di bawah wadah gulir (bar Proses Kasir): isi yang
+   tersembunyi di baliknya memudar ke arahnya. Timeline-nya guliran wadah
+   terdekat; tanpa luapan ia tak aktif dan pudar tak pernah tampil. Butuh
+   elemen berposisi (sticky/relative). */
+@keyframes fade-above-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+@utility scroll-fade-above {
+  @supports (animation-timeline: scroll()) {
+    &::before {
+      content: "";
+      position: absolute;
+      inset-inline: 0;
+      bottom: 100%;
+      height: var(--space-6);
+      background: linear-gradient(to bottom, transparent, var(--color-card));
+      pointer-events: none;
+      opacity: 0;
+      animation: fade-above-out linear both;
+      animation-timeline: scroll(nearest);
+    }
+  }
+}
+
 /* Kelas Tailwind hanya dibuat dari folder ini. Kata seperti "hidden" atau
    "grid" di kode FixMaster tidak boleh melahirkan utilitas yang mengalahkan
    kelas global lama. Tambahkan folder halaman saat halamannya dipindah. */
@@ -91,3 +142,7 @@
 @source "../features/onboarding";
 @source "../dev";
 @source "../features/services";
+/* Folder pos masih memuat PosHistory dan InventoryModal FixMaster (L-61),
+   jadi berkasnya disebut satu per satu sampai folder itu bersih. */
+@source "../features/pos/PosPage.tsx";
+@source "../features/pos/PosCatalog.tsx";
