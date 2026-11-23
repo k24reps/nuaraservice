@@ -1,5 +1,9 @@
 import { useState } from 'react';
-import { Modal, Input, Button, FormFields, FormError } from '@/components/ui';
+import { LoaderCircle } from 'lucide-react';
+import { Button } from '@/components/dens/button';
+import { Field, FormMessage } from '@/components/dens/field';
+import { FormDialog } from '@/components/dens/form-dialog';
+import { TextInput } from '@/components/dens/text-input';
 import { useFormFault } from '@/hooks/useFormFault';
 import { repository } from '@/data';
 import { syncCustomerToServices } from '@/data/supabase-client';
@@ -119,33 +123,40 @@ export function CustomerModal({ open, onClose, editing, customers, onSaved, init
   };
 
   return (
-    <Modal
+    <FormDialog
       open={open}
       onClose={onClose}
       title={editing ? 'Ubah Pelanggan' : 'Pelanggan Baru'}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="outline" onClick={onClose}>
             Batal
           </Button>
-          <Button onClick={save} loading={busy}>
+          <Button onClick={save} disabled={busy} aria-busy={busy || undefined}>
+            {busy && <LoaderCircle aria-hidden className="animate-spin motion-reduce:animate-none" />}
             Simpan
           </Button>
         </>
       }
     >
-      <FormFields>
-        <FormError>{error}</FormError>
-        <Input invalid={invalid('name')} label="Nama" value={name} autoCapWords onChange={(e) => setName(e.target.value)} autoFocus />
-        <Input
-          label="No. HP / WhatsApp"
-          invalid={invalid('phone')}
-          value={phone}
-          inputMode="tel"
-          onChange={(e) => setPhone(e.target.value)}
-        />
-        <Input label="Catatan (opsional)" value={note} onChange={(e) => setNote(e.target.value)} />
-      </FormFields>
-    </Modal>
+      <div className="grid gap-4">
+        <FormMessage>{error}</FormMessage>
+        <Field label="Nama" invalid={invalid('name')}>
+          <TextInput capitalize="words" value={name} onChange={(e) => setName(e.target.value)} data-autofocus />
+        </Field>
+        <Field label="No. HP / WhatsApp" invalid={invalid('phone')}>
+          <TextInput
+            capitalize="none"
+            className="font-mono placeholder:font-sans"
+            value={phone}
+            inputMode="tel"
+            onChange={(e) => setPhone(e.target.value)}
+          />
+        </Field>
+        <Field label="Catatan (opsional)">
+          <TextInput value={note} onChange={(e) => setNote(e.target.value)} />
+        </Field>
+      </div>
+    </FormDialog>
   );
 }

@@ -594,6 +594,14 @@ Panel diagnostik: metric tile mono + level-meter. Membaca KPI dari `computeKpis(
 
 ## Pelanggan — Contact Registry
 
+**Nuara (L-51, 23 Nov 2026).** Halaman Pelanggan, laci riwayat, dan form pelanggan kini dens-ui +
+Tailwind; tiga tampilan (kartu, daftar, ringkas) tetap ada lewat `ViewToggle` dens. Tab indeks
+kartu arsip, LED status, dan LED "Pelanggan Setia" dibuang: status tiket di laci memakai lencana
+`STATUS_BADGE`, "Pelanggan Setia" bertitik `highlight`. Laci riwayat = `Sheet` dens (fokus terkunci,
+fokus kembali ke kartu). Baris tampilan daftar kini tiga tingkat lewat container query (lihat
+Decisions L-51); FixMaster meluap di 1025-1100px dan di semua ponsel. Foto `cust-dark.png` di bawah
+masih tampilan FixMaster.
+
 **Grid kartu arsip**: plate inisial, **ID mono** (ID-XXXXXX), baris kontak HP/email/alamat mono, readout aktivitas (jumlah servis + total transaksi), penanda **Pelanggan Setia** (LED cyan).
 
 - **Ringkasan di kepala halaman (7 Nov 2026).** Baris teks di bawah chip kategori dipindah ke atas toolbar sebagai `PageSummary`: Pelanggan, Pelanggan Berulang, dan Ditampilkan. Label pendek di ponsel adalah Total, Berulang, dan Tampil.

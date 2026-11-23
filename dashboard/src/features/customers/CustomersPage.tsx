@@ -1,18 +1,17 @@
 import { EmptyValue } from '@/components/ui/EmptyValue';
 import { useMemo, useState } from 'react';
-import {
-  Card,
-  Button,
-  Input,
-  EmptyState,
-  Icon,
-  LoadState,
-  loadPending,
-  ViewToggle,
-  CategoryChips,
-  usePersistedView,
-  PageSummary,
-} from '@/components/ui';
+import { Pencil, Phone, Plus, Search, Trash2, Users } from 'lucide-react';
+import { LoadState, loadPending, usePersistedView } from '@/components/ui';
+import { Button } from '@/components/dens/button';
+import { ConfirmDialog } from '@/components/dens/confirm-dialog';
+import { EmptyState } from '@/components/dens/empty-state';
+import { FilterChips } from '@/components/dens/filter-chips';
+import { SelectBox } from '@/components/dens/select-box';
+import { SummaryStrip } from '@/components/dens/summary-strip';
+import { TextInput } from '@/components/dens/text-input';
+import { ViewToggle } from '@/components/dens/view-toggle';
+import { WhatsAppIcon } from '@/components/dens/whatsapp-icon';
+import { cn } from '@/lib/utils';
 import { useCollection } from '@/hooks/useCollection';
 import { useCustomerServices, useCustomerStats } from '@/hooks/useCustomerStats';
 import { EMPTY_CUSTOMER_STAT, matchesCustomer } from '@/lib/business/customers';
@@ -27,9 +26,7 @@ import { useT } from '@/i18n';
 import { demoGuard } from '@/stores/demo';
 import { CustomerModal } from './CustomerModal';
 import { CustomerHistoryDrawer } from './CustomerHistoryDrawer';
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import type { Customer } from '@/data/types';
-import styles from './CustomersPage.module.css';
 
 type SortKey = 'svc_desc' | 'name_asc' | 'trx_desc';
 
@@ -157,52 +154,87 @@ export function CustomersPage() {
     }
   };
 
-  // Aksi yang sama di ketiga tampilan.
-  const renderActions = (c: Customer) => (
-    <>
-      {c.phone && (
-        <button
-          className={[styles.iconBtn, styles.wa].join(' ')}
+  // Aksi yang sama di ketiga tampilan. Ubin ringkas memakai tombol 36px.
+  const renderActions = (c: Customer, compact = false) => {
+    const size = compact ? 'size-9 pointer-coarse:size-11' : undefined;
+    return (
+      <>
+        {c.phone && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className={cn('text-muted-foreground hover:bg-success hover:text-success-foreground', size)}
+            onClick={(e) => {
+              e.stopPropagation();
+              sendWa(c);
+            }}
+            aria-label={t('customers.sendWa')}
+            title={t('customers.sendWa')}
+          >
+            <WhatsAppIcon className="size-4" />
+          </Button>
+        )}
+        <Button
+          variant="ghost"
+          size="icon"
+          className={cn('text-muted-foreground hover:text-foreground', size)}
           onClick={(e) => {
             e.stopPropagation();
-            sendWa(c);
+            openEdit(c);
           }}
-          aria-label={t('customers.sendWa')}
-          title={t('customers.sendWa')}
+          aria-label={t('customers.edit')}
         >
-          <Icon name="whatsapp" aria-hidden />
-        </button>
-      )}
-      <button
-        className={styles.iconBtn}
-        onClick={(e) => {
-          e.stopPropagation();
-          openEdit(c);
-        }}
-        aria-label={t('customers.edit')}
-      >
-        <Icon name="pen" aria-hidden />
-      </button>
-      {isMgr && (
-        <button
-          className={[styles.iconBtn, styles.danger].join(' ')}
-          onClick={(e) => {
-            e.stopPropagation();
-            requestDelete(c);
-          }}
-          aria-label={t('common.delete')}
-        >
-          <Icon name="trash" aria-hidden />
-        </button>
-      )}
-    </>
-  );
+          <Pencil aria-hidden />
+        </Button>
+        {isMgr && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className={cn('text-muted-foreground hover:bg-destructive-soft hover:text-destructive', size)}
+            onClick={(e) => {
+              e.stopPropagation();
+              requestDelete(c);
+            }}
+            aria-label={t('common.delete')}
+          >
+            <Trash2 aria-hidden />
+          </Button>
+        )}
+      </>
+    );
+  };
+
+  // Seluruh kartu/baris/ubin membuka riwayat servis; tombol di dalamnya tidak.
+  const recordProps = (c: Customer) => ({
+    role: 'button' as const,
+    tabIndex: 0,
+    onClick: () => setHistoryCustomer(c),
+    onKeyDown: openOnKey(c),
+    title: t('customers.viewHistory'),
+  });
+  const plate = 'grid shrink-0 place-items-center rounded-xl bg-secondary font-semibold text-secondary-foreground';
+  const panel = 'overflow-hidden rounded-2xl bg-card text-card-foreground shadow-panel ring-1 ring-border/60';
+  const statusOf = (count: number) =>
+    servicesPending ? (
+      <span className="text-xs text-muted-foreground">
+        <EmptyValue />
+      </span>
+    ) : count > 1 ? (
+      <span className="inline-flex items-center gap-1.5 text-xs font-medium">
+        <span aria-hidden className="size-2 rounded-full bg-highlight" />
+        {t('customers.loyal')}
+      </span>
+    ) : (
+      <span className="text-xs text-muted-foreground">
+        {count === 1 ? t('customers.servedOnce') : t('customers.neverServed')}
+      </span>
+    );
 
   return (
-    <div className={styles.wrap}>
-      {/* Ringkasan membuka halaman, seperti Servis dan Inventori. Dulu ia di
-          bawah chip kategori, jadi di ponsel tertutup isi lain. */}
-      <PageSummary
+    <div data-nu className="flex flex-col gap-4 bg-transparent">
+      {/* Ringkasan membuka halaman, seperti Servis dan Kasir. Dulu ia di bawah
+          chip kategori, jadi di ponsel tertutup isi lain. */}
+      <SummaryStrip
         label={t('customers.summaryAria')}
         items={[
           { label: t('customers.statTotal'), short: t('customers.statTotalShort'), value: customers.length },
@@ -214,34 +246,40 @@ export function CustomersPage() {
           { label: t('customers.statShown'), short: t('customers.statShownShort'), value: rows.length },
         ]}
       />
-      <div className={styles.toolbar}>
-        <div className={styles.search}>
-          <Input
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="max-w-[380px] min-w-[220px] flex-1">
+          <TextInput
+            capitalize="none"
             placeholder={t('customers.searchPh')}
+            aria-label={t('customers.searchPh')}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            iconLeft={<Icon name="magnifying-glass" aria-hidden />}
+            start={<Search aria-hidden />}
           />
         </div>
-        <div className={styles.actions}>
-          <select
-            className={styles.sortSelect}
+        {/* Ponsel: tanpa wrap baris ini (urutan + tampilan + tombol) memaksa
+            ~566px dan menyeret halaman ke geser samping. */}
+        <div className="flex flex-wrap items-center gap-3">
+          <SelectBox
             value={sort}
-            onChange={(e) => setSort(e.target.value as SortKey)}
+            onValueChange={(v) => setSort(v as SortKey)}
             aria-label={t('customers.sortLabel')}
-          >
-            <option value="svc_desc">{t('customers.sortServices')}</option>
-            <option value="trx_desc">{t('customers.sortValue')}</option>
-            <option value="name_asc">{t('customers.sortName')}</option>
-          </select>
+            className="w-auto min-w-44"
+            options={[
+              { value: 'svc_desc', label: t('customers.sortServices') },
+              { value: 'trx_desc', label: t('customers.sortValue') },
+              { value: 'name_asc', label: t('customers.sortName') },
+            ]}
+          />
           <ViewToggle value={view} onChange={chooseView} label={t('customers.viewLabel')} />
-          <Button onClick={openNew} iconLeft={<Icon name="plus" aria-hidden />}>
+          <Button onClick={openNew}>
+            <Plus aria-hidden />
             {t('customers.new')}
           </Button>
         </div>
       </div>
 
-      <CategoryChips
+      <FilterChips
         categories={categoryCounts}
         total={customers.length}
         value={activeCategory}
@@ -250,115 +288,150 @@ export function CustomersPage() {
       />
 
       {loadPending(customersLoad) ? (
-        <Card>
+        <div className={panel}>
           <LoadState queries={[customersLoad]} />
-        </Card>
+        </div>
       ) : rows.length === 0 ? (
-        <Card>
+        <div className={panel}>
           <EmptyState
-            icon={<Icon name="users" aria-hidden />}
+            icon={<Users aria-hidden />}
             title={filtered ? t('customers.noResults') : t('customers.emptyTitle')}
-            description={
-              filtered ? t('customers.noResultsHint') : t('customers.emptyHint')
-            }
+            description={filtered ? t('customers.noResultsHint') : t('customers.emptyHint')}
             action={
               !filtered && (
-                <Button onClick={openNew} iconLeft={<Icon name="plus" aria-hidden />}>
+                <Button onClick={openNew}>
+                  <Plus aria-hidden />
                   {t('customers.new')}
                 </Button>
               )
             }
           />
-        </Card>
+        </div>
       ) : view === 'tiles' ? (
-        <div className={styles.tileGrid}>
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(min(220px,100%),1fr))] gap-2">
           {rows.map((c) => {
             const st = stats.get(c.id) ?? EMPTY_CUSTOMER_STAT;
             return (
               <div
                 key={c.id}
-                className={styles.tile}
-                role="button"
-                tabIndex={0}
-                onClick={() => setHistoryCustomer(c)}
-                onKeyDown={openOnKey(c)}
-                title={t('customers.viewHistory')}
+                {...recordProps(c)}
+                className="flex cursor-pointer flex-col gap-2 rounded-xl bg-card px-3 py-2.5 text-card-foreground ring-1 ring-border/60 outline-none transition-[background-color,box-shadow] hover:bg-accent/50 hover:ring-primary/25 focus-visible:ring-2 focus-visible:ring-ring"
               >
-                <div className={styles.tileHead}>
-                  <span className={[styles.plate, styles.tilePlate].join(' ')}>
-                    {c.name.charAt(0).toUpperCase()}
-                  </span>
-                  <div className={styles.ident}>
-                    <div className={styles.tileName}>{c.name}</div>
-                    <div className={styles.idTag}>{c.phone || t('customers.noPhone')}</div>
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className={cn(plate, 'size-8 text-sm')}>{c.name.charAt(0).toUpperCase()}</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-semibold">{c.name}</div>
+                    <div className="font-mono text-xs text-muted-foreground">{c.phone || t('customers.noPhone')}</div>
                   </div>
                 </div>
-                <div className={styles.tileFoot}>
-                  <span className={styles.tileStat}>
+                {/* Statistik + sampai tiga aksi tak selalu muat sebaris; aksi yang
+                    turun baris, bukan meluap keluar ubin. */}
+                <div className="flex flex-wrap items-center justify-between gap-x-1.5 gap-y-1">
+                  <span className="font-mono text-xs whitespace-nowrap text-muted-foreground tabular-nums">
                     {servicesPending ? EMPTY_VALUE : `${st.count}x · ${fmtRp(st.paidTotal)}`}
                   </span>
-                  <div className={styles.cardActions}>{renderActions(c)}</div>
+                  <div className="flex gap-1">{renderActions(c, true)}</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : view === 'list' ? (
+        // Baris daftar, tiga tingkat (ambang muat/tidak muat = container query,
+        // AGENTS §4). Kasus terburuk terukur: bingkai 32 + jeda 48 + nama 176
+        // (plat 44 + 12 + teks 120) + HP 14 digit 123 + "999x" & "Rp 999.999.999"
+        // 175 + status & tiga tuts 44px 253 = 807px. Di bawahnya kolom HP dan
+        // jumlah servis hilang (butuh 611px); di bawah itu status + tuts turun ke
+        // barisnya sendiri. FixMaster memakai @media 768px, yang di 1025-1100px
+        // (sidebar tampil) menyisakan wadah 667px untuk baris 807px.
+        <div className="@container/cust grid gap-2">
+          {rows.map((c) => {
+            const st = stats.get(c.id) ?? EMPTY_CUSTOMER_STAT;
+            return (
+              <div
+                key={c.id}
+                {...recordProps(c)}
+                className={cn(
+                  'grid cursor-pointer items-center gap-x-4 gap-y-2 rounded-xl bg-card px-4 py-2 text-card-foreground shadow-panel ring-1 ring-border/60 outline-none transition-[box-shadow] hover:ring-primary/25 focus-visible:ring-2 focus-visible:ring-ring',
+                  "grid-cols-[minmax(0,1fr)_auto_auto_auto] [grid-template-areas:'head_contacts_activity_foot']",
+                  "@max-[808px]/cust:grid-cols-[minmax(0,1fr)_auto_auto] @max-[808px]/cust:[grid-template-areas:'head_activity_foot']",
+                  "@max-[611px]/cust:grid-cols-[minmax(0,1fr)_auto] @max-[611px]/cust:[grid-template-areas:'head_activity'_'foot_foot']",
+                )}
+              >
+                <div className="flex min-w-0 items-center gap-3 [grid-area:head]">
+                  <span className={cn(plate, 'size-11 text-lg')}>{c.name.charAt(0).toUpperCase()}</span>
+                  <div className="min-w-0">
+                    <div className="truncate font-semibold">{c.name}</div>
+                    <div className="font-mono text-xs text-muted-foreground uppercase">ID-{c.id.slice(0, 6).toUpperCase()}</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 font-mono text-xs text-muted-foreground [grid-area:contacts] @max-[808px]/cust:hidden [&>svg]:size-3.5 [&>svg]:shrink-0">
+                  <Phone aria-hidden />
+                  <span className="whitespace-nowrap">{c.phone || <em className="italic">{t('customers.noPhone')}</em>}</span>
+                </div>
+                <div className="flex items-center justify-end gap-5 font-mono text-sm font-semibold whitespace-nowrap tabular-nums [grid-area:activity]">
+                  <span
+                    className={cn(
+                      '@max-[808px]/cust:hidden',
+                      !servicesPending && st.count > 0 ? 'text-foreground' : 'text-muted-foreground',
+                    )}
+                  >
+                    {servicesPending ? EMPTY_VALUE : `${st.count}x`}
+                  </span>
+                  <span>{servicesPending ? EMPTY_VALUE : fmtRp(st.paidTotal)}</span>
+                </div>
+                <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 [grid-area:foot] @max-[611px]/cust:border-t @max-[611px]/cust:border-dashed @max-[611px]/cust:border-border @max-[611px]/cust:pt-2">
+                  {statusOf(st.count)}
+                  <div className="flex gap-1">{renderActions(c)}</div>
                 </div>
               </div>
             );
           })}
         </div>
       ) : (
-        <div className={[styles.grid, view === 'list' ? styles.listView : ''].join(' ')}>
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(min(290px,100%),1fr))] gap-3">
           {rows.map((c) => {
             const st = stats.get(c.id) ?? EMPTY_CUSTOMER_STAT;
             return (
               <div
                 key={c.id}
-                className={styles.record}
-                role="button"
-                tabIndex={0}
-                onClick={() => setHistoryCustomer(c)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    setHistoryCustomer(c);
-                  }
-                }}
-                title={t('customers.viewHistory')}
+                {...recordProps(c)}
+                className="flex cursor-pointer flex-col gap-3 rounded-2xl bg-card p-4 text-card-foreground shadow-panel ring-1 ring-border/60 outline-none transition-[box-shadow,translate] hover:-translate-y-0.5 hover:shadow-raised hover:ring-primary/25 focus-visible:ring-2 focus-visible:ring-ring motion-reduce:hover:translate-y-0"
               >
-                <div className={styles.head}>
-                  <span className={styles.plate}>{c.name.charAt(0).toUpperCase()}</span>
-                  <div className={styles.ident}>
-                    <div className={styles.name}>{c.name}</div>
-                    <div className={styles.idTag}>ID-{c.id.slice(0, 6).toUpperCase()}</div>
+                <div className="flex items-center gap-3">
+                  <span className={cn(plate, 'size-11 text-lg')}>{c.name.charAt(0).toUpperCase()}</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate font-semibold">{c.name}</div>
+                    <div className="font-mono text-xs text-muted-foreground uppercase">ID-{c.id.slice(0, 6).toUpperCase()}</div>
                   </div>
                 </div>
 
-                <div className={styles.contacts}>
-                  <div className={styles.contactRow}>
-                    <Icon name="phone" aria-hidden />
-                    <span>{c.phone || <em className={styles.contactMuted}>{t('customers.noPhone')}</em>}</span>
-                  </div>
+                <div className="flex items-center gap-2 border-y border-dashed border-border py-3 font-mono text-xs text-muted-foreground [&>svg]:size-3.5 [&>svg]:shrink-0">
+                  <Phone aria-hidden />
+                  <span className="truncate">{c.phone || <em className="italic">{t('customers.noPhone')}</em>}</span>
                 </div>
 
-                <div className={styles.activity}>
-                  <div className={styles.activityBlock}>
-                    <span className={styles.activityLabel}>{t('customers.services')}</span>
-                    <span className={[styles.activityValue, !servicesPending && st.count > 0 ? styles.brand : styles.idle].join(' ')}>
+                <div className="flex items-end justify-between gap-3">
+                  <div className="grid min-w-0 gap-0.5">
+                    <span className="text-xs text-muted-foreground">{t('customers.services')}</span>
+                    <span
+                      className={cn(
+                        'font-mono font-semibold tabular-nums',
+                        !servicesPending && st.count > 0 ? 'text-foreground' : 'text-muted-foreground',
+                      )}
+                    >
                       {servicesPending ? EMPTY_VALUE : `${st.count}x`}
                     </span>
                   </div>
-                  <div className={styles.activityBlock}>
-                    <span className={styles.activityLabel}>{t('customers.paidServices')}</span>
-                    <span className={styles.activityValue}>{servicesPending ? EMPTY_VALUE : fmtRp(st.paidTotal)}</span>
+                  <div className="grid min-w-0 gap-0.5 text-right">
+                    <span className="text-xs text-muted-foreground">{t('customers.paidServices')}</span>
+                    <span className="font-mono font-semibold tabular-nums">{servicesPending ? EMPTY_VALUE : fmtRp(st.paidTotal)}</span>
                   </div>
                 </div>
 
-                <div className={styles.foot}>
-                  {servicesPending ? (
-                    <span className={styles.newcomer}><EmptyValue /></span>
-                  ) : st.count > 1 ? (
-                    <span className={styles.repeat}>{t('customers.loyal')}</span>
-                  ) : (
-                    <span className={styles.newcomer}>{st.count === 1 ? t('customers.servedOnce') : t('customers.neverServed')}</span>
-                  )}
-                  <div className={styles.cardActions}>{renderActions(c)}</div>
+                <div className="flex items-center justify-between gap-2">
+                  {statusOf(st.count)}
+                  <div className="flex gap-1">{renderActions(c)}</div>
                 </div>
               </div>
             );

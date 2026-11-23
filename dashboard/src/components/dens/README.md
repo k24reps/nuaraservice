@@ -2,7 +2,7 @@
 
 Disalin dari dens-ui v0.2.0 (https://github.com/dendense/dens-ui, commit 4e8c4c2) lalu disesuaikan untuk Nuara Dashboard: impor ke `@/components/dens/`, warna lewat tema `src/styles/nuara-theme.css`, bayangan diwarnai navy, hover tombol utama memakai `primary-hover` DBD.
 
-Komponen tambahan yang bukan dari dens-ui (ditulis mengikuti pola shadcn/ui, MIT): `popover`, `sheet`, `drawer` (vaul), `command` (cmdk), `combobox`, `sonner`.
+Komponen tambahan yang bukan dari dens-ui (ditulis mengikuti pola shadcn/ui, MIT): `popover`, `sheet`, `drawer` (vaul), `command` (cmdk), `combobox`, `sonner`. `DialogContent` dan `SheetContent` mengembalikan fokus ke elemen yang fokus saat dibuka (`CaptureFocus` di `dialog.tsx`), karena Radix hanya mengembalikannya ke `DialogTrigger`/`SheetTrigger`.
 
 Tambahan Nuara (bukan dari dens-ui; tiap berkas menyebutnya di komentar kepala). Sebagian adalah pengganti komponen FixMaster di `components/ui/` dengan API yang sama, supaya halaman yang dipindah tinggal mengganti impor:
 
@@ -18,6 +18,7 @@ Tambahan Nuara (bukan dari dens-ui; tiap berkas menyebutnya di komentar kepala).
 | `filter-chips.tsx` | `FilterChips`: chip saring berjumlah, baris geser berpudar | `CategoryChips` |
 | `empty-state.tsx` | `EmptyState` | `EmptyState` |
 | `whatsapp-icon.tsx` | logo WhatsApp (Phosphor, MIT); lucide tak memuat logo merek | ikon `whatsapp` |
+| `view-toggle.tsx` | `ViewToggle`: pilihan tampilan kartu/daftar/ringkas (`aria-pressed`) | `ViewToggle` |
 
 Folder ini sengaja bukan `components/ui/`: komponen FixMaster di sana bernama `Button.tsx`, sedangkan dens-ui `button.tsx`; di Windows dan macOS keduanya berkas yang sama.
 

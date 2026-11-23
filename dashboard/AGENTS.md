@@ -66,7 +66,8 @@ tetap relevan, tetapi bagian merek, harga, dan infrastruktur FixMaster tidak ber
   `audit-*` sama dengan sebelum langkah.
 - **Pengganti komponen FixMaster** sudah ada di `src/components/dens/` dengan API yang sama
   (`SummaryStrip`, `FilterChips`, `TextInput`, `SelectBox`, `FormDialog`, `ConfirmDialog`,
-  `EmptyState`, `Field`/`FormMessage`; daftar di README folder itu). Pakai itu sebelum membuat
+  `EmptyState`, `Field`/`FormMessage`, `ViewToggle`; daftar di README folder itu). Panel samping
+  memakai `Sheet` dens. Pakai itu sebelum membuat
   yang baru. Fokus awal jendela lewat `data-autofocus`, bukan `autoFocus` (lihat form-dialog.tsx).
   Komponen dens yang juga dipakai di dalam halaman/modal FixMaster: akarnya `data-nu bg-transparent`
   (tanpa `data-nu` reset dens tidak berlaku; `[data-nu]` sendiri memberi latar halaman).

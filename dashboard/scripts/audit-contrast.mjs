@@ -314,6 +314,30 @@ for (const theme of ['light']) {
       await page.locator('[role="dialog"] [role="radio"]').first().click();
       await page.waitForTimeout(300);
     }],
+    // Pelanggan pindah ke dens-ui di L-51: menu di atas hanya memindai tampilan
+    // kartu (bawaan), jadi daftar, ringkas, laci riwayat, dan form diperiksa sendiri.
+    ['Pelanggan-Daftar', async () => {
+      await page.keyboard.press('Escape');
+      await page.getByRole('link', { name: /^Pelanggan/ }).first().click();
+      await page.waitForTimeout(900);
+      await page.locator('[data-slot="view-toggle"] button').nth(1).click();
+      await page.waitForTimeout(300);
+    }],
+    ['Pelanggan-Ringkas', async () => {
+      await page.locator('[data-slot="view-toggle"] button').nth(2).click();
+      await page.waitForTimeout(300);
+    }],
+    ['Pelanggan-Riwayat', async () => {
+      await page.locator('[data-slot="view-toggle"] button').nth(0).click();
+      await page.locator('main [role="button"][title]').first().click();
+      await page.waitForTimeout(600);
+    }],
+    ['Pelanggan-Ubah', async () => {
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(300);
+      await page.locator('main [role="button"][title] button[aria-label="Ubah"]').first().click();
+      await page.waitForTimeout(400);
+    }],
     // Kartu Tampilan (Pengaturan › Sistem) dan chip pembesaran Topbar di ketiga
     // rona LED: nominal 100%, aksen 110% + Padat, jingga 90%. Tab Sistem tidak
     // terbuka oleh menu Pengaturan di atas, jadi kartu ini perlu langkah sendiri.

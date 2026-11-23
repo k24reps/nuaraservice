@@ -115,6 +115,7 @@ function DialogDescription({ className, ...props }: React.ComponentProps<typeof 
 }
 
 export {
+  CaptureFocus,
   Dialog,
   DialogTrigger,
   DialogClose,

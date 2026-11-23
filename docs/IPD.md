@@ -1,6 +1,6 @@
 # IPD (Implementation Plan Document) - Nuara Dashboard
 
-> Versi: 0.10 | Diperbarui: 2026-11-23 | Merujuk: PRD, TRD, AFD, DBD, `dashboard/AGENTS.md`
+> Versi: 0.11 | Diperbarui: 2026-11-23 | Merujuk: PRD, TRD, AFD, DBD, `dashboard/AGENTS.md`
 <!-- Versi 0.2 (42 langkah Next.js dari nol) dibatalkan 2026-11-21 (wawancara P13). Langkahnya disimpan di bagian Arsip dengan tanda [DIBATALKAN]; rujukan kriteria F-xx di sana tetap berguna untuk daftar selisih. -->
 
 ## Cara memakai
@@ -17,7 +17,7 @@
 | Fase | Tujuan | Langkah |
 |---|---|---|
 | A | Salinan FixMaster jalan sebagai Nuara Dashboard | L-43, L-44, L-45 |
-| B | UI dipindah ke dens-ui dengan warna Nuara, per halaman | L-46, L-47, L-58, L-48, L-49, L-59, L-60, L-50, L-61, L-51 s.d. L-56 |
+| B | UI dipindah ke dens-ui dengan warna Nuara, per halaman | L-46, L-47, L-58, L-48, L-49, L-59, L-60, L-50, L-61, L-51, L-62, L-52 s.d. L-56 |
 | C | Selisih PRD yang diputuskan Pemilik | ditentukan dari L-45 |
 | D | Rilis dan berhenti memakai FixMaster | L-57 |
 
@@ -89,7 +89,11 @@ Aturan bersama: satu langkah = satu kelompok halaman dipindah utuh, CSS Module l
   - Logika batal, kirim ulang WA, cetak ulang, simpan stok, pembelian (modal rata-rata + kas), dan hapus barang tidak berubah.
   - Selesai jika: tab Riwayat, jendela batal, dan form barang stok (baru, ubah, stok masuk + dibeli) tampil di desktop, tablet, ponsel sampai 320px tanpa luberan dan tanpa isi keluar dari baris/jendela; kontrol >= 44px di layar sentuh; fokus kembali ke tombol pembuka; probe `audit-*` dan `audit-contrast` bersih; halaman lain sama per piksel; tes, lint, build lolos.
   - Hasil 2026-11-23: lihat Catatan L-61.
-- [ ] **L-51 Pelanggan dan Supplier**
+- [x] **L-51 Pelanggan** (`CustomersPage`, `CustomerHistoryDrawer`, `CustomerModal`); sesudahnya folder `features/customers` utuh di `@source`
+  - Dipecah 2026-11-23 (K-14): halaman Supplier dan tiga modalnya pindah ke L-62. Logika statistik, hapus pelanggan, kirim WA, dan sinkron nama/HP ke tiket tidak berubah. Tiga tampilan (kartu, daftar, ringkas) tetap ada.
+  - Selesai jika: tiga tampilan, laci riwayat, dan form pelanggan tampil di desktop, tablet, ponsel sampai 320px tanpa luberan dan tanpa isi keluar dari kartu/baris; kontrol >= 44px di layar sentuh; fokus kembali ke kartu/tombol pembuka; probe `audit-*` dan `audit-contrast` bersih; halaman lain sama per piksel; tes, lint, build lolos.
+  - Hasil 2026-11-23: lihat Catatan L-51.
+- [ ] **L-62 Supplier** (`SuppliersPage`, `SupplierModal`, `PurchaseOrderModal`, `ReceiveModal`); sesudahnya folder `features/suppliers` utuh di `@source`
 - [ ] **L-52 Keuangan**
 - [ ] **L-53 Dashboard dan Laporan**
 - [ ] **L-54 Absensi, Tugas, Log Aktivitas, Glosarium, Kalkulator Biaya**
@@ -145,6 +149,7 @@ Dikumpulkan 2026-11-22 dari log wawancara, catatan IPD, dan langkah L-43 s.d. L-
 | K-11 | `PartWarrantyFields` (isian garansi per part) dipindah di L-59, bukan L-60 | L-59: dipakai di dalam modal Ubah Status; versi FixMaster akan kena reset gaya dens di dalam dialog dens | Dipindah di L-59; modal Garansi part (FixMaster, L-60) sudah memakai isian baru | Dipindah | Sudah berlaku |
 | K-12 | Pemecahan L-50 (Kasir & Stok, sekitar 2.100 baris kode + 1.700 baris CSS) | Rencana L-50, 2026-11-22 | Dipecah: L-50 halaman Kasir + katalog, L-61 riwayat penjualan + form barang stok | Dipecah (pola K-08) | Sudah berlaku |
 | K-13 | Panel total Kasir bergaya LCD (layar gelap, digit hantu "888", garis pindai, LED berdenyut) beserta perforasi struk, tuts qty mekanis, dan LED di tuts bayar (motif FixMaster) | L-50 | Diganti panel total navy dengan angka mono putih (ukurannya tetap menyesuaikan jumlah digit), garis putus, tuts bulat, dan cincin pilihan | Buang (pola K-10) | Sudah berlaku |
+| K-14 | Pemecahan L-51 (Pelanggan dan Supplier, sekitar 1.640 baris kode + 1.160 baris CSS) | Rencana L-51, 2026-11-23 | Dipecah: L-51 Pelanggan, L-62 Supplier (halaman + modal Supplier, PO, terima barang) | Dipecah (pola K-08) | Sudah berlaku |
 
 **Menunggu tindakan Pemilik (bukan keputusan).** L-44: membuat proyek Supabase tes milik Nuara (region Singapura), proyek Vercel kedua, dan DNS `app.nuaraservice.my.id`; mendaftar sebagai Pemilik dan mengundang satu akun uji. Tes integrasi belum pernah dijalankan sampai proyek itu ada.
 
@@ -208,6 +213,8 @@ Dikumpulkan 2026-11-22 dari log wawancara, catatan IPD, dan langkah L-43 s.d. L-
 - 2026-11-22 - L-50 - Putaran verifikasi menemukan tiga hal yang langsung diperbaiki: (1) tab Kasir/Riwayat 43px dan kolom qty 32px di layar sentuh (FixMaster 44px), kini 44px; (2) `data-nu` di akar halaman membuat reset dens mengenai `PosHistory` yang dirender inline (tombol cetak/batal mengecil di ponsel), jadi `data-nu` dipasang per bagian (tab, panel Kasir, dock) dan dikunci tes; (3) bar Proses baru 84px dan register sampai 170px, jadi `scroll-padding` jaring pengaman dinaikkan dari 128/80 ke 176/88px (dengan angka lama kolom ketiga mendarat 4px di balik bar). `audit-contrast.mjs` kini mencari kartu, tuts bayar, dan nominal cepat lewat struktur dan id, bukan kelas CSS Module.
 - 2026-11-23 - L-61 - Hasil: tab Riwayat, jendela batal, dan form barang stok diukur di 8 ukuran (1440, 1366, 1025, tablet sentuh 1024/834, iPhone 13, 360px, 320px) dalam enam keadaan (riwayat, batal, ubah barang, stok masuk, dibeli sekarang, barang baru) tanpa luberan dan tanpa isi keluar dari baris atau jendela; tuts riwayat turun ke barisnya sendiri di ponsel seperti sebelumnya; kontrol >= 44px di layar sentuh (radio tersembunyi 13px milik FixMaster hilang); fokus kembali ke tombol Batalkan/Ubah setelah jendela ditutup. `audit-contrast` bersih dan kini memeriksa Riwayat, jendela batal, dan form barang stok (ubah + dibeli); probe `audit-mobile`, pita tablet, `audit-zoom`, zoom 1,25, dan Padat identik dengan d8a71b7 (L-50); 13 halaman sama per piksel (selisih hanya di wilayah derau dan 1 piksel anti-alias ikon sidebar Keuangan); impeccable 0 temuan; 1162 tes / 86 berkas, lint, build lolos.
 - 2026-11-23 - L-61 - `data-nu` Kasir kembali ke akar halaman (L-50 memasangnya per bagian hanya karena `PosHistory` lama dirender inline). Jendela batal memfokus tombol Kembali, bukan kolom alasan (keyboard ponsel menutupi tombol pada jendela yang memindah uang dan stok). Bug `Field` dens ikut diperbaiki: akarnya meregang setinggi sel tetangga sehingga isian di baris dua kolom turun 6px bila petunjuk sebelahnya lebih panjang; kini `content-start`. Layar masuk, wizard, form Servis Baru, dan modal Servis terukur identik per piksel sesudahnya.
+- 2026-11-23 - L-51 - Hasil: halaman Pelanggan diukur di 11 ukuran (1920 sampai 1025 desktop, tablet sentuh 1024/834/744, iPhone 13, 360px, 320px) x tiga tampilan, plus laci riwayat dan form pelanggan: tanpa luberan, tanpa isi keluar dari kartu atau baris, kontrol >= 44px di layar sentuh, fokus kembali ke kartu (laci) dan tombol Ubah (form). Baris tampilan daftar diuji dengan teks terburuk yang disuntikkan (Rp 999.999.999, HP 14 digit) di lebar wadah 1082 sampai 256px: tanpa luapan. FixMaster pada ukuran yang sama meluap di tampilan daftar (1100px: 15px, 1025px: 90px, ponsel: sampai 280px). `audit-contrast` bersih dan kini memeriksa tampilan daftar, ringkas, laci riwayat, dan form pelanggan; probe `audit-mobile`, pita tablet, `audit-zoom`, zoom 1,25, dan Padat identik dengan ec06674 (L-61) kecuali baris chip kategori /customers yang meluap lebih pendek (320px: 263 vs 305px); 12 halaman lain sama per piksel (selisih hanya di wilayah derau dan 1 piksel anti-alias ikon sidebar Keuangan); impeccable 0 temuan; 1169 tes / 87 berkas, lint, build lolos.
+- 2026-11-23 - L-51 - Komponen bersama yang bertambah: `ViewToggle` dens (pengganti `ViewToggle` FixMaster, area ketuk 44px lewat `::after`) dan pengembalian fokus `Sheet` (sama dengan `DialogContent`, dikunci `dialog.test.tsx`). Tombol tampilan pertama kali terukur 44x36 di layar sentuh dan langsung diperbaiki. Teks FixMaster di laci riwayat dan form pelanggan yang masih literal (bukan kunci i18n) dibiarkan apa adanya.
 
 ## Arsip: rencana Next.js (dibatalkan 2026-11-21)
 Langkah di bawah tidak dikerjakan. Disimpan karena rujukan kriteria F-xx dan keputusan di dalamnya dipakai untuk L-45.

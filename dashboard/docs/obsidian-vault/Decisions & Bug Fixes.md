@@ -13,6 +13,30 @@ Catatan keputusan desain penting + bug nyata yang ditemukan saat verifikasi.
 
 ## Keputusan desain
 
+### Halaman Pelanggan pindah ke dens-ui (L-51, 23 Nov 2026)
+`CustomersPage`, `CustomerHistoryDrawer`, dan `CustomerModal` ditulis ulang dengan dens-ui; dua CSS
+Module dihapus dan `@source` memindai `features/customers` utuh. Supplier dipisah ke L-62 (K-14).
+Logika statistik, hapus (ditolak bila ada tiket), kirim WA, dan sinkron nama/HP ke tiket tidak
+disentuh. `CustomerModal` yang juga dibuka dari Kasir ikut berganti.
+- **Tiga tampilan tetap** (kartu, daftar, ringkas) lewat `ViewToggle` dens baru
+  (`components/dens/view-toggle.tsx`, API sama dengan versi FixMaster; area ketuk 44px lewat
+  `::after`). Pilihan tetap diingat `usePersistedView('fixmaster-customers-view')`.
+- **Bug lama: baris tampilan daftar meluap.** FixMaster menyembunyikan kolom HP dan jumlah servis
+  lewat `@media (max-width: 768px)`; di 1025-1100px (sidebar tampil) wadahnya 667px untuk baris yang
+  terukur butuh 726-755px dengan data demo, dan di ponsel kaki baris (status + tiga tuts) keluar
+  sampai 280px. Kini tiga tingkat lewat container query, ambang dari kasus terburuk
+  ("Rp 999.999.999", HP 14 digit, tuts 44px): >=808px semua kolom; 611-807px tanpa HP dan jumlah;
+  <611px status + tuts turun ke barisnya sendiri. Nama terpotong (`truncate`) sebelum kolom lain.
+  Diuji dengan teks terburuk yang disuntikkan di lebar 1082 sampai 256px: tanpa luapan.
+- **Kisi kartu dan ubin** memakai `minmax(min(290px,100%),1fr)`; `@media 560px` lama tak perlu lagi.
+- **Laci riwayat = `Sheet` dens** (Radix Dialog): fokus terkunci, Esc dan klik luar menutup, scroll
+  halaman terkunci. FixMaster memakai portal + listener keydown sendiri tanpa jebakan fokus.
+  `SheetContent` kini mengembalikan fokus seperti `DialogContent` (`CaptureFocus` diekspor dari
+  `dialog.tsx`); dikunci tes di `dialog.test.tsx`. Pelanggan terakhir ditahan di state selama
+  panel menutup, supaya isinya tak hilang di tengah animasi. Lebar = bawaan Sheet (celah 3rem untuk
+  ketuk-tutup di ponsel).
+- `audit-contrast.mjs` memeriksa tampilan daftar, ringkas, laci riwayat, dan form pelanggan.
+
 ### Riwayat penjualan dan form barang stok pindah ke dens-ui, folder Kasir & Stok selesai (L-61, 23 Nov 2026)
 `PosHistory` (tab Transaksi Terakhir + jendela batal) dan `InventoryModal` (barang baru, ubah,
 tambah stok, hapus) ditulis ulang dengan dens-ui; dua CSS Module terakhir dihapus dan `@source`
