@@ -146,3 +146,6 @@
 @source "../features/inventory";
 @source "../features/customers";
 @source "../features/suppliers";
+/* Folder finance masih memuat lima modal FixMaster (L-63), jadi halamannya
+   disebut satu per satu sampai folder itu bersih. */
+@source "../features/finance/FinancePage.tsx";

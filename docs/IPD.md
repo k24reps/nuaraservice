@@ -1,6 +1,6 @@
 # IPD (Implementation Plan Document) - Nuara Dashboard
 
-> Versi: 0.12 | Diperbarui: 2026-11-23 | Merujuk: PRD, TRD, AFD, DBD, `dashboard/AGENTS.md`
+> Versi: 0.13 | Diperbarui: 2026-11-23 | Merujuk: PRD, TRD, AFD, DBD, `dashboard/AGENTS.md`
 <!-- Versi 0.2 (42 langkah Next.js dari nol) dibatalkan 2026-11-21 (wawancara P13). Langkahnya disimpan di bagian Arsip dengan tanda [DIBATALKAN]; rujukan kriteria F-xx di sana tetap berguna untuk daftar selisih. -->
 
 ## Cara memakai
@@ -17,7 +17,7 @@
 | Fase | Tujuan | Langkah |
 |---|---|---|
 | A | Salinan FixMaster jalan sebagai Nuara Dashboard | L-43, L-44, L-45 |
-| B | UI dipindah ke dens-ui dengan warna Nuara, per halaman | L-46, L-47, L-58, L-48, L-49, L-59, L-60, L-50, L-61, L-51, L-62, L-52 s.d. L-56 |
+| B | UI dipindah ke dens-ui dengan warna Nuara, per halaman | L-46, L-47, L-58, L-48, L-49, L-59, L-60, L-50, L-61, L-51, L-62, L-52, L-63, L-53 s.d. L-56 |
 | C | Selisih PRD yang diputuskan Pemilik | ditentukan dari L-45 |
 | D | Rilis dan berhenti memakai FixMaster | L-57 |
 
@@ -97,7 +97,11 @@ Aturan bersama: satu langkah = satu kelompok halaman dipindah utuh, CSS Module l
   - Logika PO (buat, perbaiki, terima + HPP rata-rata + kas, batal dengan pembalikan stok dan kas) dan hapus supplier tidak berubah.
   - Selesai jika: tab PO dan Supplier, form PO dengan baris barang, jendela terima, dan form supplier tampil di desktop, tablet, ponsel sampai 320px tanpa luberan dan tanpa isi keluar dari baris/kartu/jendela; kontrol >= 44px di layar sentuh; probe `audit-*` dan `audit-contrast` bersih; halaman lain sama per piksel; tes, lint, build lolos.
   - Hasil 2026-11-23: lihat Catatan L-62.
-- [ ] **L-52 Keuangan**
+- [x] **L-52 Keuangan: halaman** (`FinancePage`)
+  - Dipecah 2026-11-23 (K-15): lima modal Keuangan pindah ke L-63. `FinancePage.module.css` dipangkas ke kelas yang masih dipakai modal; `@source` menyebut `FinancePage.tsx` saja. Logika ringkasan, pergerakan wallet, kunci bulan, hapus/batal, dan tautan karyawan tidak berubah.
+  - Selesai jika: halaman tampil di desktop, tablet, ponsel sampai 320px tanpa luberan; tepi kanan nominal pita satu kolom dan sejajar arus bersih per hari; kontrol baru >= 44px di layar sentuh; lima modal lama sama per piksel; probe `audit-*` dan `audit-contrast` bersih; halaman lain sama per piksel; tes, lint, build lolos.
+  - Hasil 2026-11-23: lihat Catatan L-52.
+- [ ] **L-63 Keuangan: modal** (`EntryModal`, `TransferModal`, `CountModal`, `PayrollModal`, `LinkEmployeeModal`); sesudahnya `FinancePage.module.css` dihapus dan folder `features/finance` utuh di `@source`
 - [ ] **L-53 Dashboard dan Laporan**
 - [ ] **L-54 Absensi, Tugas, Log Aktivitas, Glosarium, Kalkulator Biaya**
 - [ ] **L-55 Pengaturan**
@@ -153,6 +157,7 @@ Dikumpulkan 2026-11-22 dari log wawancara, catatan IPD, dan langkah L-43 s.d. L-
 | K-12 | Pemecahan L-50 (Kasir & Stok, sekitar 2.100 baris kode + 1.700 baris CSS) | Rencana L-50, 2026-11-22 | Dipecah: L-50 halaman Kasir + katalog, L-61 riwayat penjualan + form barang stok | Dipecah (pola K-08) | Sudah berlaku |
 | K-13 | Panel total Kasir bergaya LCD (layar gelap, digit hantu "888", garis pindai, LED berdenyut) beserta perforasi struk, tuts qty mekanis, dan LED di tuts bayar (motif FixMaster) | L-50 | Diganti panel total navy dengan angka mono putih (ukurannya tetap menyesuaikan jumlah digit), garis putus, tuts bulat, dan cincin pilihan | Buang (pola K-10) | Sudah berlaku |
 | K-14 | Pemecahan L-51 (Pelanggan dan Supplier, sekitar 1.640 baris kode + 1.160 baris CSS) | Rencana L-51, 2026-11-23 | Dipecah: L-51 Pelanggan, L-62 Supplier (halaman + modal Supplier, PO, terima barang) | Dipecah (pola K-08) | Sudah berlaku |
+| K-15 | Pemecahan L-52 (Keuangan, sekitar 2.220 baris kode + 890 baris CSS) | Rencana L-52, 2026-11-23 | Dipecah: L-52 halaman Keuangan, L-63 lima modalnya (catat, transfer, hitung saldo, bayar gaji, tautkan karyawan) | Dipecah (pola K-08) | Sudah berlaku |
 
 **Menunggu tindakan Pemilik (bukan keputusan).** L-44: membuat proyek Supabase tes milik Nuara (region Singapura), proyek Vercel kedua, dan DNS `app.nuaraservice.my.id`; mendaftar sebagai Pemilik dan mengundang satu akun uji. Tes integrasi belum pernah dijalankan sampai proyek itu ada.
 
@@ -220,6 +225,8 @@ Dikumpulkan 2026-11-22 dari log wawancara, catatan IPD, dan langkah L-43 s.d. L-
 - 2026-11-23 - L-51 - Komponen bersama yang bertambah: `ViewToggle` dens (pengganti `ViewToggle` FixMaster, area ketuk 44px lewat `::after`) dan pengembalian fokus `Sheet` (sama dengan `DialogContent`, dikunci `dialog.test.tsx`). Tombol tampilan pertama kali terukur 44x36 di layar sentuh dan langsung diperbaiki. Teks FixMaster di laci riwayat dan form pelanggan yang masih literal (bukan kunci i18n) dibiarkan apa adanya.
 - 2026-11-23 - L-62 - Hasil: halaman Supplier diukur di 11 ukuran (1920 sampai 1025 desktop, tablet sentuh 1024/834/744, iPhone 13, 360px, 320px) dalam enam keadaan (tab PO, form PO dengan baris barang, jendela terima, tab Supplier, form supplier, fokus kembali): tanpa luberan, tanpa isi keluar dari baris atau jendela, kontrol >= 44px di layar sentuh. Baris docket PO diuji dengan teks terburuk yang disuntikkan (nama supplier panjang, "Sebagian Diterima" + tiga tuts, Rp 999.999.999) di lebar wadah 1082 sampai 256px: tanpa luapan. FixMaster pada ukuran yang sama: kolom jendela terima meluap 17px di 320px dan kotak centang bayar 16px; keduanya hilang. `audit-contrast` bersih dan kini memeriksa tab Supplier, form PO, dan jendela terima; probe `audit-mobile`, pita tablet, `audit-zoom`, zoom 1,25, dan Padat identik dengan 42ec811 (L-51); 12 halaman lain sama per piksel (selisih hanya di wilayah derau dan 1 piksel anti-alias ikon sidebar Keuangan); impeccable 0 temuan; 1176 tes / 88 berkas, lint, build lolos.
 - 2026-11-23 - L-62 - Ikut berubah: peta lencana status PO `PO_STATUS_BADGE` (baru, diuji; jendela terima dulu selalu biru apa pun statusnya), label aksesibel untuk isian qty/harga beli/terima (dulu tanpa label), dan tombol konfirmasi batal PO yang kini mati selama diproses (dulu bisa diketuk dua kali). Teks FixMaster yang masih literal di halaman dan modal Supplier dibiarkan apa adanya.
+- 2026-11-23 - L-52 - Hasil: halaman Keuangan diukur di 11 ukuran (1920 sampai 1025 desktop, tablet sentuh 1024/834/744, iPhone 13, 360px, 320px), tampilan awal dan filter wallet: tanpa luberan, tanpa isi keluar dari baris pita; tepi kanan nominal satu kolom dan sejajar arus bersih per hari di desktop dan tablet (sama dengan FixMaster, terpaut 1px). Lima modal FixMaster (pengeluaran, pemasukan, bayar gaji, transfer, hitung saldo) sama per piksel di dalam panelnya; selisih hanya di sudut membulat, tempat halaman baru tampil di balik lapisan gelap. `audit-contrast` bersih dan kini memeriksa sel wallet terpilih; probe `audit-mobile`, pita tablet, `audit-zoom`, zoom 1,25, dan Padat identik dengan ed1108e (L-62); 12 halaman lain sama per piksel (selisih hanya di wilayah derau); impeccable 0 temuan; 1182 tes / 89 berkas, lint, build lolos.
+- 2026-11-23 - L-52 - Tautan `Term` ("Arus Kas Bersih", komponen bersama FixMaster) masih 30px di layar sentuh, sama dengan sebelum langkah ini; dipindah bersama komponen bersama lain di L-56. Konfirmasi batal transfer dan hapus catatan kini mati selama diproses (dulu hanya labelnya berganti).
 
 ## Arsip: rencana Next.js (dibatalkan 2026-11-21)
 Langkah di bawah tidak dikerjakan. Disimpan karena rujukan kriteria F-xx dan keputusan di dalamnya dipakai untuk L-45.

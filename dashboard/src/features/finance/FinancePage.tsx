@@ -3,8 +3,28 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useT, type TranslationKey } from '@/i18n';
 import { EXPENSE_GROUPS, EXPENSE_GROUP_LABEL, expenseGroupOf, categoryLabel } from '@/lib/business/overhead';
 import { useSessionStore } from '@/stores/session';
-import { Card, CardHeader, CardBody, Button, EmptyState, Icon, LoadState, loadPending, Term } from '@/components/ui';
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import {
+  ArrowDown,
+  ArrowLeftRight,
+  ArrowUp,
+  ChevronLeft,
+  ChevronRight,
+  CircleHelp,
+  CircleX,
+  ListChecks,
+  Pencil,
+  Receipt,
+  Trash2,
+  Users,
+  Wallet,
+  X,
+} from 'lucide-react';
+import { LoadState, loadPending, Term } from '@/components/ui';
+import { Button } from '@/components/dens/button';
+import { ConfirmDialog } from '@/components/dens/confirm-dialog';
+import { EmptyState } from '@/components/dens/empty-state';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/dens/select';
+import { cn } from '@/lib/utils';
 import { useCollection } from '@/hooks/useCollection';
 import { useCollectionRange } from '@/hooks/useCollectionRange';
 import { repository } from '@/data';
@@ -38,7 +58,6 @@ import { LinkEmployeeModal } from './LinkEmployeeModal';
 import { EMPLOYEE_LINK_CATEGORIES } from '@/lib/business/payroll';
 import { voidTransfer } from './transferActions';
 import type { Income, Expense, WalletTransfer } from '@/data/types';
-import styles from './FinancePage.module.css';
 import { interpolate } from '@/lib/business/notify';
 
 type LedgerKind = 'income' | 'expense' | 'transfer';
@@ -63,6 +82,9 @@ async function findServiceByNo(serviceNo: string) {
     : await repository.list('services');
   return rows.find((s) => s.serviceNo === serviceNo) ?? null;
 }
+
+/** Nilai Select untuk "semua kategori" (Radix Select tak menerima value kosong). */
+const ALL_CATEGORIES = '__semua__';
 
 /** How many ledger rows to render at once; grows via "Tampilkan lebih banyak". */
 const PAGE_SIZE = 100;
@@ -449,6 +471,25 @@ export function FinancePage() {
   const rowLabel = (r: LedgerRow) => `${r.description || r.category} ${fmtRp(r.amount)}`;
   const orgWide = !!activeOutletId && outlets.length > 1;
 
+  // Warna arah uang: masuk hijau, keluar tinta utama (tanda − yang membawa
+  // arah), transfer dan modal/prive netral. Merah dicadangkan untuk yang salah.
+  const TONE = { inc: 'text-success-foreground', exp: 'text-foreground', trf: 'text-muted-foreground' } as const;
+  const iconBtn = 'text-muted-foreground hover:text-foreground';
+  const dangerBtn = 'text-muted-foreground hover:bg-destructive-soft hover:text-destructive';
+  // Kolom aksi selebar dua tombol, terisi atau tidak: tepi kanan nominal tak
+  // boleh melompat antarbaris, supaya angka bisa dibaca turun seperti kolom
+  // buku kas (dulu 1293/1335/1387px dalam satu pita).
+  const tapeRow = cn(
+    'grid items-center gap-x-3 gap-y-1 border-b border-dashed border-border px-5 py-2.5 hover:bg-accent/40',
+    "grid-cols-[minmax(0,1fr)_auto_var(--tape-btns)] [grid-template-areas:'body_amount_btns']",
+    // Sempit: keterangan selebar pita, lalu nominal + aksi. Satu baris empat
+    // kolom dulu memeras keterangan jadi 81px dan memotong nomor tiket.
+    "@max-[561px]/finance:grid-cols-[minmax(0,1fr)_auto] @max-[561px]/finance:px-4 @max-[561px]/finance:[grid-template-areas:'body_body'_'amount_btns']",
+  );
+  const tapeAmount = 'text-right font-mono text-sm font-semibold whitespace-nowrap tabular-nums [grid-area:amount] @max-[561px]/finance:text-left';
+  const tapeBtns = 'flex justify-end gap-0.5 [grid-area:btns]';
+  const metaChip = 'rounded-full border border-dashed border-border px-1.5';
+
   const renderRow = (r: LedgerRow) => {
     if (r.kind === 'transfer') {
       const tr = r.record as WalletTransfer;
@@ -464,16 +505,15 @@ export function FinancePage() {
             ? '−'
             : '';
       return (
-        <div
-          key={`transfer-${r.id}`}
-          className={[styles.tapeRow, styles.transfer, voided ? styles.voided : ''].join(' ')}
-        >
-          <div className={styles.tapeBody}>
-            <span className={styles.tapeDesc}>
-              {r.description || <span className={styles.muted}>{t('finance.noNote')}</span>}
+        <div key={`transfer-${r.id}`} data-voided={voided || undefined} className={tapeRow}>
+          <div className="grid min-w-0 gap-0.5 [grid-area:body]">
+            {/* Transfer dibatalkan (0086) tetap di pita sebagai jejak, dicoret dan
+                redup: uangnya sudah kembali, jadi tak boleh terbaca masih berlaku. */}
+            <span className={cn('text-sm [overflow-wrap:anywhere]', voided && 'text-muted-foreground line-through')}>
+              {r.description || <span className="text-muted-foreground">{t('finance.noNote')}</span>}
             </span>
-            <span className={styles.tapeMeta}>
-              <span className={[styles.tapeCat, styles.trf].join(' ')}>
+            <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5 font-mono text-xs text-muted-foreground">
+              <span className={cn('font-sans font-medium', voided ? 'text-destructive' : TONE.trf)}>
                 {t(voided ? 'finance.voided' : 'finance.transfer')}
               </span>
               <span>
@@ -483,15 +523,16 @@ export function FinancePage() {
               </span>
             </span>
           </div>
-          <span className={[styles.tapeAmount, styles.trf].join(' ')}>
+          <span className={cn(tapeAmount, TONE.trf, voided && 'line-through')}>
             {dir}
             {fmtRp(r.amount)}
           </span>
-          <span className={styles.tapeBtns}>
+          <span className={tapeBtns}>
             {!voided && (
-              <button
-                type="button"
-                className={styles.iconBtn}
+              <Button
+                variant="ghost"
+                size="icon"
+                className={iconBtn}
                 onClick={() => {
                   setEditingTransfer(tr);
                   setTransferOpen(true);
@@ -499,19 +540,20 @@ export function FinancePage() {
                 aria-label={interpolate(t('finance.editTransferAria'), { amount: fmtRp(r.amount) })}
                 title={t(locked ? 'finance.editTransferLocked' : 'finance.editTransfer')}
               >
-                <Icon name="pen" aria-hidden />
-              </button>
+                <Pencil aria-hidden />
+              </Button>
             )}
             {!voided && !locked && (
-              <button
-                type="button"
-                className={[styles.iconBtn, styles.danger].join(' ')}
+              <Button
+                variant="ghost"
+                size="icon"
+                className={dangerBtn}
                 onClick={() => setToVoid(tr)}
                 aria-label={interpolate(t('finance.voidTransferAria'), { amount: fmtRp(r.amount) })}
                 title={t('finance.voidTransferHint')}
               >
-                <Icon name="circle-xmark" aria-hidden />
-              </button>
+                <CircleX aria-hidden />
+              </Button>
             )}
           </span>
         </div>
@@ -522,7 +564,7 @@ export function FinancePage() {
     // tapi diwarnai netral supaya tak terbaca sebagai untung/rugi —
     // sama seperti baris transfer.
     const capitalRow = isCapitalFlow(r);
-    const tone = capitalRow ? styles.trf : inc ? styles.inc : styles.exp;
+    const tone = capitalRow ? TONE.trf : inc ? TONE.inc : TONE.exp;
     // Expense tied to a PO or a service "modal dadakan" line must be
     // removed from its owning page (PO / service detail) so the
     // linked record is reversed too — deleting here would orphan it.
@@ -546,40 +588,45 @@ export function FinancePage() {
             ? t('finance.lockSource')
           : null;
     return (
-      <div
-        key={`${r.kind}-${r.id}`}
-        className={[styles.tapeRow, capitalRow ? styles.transfer : styles[r.kind]].join(' ')}
-      >
-        <div className={styles.tapeBody}>
-          <span className={styles.tapeDesc} title={r.description || undefined}>
-            {r.description || <span className={styles.muted}>{t('finance.noNote')}</span>}
+      <div key={`${r.kind}-${r.id}`} data-kind={capitalRow ? 'capital' : r.kind} className={tapeRow}>
+        <div className="grid min-w-0 gap-0.5 [grid-area:body]">
+          <span className="text-sm [overflow-wrap:anywhere]" title={r.description || undefined}>
+            {r.description || <span className="text-muted-foreground">{t('finance.noNote')}</span>}
           </span>
-          <span className={styles.tapeMeta}>
-            <span className={[styles.tapeCat, tone].join(' ')}>{categoryLabel(r.category)}</span>
+          <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5 font-mono text-xs text-muted-foreground">
+            {/* Kategori pengeluaran bertinta biasa: warna di samping nominal
+                memberi dua sinyal untuk satu fakta. */}
+            <span className={cn('font-sans font-medium', inc && !capitalRow ? TONE.inc : 'text-muted-foreground')}>
+              {categoryLabel(r.category)}
+            </span>
             <span>{walletName(r.walletId)}</span>
             {EMPLOYEE_LINK_CATEGORIES.has(r.category) && (
               // Boleh juga di bulan terkunci: hanya menautkan karyawan, uangnya tetap (0099).
-              <button type="button" className={styles.empChip} onClick={() => setLinking(r)}>
-                <Icon name="users" aria-hidden />
+              <button
+                type="button"
+                className="relative inline-flex min-h-6 items-center gap-1 rounded-full border border-dashed border-border px-2 font-sans outline-none transition-colors hover:border-solid hover:border-primary/40 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring pointer-coarse:after:absolute pointer-coarse:after:inset-x-0 pointer-coarse:after:-inset-y-2.5 [&_svg]:size-3"
+                onClick={() => setLinking(r)}
+              >
+                <Users aria-hidden />
                 {employees.find((e) => e.id === (r.record as Expense | Income).employeeId)?.name ??
                   t('finance.linkEmployee')}
               </button>
             )}
-            {lockText && <span className={styles.lockTag}>{lockText}</span>}
+            {lockText && <span className={cn(metaChip, 'font-sans')}>{lockText}</span>}
           </span>
         </div>
-        <span className={[styles.tapeAmount, tone].join(' ')}>
+        <span className={cn(tapeAmount, tone)}>
           {inc ? '+' : '−'}
           {fmtRp(r.amount)}
         </span>
-        {/* One grid cell for ALL action buttons — loose siblings
-            overflowed the single `auto` column and wrapped to a new
-            implicit grid row (trash icon stranded bottom-left). */}
-        <span className={styles.tapeBtns}>
+        {/* Satu sel grid untuk SEMUA tombol aksi — saudara lepas meluap dari
+            kolom `auto` dan membuat baris grid implisit baru. */}
+        <span className={tapeBtns}>
           {!closedMonth && !lockedExpense && !linkedIncome && (
-            <button
-              type="button"
-              className={styles.iconBtn}
+            <Button
+              variant="ghost"
+              size="icon"
+              className={iconBtn}
               onClick={() => {
                 if (inc) {
                   setEditingIncome(r.record as Income);
@@ -592,48 +639,55 @@ export function FinancePage() {
               }}
               aria-label={interpolate(t('finance.editRowAria'), { row: rowLabel(r) })}
             >
-              <Icon name="pen" aria-hidden />
-            </button>
+              <Pencil aria-hidden />
+            </Button>
           )}
           {/* Pemasukan Kasir hanya dibatalkan dari Kasir (void_sale mengembalikan
-              stok & menandai penjualannya). Dulu tombol ini ada: penjualannya
-              menggantung dan stok tak kembali. Server menolaknya juga (0092). */}
+              stok & menandai penjualannya). Server menolaknya juga (0092). */}
           {!lockedExpense && !closedMonth && !saleIncome && (
-            <button
-              type="button"
-              className={[styles.iconBtn, styles.danger].join(' ')}
+            <Button
+              variant="ghost"
+              size="icon"
+              className={dangerBtn}
               onClick={() => setToDelete(r)}
               aria-label={interpolate(t('finance.deleteRowAria'), { row: rowLabel(r) })}
             >
-              <Icon name="trash" aria-hidden />
-            </button>
+              <Trash2 aria-hidden />
+            </Button>
           )}
         </span>
       </div>
     );
   };
 
+  const cell = 'relative -mr-px -mb-px flex min-w-0 flex-col gap-1 border-r border-b border-dashed border-border px-4 py-3 text-left @max-[561px]/finance:gap-0.5 @max-[561px]/finance:px-3 @max-[561px]/finance:py-2.5';
+  const cellLabel = 'text-xs font-medium text-muted-foreground [overflow-wrap:anywhere]';
+  const strip = 'grid overflow-hidden rounded-2xl bg-card text-card-foreground shadow-panel ring-1 ring-border/60';
+  const panel = 'overflow-hidden rounded-2xl bg-card text-card-foreground shadow-panel ring-1 ring-border/60';
+
   return (
-    <div className={styles.wrap}>
-      <div className={styles.monthBar}>
-        <button
-          type="button"
-          className={styles.monthStep}
+    <div data-nu className="@container/finance flex flex-col gap-4 bg-transparent phone:gap-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          variant="outline"
+          size="icon"
+          className="shadow-none"
           onClick={() => {
             setMonthOffset((m) => m + 1);
             setLimit(PAGE_SIZE);
           }}
           aria-label={t('finance.prevMonth')}
         >
-          <Icon name="chevron-left" aria-hidden />
-        </button>
-        <span className={styles.monthLabel} aria-live="polite">
+          <ChevronLeft aria-hidden />
+        </Button>
+        <span className="inline-flex min-w-44 items-baseline justify-center gap-2 text-sm font-semibold" aria-live="polite">
           {monthLabel}
-          {monthOffset === 0 && <span className={styles.monthNow}>{t('finance.thisMonth')}</span>}
+          {monthOffset === 0 && <span className="font-normal text-muted-foreground">{t('finance.thisMonth')}</span>}
         </span>
-        <button
-          type="button"
-          className={styles.monthStep}
+        <Button
+          variant="outline"
+          size="icon"
+          className="shadow-none"
           onClick={() => {
             setMonthOffset((m) => Math.max(0, m - 1));
             setLimit(PAGE_SIZE);
@@ -641,40 +695,55 @@ export function FinancePage() {
           disabled={monthOffset === 0}
           aria-label={t('finance.nextMonth')}
         >
-          <Icon name="chevron-right" aria-hidden />
-        </button>
-        <Link className={styles.glossaryBtn} to="/istilah">
-          <Icon name="circle-question" aria-hidden /> {t('glossary.open')}
-        </Link>
+          <ChevronRight aria-hidden />
+        </Button>
+        <Button asChild variant="outline" size="sm" className="ml-auto shadow-none pointer-coarse:h-11">
+          <Link to="/istilah">
+            <CircleHelp aria-hidden /> {t('glossary.open')}
+          </Link>
+        </Button>
       </div>
 
       {/* Wallet = strip readout dengan sel Total, dan pergerakan bulan yang
           dilihat di tiap sel — cukup untuk mencocokkan saldo dengan laci/rekening. */}
       {loadPending(walletsLoad) ? (
-        <Card>
+        <div className={panel}>
           <LoadState queries={[walletsLoad]} />
-        </Card>
+        </div>
       ) : wallets.length === 0 ? (
-        <Card padding>
-          <p className={styles.noWallet}>{t('finance.noWallet')}</p>
-        </Card>
+        <div className={cn(panel, 'px-5 py-4')}>
+          <p className="text-sm text-muted-foreground">{t('finance.noWallet')}</p>
+        </div>
       ) : (
-        <div className={styles.walletStrip}>
-          <div className={[styles.walletCell, styles.walletTotal].join(' ')}>
-            <span className={styles.walletName}>
-              {t(monthOffset > 0 ? 'finance.balanceNow' : 'finance.totalBalance')}
-            </span>
-            <strong className={styles.walletBalance}>{fmtRp(totalBalance)}</strong>
-            <span className={styles.totalFoot}>
-            <span className={styles.walletMove}>
-              {orgWide
-                ? t('finance.branchPlusShared')
-                : interpolate(t('finance.walletCount'), { n: String(shownWallets.length) })}
-            </span>
-            {/* Ponsel: Hitung saldo menempel di Total, tombol di baris aksi disembunyikan. */}
-            <button type="button" className={styles.countInline} onClick={() => setCountOpen(true)}>
-              {t('finance.countShort')}
-            </button>
+        <div
+          className={cn(
+            strip,
+            'grid-cols-[repeat(auto-fit,minmax(170px,1fr))]',
+            '@max-[561px]/finance:grid-cols-2 @max-[561px]/finance:[&>:last-child:nth-child(odd)]:col-span-full',
+          )}
+        >
+          {/* Total = jumlah, bukan salah satu wallet: latar permukaan dan angka tebal. */}
+          <div className={cn(cell, 'bg-surface')}>
+            <span className={cellLabel}>{t(monthOffset > 0 ? 'finance.balanceNow' : 'finance.totalBalance')}</span>
+            {/* Rupiah panjang menyusut mengikuti lebar wadah, dan boleh patah daripada terpotong. */}
+            <strong className="font-mono text-[length:clamp(1rem,3.2cqi,1.25rem)] font-semibold tabular-nums [overflow-wrap:anywhere]">
+              {fmtRp(totalBalance)}
+            </strong>
+            <span className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+              <span className="font-mono text-xs text-muted-foreground">
+                {orgWide
+                  ? t('finance.branchPlusShared')
+                  : interpolate(t('finance.walletCount'), { n: String(shownWallets.length) })}
+              </span>
+              {/* Sempit: Hitung saldo menempel di Total, tombol di baris aksi disembunyikan. */}
+              <Button
+                variant="outline"
+                size="sm"
+                className="hidden h-7 px-3 text-xs shadow-none @max-[561px]/finance:inline-flex pointer-coarse:h-11"
+                onClick={() => setCountOpen(true)}
+              >
+                {t('finance.countShort')}
+              </Button>
             </span>
           </div>
           {shownWallets.map((w) => {
@@ -684,33 +753,38 @@ export function FinancePage() {
               <button
                 key={w.id}
                 type="button"
-                className={styles.walletCell}
+                className={cn(
+                  cell,
+                  'outline-none transition-colors hover:bg-accent/50 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring aria-pressed:bg-accent',
+                )}
                 aria-pressed={on}
                 onClick={() => pickWallet(w.id)}
               >
-                <span className={styles.walletName}>
-                  <span className={styles.walletLed} aria-hidden />
+                <span className={cn(cellLabel, 'inline-flex items-center gap-1.5', on && 'text-foreground')}>
+                  <span aria-hidden className={cn('size-2 shrink-0 rounded-full', on ? 'bg-primary' : 'bg-primary/30')} />
                   {w.name}
                 </span>
-                <strong className={styles.walletBalance}>{fmtRp(w.balance)}</strong>
+                <strong className="font-mono text-[length:clamp(1rem,3.2cqi,1.25rem)] font-semibold tabular-nums [overflow-wrap:anywhere]">
+                  {fmtRp(w.balance)}
+                </strong>
                 {m && (
-                  <span className={styles.walletMove}>
+                  // Tiap angka utuh; yang turun baris angkanya, bukan "Rp" / "550.000".
+                  <span className="flex flex-wrap gap-x-1.5 font-mono text-xs text-muted-foreground tabular-nums [&>span]:whitespace-nowrap">
                     {/* Persamaan yang bisa dicocokkan dengan laci: saldo awal bulan
                         + masuk − keluar ± transfer = saldo. Hanya untuk bulan berjalan
                         dan tampilan semua cabang — wallet milik seluruh usaha,
                         pergerakan per cabang tak akan menutup persamaannya. */}
                     {monthOffset === 0 && (!orgWide || !!w.outletId) && (
-                      <span className={styles.trf}>
+                      <span>
                         {t('finance.opening')} {fmtNumber(w.balance - (m.in - m.out + m.transfer))}
                       </span>
                     )}
-                    {orgWide && !w.outletId && <span className={styles.trf}>{t('finance.branchMove')}</span>}
+                    {orgWide && !w.outletId && <span>{t('finance.branchMove')}</span>}
                     {/* Tanpa "Rp": saldo di atasnya sudah bermata uang, dan gerak muat sebaris di ponsel. */}
-                    <span className={styles.inc}>+{fmtNumber(m.in)}</span>{' '}
-                    <span className={styles.exp}>−{fmtNumber(m.out)}</span>
+                    <span className={TONE.inc}>+{fmtNumber(m.in)}</span>
+                    <span className={TONE.exp}>−{fmtNumber(m.out)}</span>
                     {m.transfer !== 0 && (
-                      <span className={styles.trf}>
-                        {' '}
+                      <span>
                         {m.transfer > 0 ? '⇄ +' : '⇄ −'}
                         {fmtNumber(Math.abs(m.transfer))}
                       </span>
@@ -723,34 +797,60 @@ export function FinancePage() {
         </div>
       )}
 
-      <div className={styles.summaryStrip} role="list" aria-label={t('finance.summaryAria')}>
-        <div role="listitem" className={[styles.summaryCell, styles.income].join(' ')}>
-          <span>{t('finance.income')}{scopeSuffix}</span>
-          <strong>{fmtRp(summary.income)}</strong>
-        </div>
-        <div role="listitem" className={[styles.summaryCell, styles.expense].join(' ')}>
-          <span>{t('finance.expense')}{scopeSuffix}</span>
-          <strong>{fmtRp(summary.expense)}</strong>
-        </div>
-        <div
-          role="listitem"
-          className={[styles.summaryCell, styles.net].join(' ')}
-          data-tone={summary.net < 0 ? 'warn' : undefined}
-        >
-          <span>
-            <Term id="arus-kas-bersih">{t('finance.netCash')}</Term>
-            {scopeSuffix}
-          </span>
-          <strong>
-            {summary.net < 0 && <span className={styles.netLed} aria-hidden />}
-            {fmtRp(summary.net)}
-          </strong>
-        </div>
+      {/* Pengeluaran rutin bukan alarm: nominalnya bertinta utama, tanda − yang
+          membawa arah. Kas bersih netral selama positif; saat negatif ia
+          berwarna peringatan, karena di situlah pemilik perlu berhenti membaca. */}
+      <div
+        className={cn(
+          strip,
+          'grid-cols-[repeat(auto-fit,minmax(170px,1fr))]',
+          // Sempit: satu baris tiga sel, buku kas naik ke layar pertama.
+          '@max-[561px]/finance:grid-cols-3',
+        )}
+        role="list"
+        aria-label={t('finance.summaryAria')}
+      >
+        {(
+          [
+            ['income', <>{t('finance.income')}{scopeSuffix}</>, summary.income, TONE.inc],
+            ['expense', <>{t('finance.expense')}{scopeSuffix}</>, summary.expense, TONE.exp],
+            [
+              'net',
+              <>
+                <Term id="arus-kas-bersih">{t('finance.netCash')}</Term>
+                {scopeSuffix}
+              </>,
+              summary.net,
+              summary.net < 0 ? 'text-warning-foreground' : TONE.exp,
+            ],
+          ] as const
+        ).map(([key, label, value, tone]) => (
+          <div
+            key={key}
+            role="listitem"
+            data-tone={key === 'net' && value < 0 ? 'warn' : undefined}
+            className={cn(cell, 'data-[tone=warn]:bg-warning/60 @max-[561px]/finance:p-2')}
+          >
+            <span className={cellLabel}>{label}</span>
+            {/* Sempit: nominal utuh sebaris, 12px mono muat di sepertiga 320px (terukur). */}
+            <strong
+              className={cn(
+                'inline-flex items-center gap-2 font-mono text-lg font-semibold tabular-nums [overflow-wrap:anywhere] @max-[561px]/finance:text-xs @max-[561px]/finance:whitespace-nowrap',
+                tone,
+              )}
+            >
+              {key === 'net' && value < 0 && <span aria-hidden className="size-2 shrink-0 rounded-full bg-warning-foreground" />}
+              {fmtRp(value)}
+            </strong>
+          </div>
+        ))}
       </div>
 
+      {/* Catatan arus kas pemilik (modal/prive): satu baris redup, bukan kartu
+          keempat — dia konteks, bukan KPI. */}
       {capital.length > 0 && (
-        <p className={styles.capitalNote}>
-          <Icon name="wallet" aria-hidden /> {t('finance.capitalLead')}{' '}
+        <p className="-mt-2 flex flex-wrap items-center gap-2 rounded-xl border border-dashed border-border px-4 py-2.5 text-xs text-muted-foreground [&_strong]:font-mono [&_strong]:text-foreground [&>svg]:size-3.5">
+          <Wallet aria-hidden /> {t('finance.capitalLead')}{' '}
           {capital.map(([cat, amount], k) => (
             <span key={cat}>
               {k > 0 && ' · '}
@@ -765,80 +865,82 @@ export function FinancePage() {
           dicatat berkali-kali sehari adalah pengeluaran. Mencatat dari tampilan
           bulan lalu kembali ke bulan ini dulu — entrinya selalu bertanggal bulan
           ini, dan dulu "hilang" dari tampilan yang sedang dibuka. */}
-      <div className={styles.actions}>
+      <div className="flex flex-wrap gap-3 @max-[561px]/finance:grid @max-[561px]/finance:grid-cols-3 @max-[561px]/finance:gap-2 @max-[561px]/finance:[&>*]:px-2 @max-[361px]/finance:[&_svg]:hidden">
         <Button
           onClick={() => {
             setMonthOffset(0);
             setModalKind('expense');
           }}
-          iconLeft={<Icon name="arrow-up" aria-hidden />}
         >
+          <ArrowUp aria-hidden />
           {t('finance.expense')}
         </Button>
         <Button
-          variant="secondary"
+          variant="outline"
           onClick={() => {
             setMonthOffset(0);
             setModalKind('income');
           }}
-          iconLeft={<Icon name="arrow-down" aria-hidden />}
         >
+          <ArrowDown aria-hidden />
           {t('finance.income')}
         </Button>
         {wallets.length > 0 && (
           <Button
-            variant="secondary"
+            variant="outline"
             onClick={() => {
               setMonthOffset(0);
               setPayrollOpen(true);
             }}
-            iconLeft={<Icon name="users" aria-hidden />}
           >
+            <Users aria-hidden />
             {t('payroll.open')}
           </Button>
         )}
         {wallets.length >= 2 && (
           <Button
-            variant="secondary"
+            variant="outline"
             onClick={() => {
               setEditingTransfer(null);
               setTransferOpen(true);
             }}
-            iconLeft={<Icon name="arrow-right-arrow-left" aria-hidden />}
           >
+            <ArrowLeftRight aria-hidden />
             {t('finance.transfer')}
           </Button>
         )}
         {wallets.length > 0 && (
-          <Button
-            variant="secondary"
-            className={styles.countAction}
-            onClick={() => setCountOpen(true)}
-            iconLeft={<Icon name="list-check" aria-hidden />}
-          >
+          <Button variant="outline" className="@max-[561px]/finance:hidden" onClick={() => setCountOpen(true)}>
+            <ListChecks aria-hidden />
             {t('finance.countAction')}
           </Button>
         )}
       </div>
 
-      <Card id="buku-kas" className={styles.ledgerCard}>
-        <CardHeader
-          icon={<Icon name="receipt" aria-hidden />}
-          title={`${t('finance.ledger')}${scopeSuffix}`}
-          action={
-            walletFilter ? (
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => pickWallet(null)}
-                iconLeft={<Icon name="times" aria-hidden />}
-              >
-                {t('finance.allWallets')}
-              </Button>
-            ) : undefined
-          }
-        />
-        <div className={styles.tabBar}>
+      <section
+        id="buku-kas"
+        className={cn(panel, 'scroll-mt-[calc(var(--topbar-height)+var(--space-3))]')}
+        aria-labelledby="buku-kas-title"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-4 pb-3 @max-[561px]/finance:px-4">
+          <h2 id="buku-kas-title" className="inline-flex items-center gap-2 text-sm font-semibold [&_svg]:size-4 [&_svg]:text-muted-foreground">
+            <Receipt aria-hidden />
+            {`${t('finance.ledger')}${scopeSuffix}`}
+          </h2>
+          {walletFilter && (
+            <Button variant="outline" size="sm" className="shadow-none pointer-coarse:h-11" onClick={() => pickWallet(null)}>
+              <X aria-hidden />
+              {t('finance.allWallets')}
+            </Button>
+          )}
+        </div>
+        <div
+          className={cn(
+            'flex flex-wrap items-center gap-x-1 border-b border-border px-4',
+            // Sempit: empat tab sebaris (dulu "Transfer" turun ke baris kedua).
+            '@max-[561px]/finance:grid @max-[561px]/finance:grid-cols-[repeat(4,auto)] @max-[561px]/finance:justify-between @max-[561px]/finance:px-2 @max-[361px]/finance:px-0',
+          )}
+        >
           {(
             [
               ['all', t('finance.tabAll')],
@@ -851,7 +953,7 @@ export function FinancePage() {
               key={key}
               type="button"
               aria-pressed={ledgerTab === key}
-              className={[styles.tab, ledgerTab === key ? styles.tabActive : ''].join(' ')}
+              className="-mb-px inline-flex min-h-10 items-center border-b-2 border-transparent px-3 text-sm font-medium text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring aria-pressed:border-foreground aria-pressed:font-semibold aria-pressed:text-foreground pointer-coarse:min-h-11 @max-[561px]/finance:px-1 @max-[561px]/finance:text-xs"
               onClick={() => {
                 setLedgerTab(key);
                 setLimit(PAGE_SIZE);
@@ -860,79 +962,84 @@ export function FinancePage() {
               {label}
             </button>
           ))}
-          <select
-            className={styles.catSelect}
-            aria-label={t('finance.categoryFilter')}
-            value={categoryFilter ?? ''}
-            onChange={(e) => {
-              setCategoryFilter(e.target.value || null);
+          {/* Filter kategori bergrup di ujung bilah tab. */}
+          <Select
+            value={categoryFilter ?? ALL_CATEGORIES}
+            onValueChange={(v) => {
+              setCategoryFilter(v === ALL_CATEGORIES ? null : v);
               setLimit(PAGE_SIZE);
             }}
           >
-            <option value="">{t('finance.allCategories')}</option>
-            {categoryGroups.map((g) => (
-              <optgroup key={g.key} label={t(g.label)}>
-                {g.cats.map((c) => (
-                  <option key={c} value={c}>
-                    {categoryLabel(c)}
-                  </option>
-                ))}
-              </optgroup>
-            ))}
-          </select>
+            <SelectTrigger
+              size="sm"
+              aria-label={t('finance.categoryFilter')}
+              className="my-1.5 ml-auto w-auto max-w-56 shadow-none @max-[561px]/finance:col-span-full @max-[561px]/finance:mx-0 @max-[561px]/finance:mb-2 @max-[561px]/finance:max-w-none"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL_CATEGORIES}>{t('finance.allCategories')}</SelectItem>
+              {categoryGroups.map((g) => (
+                <SelectGroup key={g.key}>
+                  <SelectLabel>{t(g.label)}</SelectLabel>
+                  {g.cats.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {categoryLabel(c)}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-        <CardBody className={styles.noPad}>
-          {/* Footer ikut dirender saat kosong — kalau disembunyikan, filter
-              wallet tanpa hasil jadi jalan buntu. */}
-          <div className={styles.tape}>
-            {loadPending(incomesLoad, expensesLoad) ? (
-              <LoadState queries={[incomesLoad, expensesLoad]} />
-            ) : visibleLedger.length === 0 ? (
-              <EmptyState
-                icon={<Icon name="receipt" aria-hidden />}
-                title={t('finance.emptyTitle')}
-                description={
-                  categoryFilter
-                    ? interpolate(t('finance.emptyCategory'), { category: categoryFilter, month: monthLabel })
-                    : walletFilter
-                    ? interpolate(t('finance.emptyWallet'), { wallet: walletName(walletFilter), month: monthLabel })
-                    : monthOffset > 0
-                      ? interpolate(t('finance.emptyMonth'), { month: monthLabel })
-                      : t('finance.emptyFirst')
-                }
-              />
-            ) : (
-              days.map((day) => (
-                <section key={day.date} className={styles.day} aria-label={fmtDate(day.date)}>
-                  <div className={styles.dayHead}>
-                    <span>{fmtDate(day.date)}</span>
-                    <span className={day.net >= 0 ? styles.inc : styles.exp}>
-                      {day.net >= 0 ? '+' : '−'}
-                      {fmtRp(Math.abs(day.net))}
-                    </span>
-                  </div>
-                  {day.rows.map(renderRow)}
-                </section>
-              ))
+        {/* Footer ikut dirender saat kosong — kalau disembunyikan, filter
+            wallet tanpa hasil jadi jalan buntu. */}
+        <div className="flex flex-col [--tape-btns:82px] pointer-coarse:[--tape-btns:90px]">
+          {loadPending(incomesLoad, expensesLoad) ? (
+            <LoadState queries={[incomesLoad, expensesLoad]} />
+          ) : visibleLedger.length === 0 ? (
+            <EmptyState
+              icon={<Receipt aria-hidden />}
+              title={t('finance.emptyTitle')}
+              description={
+                categoryFilter
+                  ? interpolate(t('finance.emptyCategory'), { category: categoryFilter, month: monthLabel })
+                  : walletFilter
+                  ? interpolate(t('finance.emptyWallet'), { wallet: walletName(walletFilter), month: monthLabel })
+                  : monthOffset > 0
+                    ? interpolate(t('finance.emptyMonth'), { month: monthLabel })
+                    : t('finance.emptyFirst')
+              }
+            />
+          ) : (
+            days.map((day) => (
+              <section key={day.date} aria-label={fmtDate(day.date)}>
+                {/* Kepala hari: tanggal sekali + arus bersih hari itu, sejajar
+                    kolom nominal di bawahnya, bukan di tepi kartu. */}
+                <div className="flex justify-between gap-3 border-b border-dashed border-border bg-surface/70 py-1.5 pr-[calc(1.25rem+var(--tape-btns)+0.75rem)] pl-5 text-xs font-semibold text-muted-foreground @max-[561px]/finance:px-4">
+                  <span>{fmtDate(day.date)}</span>
+                  <span className={cn('font-mono tabular-nums', day.net >= 0 ? TONE.inc : TONE.exp)}>
+                    {day.net >= 0 ? '+' : '−'}
+                    {fmtRp(Math.abs(day.net))}
+                  </span>
+                </div>
+                {day.rows.map(renderRow)}
+              </section>
+            ))
+          )}
+          <div className="flex flex-wrap items-center gap-3 px-5 py-4 @max-[561px]/finance:px-4">
+            {filteredLedger.length > visibleLedger.length && (
+              <Button variant="outline" size="sm" className="shadow-none pointer-coarse:h-11" onClick={() => setLimit((n) => n + PAGE_SIZE)}>
+                <ArrowDown aria-hidden />
+                {t('finance.showMore')}
+              </Button>
             )}
-            <div className={styles.loadMore}>
-              {filteredLedger.length > visibleLedger.length && (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => setLimit((n) => n + PAGE_SIZE)}
-                  iconLeft={<Icon name="arrow-down" aria-hidden />}
-                >
-                  {t('finance.showMore')}
-                </Button>
-              )}
-              <span className={styles.loadMoreHint}>
-                {interpolate(t('finance.rowsOf'), { month: monthLabel, shown: String(visibleLedger.length), total: String(filteredLedger.length) })}
-              </span>
-            </div>
+            <span className="font-mono text-xs text-muted-foreground">
+              {interpolate(t('finance.rowsOf'), { month: monthLabel, shown: String(visibleLedger.length), total: String(filteredLedger.length) })}
+            </span>
           </div>
-        </CardBody>
-      </Card>
+        </div>
+      </section>
 
       <EntryModal
         open={modalKind !== null}
@@ -983,6 +1090,7 @@ export function FinancePage() {
         }
         confirmLabel={t(voiding ? 'finance.voiding' : 'finance.voidTransfer')}
         danger
+        loading={voiding}
         onConfirm={() => void handleVoid()}
         onCancel={() => setToVoid(null)}
       />
@@ -992,6 +1100,7 @@ export function FinancePage() {
         message={toDelete ? deleteMessage(toDelete) : ''}
         confirmLabel={t(deleting ? 'finance.deleting' : 'common.delete')}
         danger
+        loading={deleting}
         onConfirm={() => void confirmDelete()}
         onCancel={() => {
           if (!deleting) setToDelete(null);

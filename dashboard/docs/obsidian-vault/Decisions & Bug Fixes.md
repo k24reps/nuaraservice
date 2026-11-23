@@ -13,6 +13,28 @@ Catatan keputusan desain penting + bug nyata yang ditemukan saat verifikasi.
 
 ## Keputusan desain
 
+### Halaman Keuangan pindah ke dens-ui (L-52, 23 Nov 2026)
+`FinancePage` ditulis ulang dengan dens-ui. Lima modalnya (catat, transfer, hitung saldo, bayar
+gaji, tautkan karyawan) pindah di L-63 (K-15); selama itu `FinancePage.module.css` dipangkas
+menjadi 11 kelas yang masih dipakai modal (dari 889 ke 171 baris), dan `financeLayout.test.ts`
+mengunci bahwa isinya persis kelas yang dipakai modal. `@source` menyebut `FinancePage.tsx` saja.
+Logika ringkasan, pergerakan wallet, kunci bulan, hapus/batal, dan tautan karyawan tidak disentuh.
+- **Semua ambang muat/tidak muat tetap container query** `finance` (561px, 361px), seperti
+  FixMaster. Kolom aksi pita tetap dua tombol (`--tape-btns` 82px, 90px di layar sentuh) supaya
+  tepi kanan nominal satu kolom; terukur sama dengan FixMaster di 11 ukuran, dan arus bersih per
+  hari sejajar kolom nominal.
+- **Motif dibuang** (pola K-10): spine warna di baris pita, sel Total, dan ringkasan; LED wallet
+  dan LED kas negatif. Arah uang kini dibawa warna nominal (masuk hijau, keluar tinta utama,
+  transfer/modal netral) dan tanda +/−; kas bersih negatif = sel ringkasan berlatar `warning`.
+- **Filter kategori** tetap bergrup lewat Radix `Select` + `SelectGroup` (bukan `SelectBox`, yang
+  tak mendukung grup); "semua kategori" = nilai `__semua__` karena Radix tak menerima nilai kosong.
+- **Konfirmasi batal transfer dan hapus catatan** kini `disabled` selama proses (`loading`),
+  bukan hanya berganti label.
+- Lima modal FixMaster terukur identik per piksel di dalam panelnya (selisih hanya di sudut
+  membulat, tempat halaman baru tampil di balik lapisan gelap).
+- Tautan `Term` ("Arus Kas Bersih", komponen bersama FixMaster) masih 30px di layar sentuh, sama
+  dengan sebelumnya; dipindah bersama komponen bersama lain di L-56.
+
 ### Halaman Supplier pindah ke dens-ui (L-62, 23 Nov 2026)
 `SuppliersPage`, `SupplierModal`, `PurchaseOrderModal`, dan `ReceiveModal` ditulis ulang dengan
 dens-ui; tiga CSS Module dihapus dan `@source` memindai `features/suppliers` utuh. Logika PO

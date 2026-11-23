@@ -338,6 +338,14 @@ for (const theme of ['light']) {
       await page.locator('main [role="button"][title] button[aria-label="Ubah"]').first().click();
       await page.waitForTimeout(400);
     }],
+    // Keuangan pindah ke dens-ui di L-52: sel wallet terpilih (filter buku kas).
+    ['Keuangan-Wallet', async () => {
+      await page.keyboard.press('Escape');
+      await page.getByRole('link', { name: /^Keuangan/ }).first().click();
+      await page.waitForTimeout(900);
+      await page.locator('main button[aria-pressed]').filter({ hasText: /Rp/ }).first().click();
+      await page.waitForTimeout(300);
+    }],
     ['Supplier-Vendor', async () => {
       await page.keyboard.press('Escape');
       await page.getByRole('link', { name: /^Supplier/ }).first().click();
