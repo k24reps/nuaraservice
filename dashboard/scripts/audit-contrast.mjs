@@ -402,6 +402,32 @@ for (const theme of ['light']) {
         await page.waitForTimeout(300);
       },
     ]),
+    // Absensi dan Tugas pindah ke dens-ui di L-54: jendela absen manual, tab
+    // Template, dan jendela template baru (hari mingguan terpilih).
+    ['Absensi-Absenkan', async () => {
+      await page.keyboard.press('Escape');
+      await page.getByRole('link', { name: /^Absensi/ }).first().click();
+      await page.waitForTimeout(900);
+      await page.locator('main button', { hasText: /^Absenkan/ }).first().click();
+      await page.waitForTimeout(400);
+    }],
+    ['Tugas-Template', async () => {
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(300);
+      await page.getByRole('link', { name: /^Tugas/ }).first().click();
+      await page.waitForTimeout(900);
+      await page.locator('main button', { hasText: /^Template [(]/ }).first().click();
+      await page.waitForTimeout(300);
+    }],
+    ['Tugas-TemplateBaru', async () => {
+      await page.locator('main button', { hasText: /^Template Baru/ }).first().click();
+      await page.waitForTimeout(400);
+      await page.locator('[role="dialog"] [role="combobox"]').first().click();
+      await page.locator('[role="option"]', { hasText: 'Mingguan' }).click();
+      await page.waitForTimeout(200);
+      await page.locator('[role="dialog"] button[aria-pressed]').first().click();
+      await page.waitForTimeout(200);
+    }],
     // Kartu Tampilan (Pengaturan › Sistem) dan chip pembesaran Topbar di ketiga
     // rona LED: nominal 100%, aksen 110% + Padat, jingga 90%. Tab Sistem tidak
     // terbuka oleh menu Pengaturan di atas, jadi kartu ini perlu langkah sendiri.

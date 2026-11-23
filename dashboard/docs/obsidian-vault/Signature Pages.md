@@ -926,6 +926,10 @@ Halaman `/activity` ([`ActivityLogPage`](src/features/activity/ActivityLogPage.t
 
 ## Tugas — Job Board
 
+**Nuara (L-54, 23 Nov 2026).** Tugas kini dens-ui + Tailwind; dua tab, tugas cepat, grup per
+template, dan jendela templat tetap. Spine status dan kotak centang mekanis dibuang (K-20): telat =
+lencana, selesai = coretan + kotak hijau. Uraian di bawah adalah tampilan FixMaster.
+
 Tiap tugas jadi **tiket kerja** dengan spine status (amber pending / merah berkedip telat / hijau selesai), **checkbox mekanis**, due-tag mono. Template jadi baris SOP dengan chip recurrence. Logika di `lib/business/tasks.ts` (`isOverdue`).
 
 **Bulk pembuatan template** (`TaskTemplateModal`): saat **buat baru**, kolom Judul Tugas jadi **textarea multi-baris** — satu judul per baris. Semua judul dibuat sekaligus (`repository.putMany`) berbagi setelan pengulangan + penerima yang sama; ada penghitung live "N tugas akan dibuat" (mono, brand). Mode **edit** tetap satu judul (`Input` biasa). Parsing: split `\n` → trim → buang baris kosong.
@@ -935,6 +939,11 @@ Tiap tugas jadi **tiket kerja** dengan spine status (amber pending / merah berke
 ![[bulk-task-dark.png]]
 
 ## Absensi — Punch Clock
+
+**Nuara (L-54, 23 Nov 2026).** Absensi kini dens-ui + Tailwind; panel jam, kehadiran hari ini,
+periode, rekap, riwayat, dan jendela koreksi tetap. Panel jam LCD jadi panel navy (K-20); tabel
+rekap/riwayat bertumpuk lewat container query terukur (491px/716px), bukan @media 768px. Uraian di
+bawah adalah tampilan FixMaster.
 
 Kartu jam jadi **readout LCD waktu hidup** (berdetak per detik, scanline, LED status). Kehadiran jadi baris **punch-card**; riwayat jadi **timecard ledger** mono.
 

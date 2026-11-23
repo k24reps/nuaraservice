@@ -1,5 +1,12 @@
 import { useState } from 'react';
-import { Modal, Input, Select, Button, Icon } from '@/components/ui';
+import { ArrowDown, ArrowUp, LoaderCircle, Plus, Trash2 } from 'lucide-react';
+import { Button } from '@/components/dens/button';
+import { Field, FormMessage } from '@/components/dens/field';
+import { FormDialog } from '@/components/dens/form-dialog';
+import { Input } from '@/components/dens/input';
+import { SelectBox } from '@/components/dens/select-box';
+import { TextInput } from '@/components/dens/text-input';
+import { Textarea } from '@/components/dens/textarea';
 import { useFormFault } from '@/hooks/useFormFault';
 import { repository } from '@/data';
 import { newId } from '@/lib/id';
@@ -18,7 +25,6 @@ import type {
   Employee,
   Outlet,
 } from '@/data/types';
-import styles from './TaskTemplateModal.module.css';
 
 interface TaskTemplateModalProps {
   open: boolean;
@@ -212,144 +218,148 @@ export function TaskTemplateModal({
   };
 
   return (
-    <Modal
+    <FormDialog
       open={open}
       onClose={onClose}
       title={editing ? 'Ubah Template Tugas' : 'Template Tugas Baru'}
       size="lg"
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="outline" onClick={onClose}>
             Batal
           </Button>
-          <Button onClick={save} loading={busy}>
+          <Button type="submit" form="task-template" disabled={busy} aria-busy={busy || undefined}>
+            {busy && <LoaderCircle aria-hidden className="animate-spin motion-reduce:animate-none" />}
             Simpan
           </Button>
         </>
       }
     >
-      <div className={styles.body}>
-        {error && <p className={styles.error}>{error}</p>}
+      <form
+        id="task-template"
+        className="grid gap-4"
+        noValidate
+        onSubmit={(e) => {
+          e.preventDefault();
+          void save();
+        }}
+      >
+        <FormMessage>{error}</FormMessage>
 
-        <Input
-          label="Nama Template"
-          invalid={invalid('name')}
-          name="template-name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Contoh: SOP Buka Toko"
-          hint="Judul grup yang tampil di atas daftar tugas hari ini."
-          autoFocus
-        />
+        <Field label="Nama Template" hint="Judul grup yang tampil di atas daftar tugas hari ini." invalid={invalid('name')}>
+          <TextInput
+            name="template-name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Contoh: SOP Buka Toko"
+            data-autofocus
+          />
+        </Field>
 
         {editing ? (
           /* Item editor — the ONLY place a template's contents can be
              reordered or removed (daily tab is read-only for these). */
-          <div className={styles.titlesField}>
-            <label className={styles.label}>Tugas di dalam template</label>
-            <ul className={styles.itemList}>
+          <div className="grid gap-1.5">
+            <span className={LABEL} id="task-items-label">
+              Tugas di dalam template
+            </span>
+            <ul className="mb-2 grid gap-2" aria-labelledby="task-items-label">
               {items.map((it, i) => (
-                <li key={it.id} className={styles.itemRow}>
-                  <span className={styles.itemNo}>{i + 1}</span>
-                  <Input
+                <li key={it.id} className="flex items-center gap-2">
+                  <span className="w-[18px] shrink-0 text-right font-mono text-xs text-muted-foreground">{i + 1}</span>
+                  <TextInput
                     name={`item-${it.id}`}
-                    className={styles.itemInput}
+                    className="min-w-0 flex-1"
                     value={it.title}
                     onChange={(e) => setItemTitle(it.id, e.target.value)}
                     placeholder="Judul tugas"
+                    aria-label={`Judul tugas ${i + 1}`}
                   />
-                  <span className={styles.itemBtns}>
-                    <button
+                  <span className="inline-flex shrink-0">
+                    <Button type="button" variant="ghost" size="icon" onClick={() => moveItem(i, -1)} disabled={i === 0} aria-label="Naikkan urutan tugas" title="Naikkan">
+                      <ArrowUp aria-hidden />
+                    </Button>
+                    <Button
                       type="button"
-                      className={styles.iconBtn}
-                      onClick={() => moveItem(i, -1)}
-                      disabled={i === 0}
-                      aria-label="Naikkan urutan tugas"
-                      title="Naikkan"
-                    >
-                      <Icon name="arrow-up" aria-hidden />
-                    </button>
-                    <button
-                      type="button"
-                      className={styles.iconBtn}
+                      variant="ghost"
+                      size="icon"
                       onClick={() => moveItem(i, 1)}
                       disabled={i === items.length - 1}
                       aria-label="Turunkan urutan tugas"
                       title="Turunkan"
                     >
-                      <Icon name="arrow-down" aria-hidden />
-                    </button>
-                    <button
+                      <ArrowDown aria-hidden />
+                    </Button>
+                    <Button
                       type="button"
-                      className={[styles.iconBtn, styles.danger].join(' ')}
+                      variant="ghost"
+                      size="icon"
+                      className="hover:bg-destructive-soft hover:text-destructive"
                       onClick={() => removeItem(it.id)}
                       aria-label="Hapus tugas dari template"
                       title="Hapus dari template"
                     >
-                      <Icon name="trash" aria-hidden />
-                    </button>
+                      <Trash2 aria-hidden />
+                    </Button>
                   </span>
                 </li>
               ))}
             </ul>
-            <button type="button" className={styles.addItem} onClick={addItem}>
-              <Icon name="plus" aria-hidden /> Tambah tugas
-            </button>
+            <Button type="button" variant="outline" size="sm" className="justify-self-start border-dashed" onClick={addItem}>
+              <Plus aria-hidden />
+              Tambah tugas
+            </Button>
           </div>
         ) : (
-          <div className={styles.titlesField}>
-            <label className={styles.label} htmlFor="task-titles">
-              Tugas di dalam template
-            </label>
-            <textarea
-              id="task-titles"
-              className={styles.titlesArea}
-              aria-invalid={invalid('items')}
+          <Field
+            label={
+              <>
+                Tugas di dalam template
+                {parsedBulk.length > 0 && <span className="ml-2 font-mono text-xs font-semibold text-primary">{parsedBulk.length} tugas</span>}
+              </>
+            }
+            hint="Satu tugas per baris. Semuanya masuk ke template ini dengan jadwal & penerima yang sama. Urutannya bisa diatur setelah disimpan."
+            invalid={invalid('items')}
+          >
+            <Textarea
               value={bulkTitles}
               onChange={(e) => setBulkTitles(capitalizeLines(e.target.value))}
               placeholder={'Satu tugas per baris, contoh:\nBersih-bersih area kerja\nCek stok sparepart\nBackup data kasir'}
               rows={4}
+              className="resize-y"
             />
-            <div className={styles.titlesFoot}>
-              <span className={styles.hint}>
-                Satu tugas per baris. Semuanya masuk ke template ini dengan jadwal &amp;
-                penerima yang sama. Urutannya bisa diatur setelah disimpan.
-              </span>
-              {parsedBulk.length > 0 && (
-                <span className={styles.bulkCount}>{parsedBulk.length} tugas</span>
-              )}
-            </div>
-          </div>
+          </Field>
         )}
 
-        <Input
-          label="Deskripsi (opsional)"
-          name="template-desc"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-        />
+        <Field label="Deskripsi (opsional)">
+          <TextInput name="template-desc" value={description} onChange={(e) => setDescription(e.target.value)} />
+        </Field>
 
-        <Select
-          label="Pengulangan"
-          value={recurrence}
-          onChange={(e) => setRecurrence(e.target.value as RecurrenceType)}
-          options={[
-            { value: 'daily', label: 'Harian' },
-            { value: 'weekly', label: 'Mingguan' },
-            { value: 'monthly', label: 'Bulanan' },
-            { value: 'once', label: 'Tanggal Tertentu (sekali)' },
-          ]}
-        />
+        <Field label="Pengulangan">
+          <SelectBox
+            value={recurrence}
+            onValueChange={(v) => setRecurrence(v as RecurrenceType)}
+            options={[
+              { value: 'daily', label: 'Harian' },
+              { value: 'weekly', label: 'Mingguan' },
+              { value: 'monthly', label: 'Bulanan' },
+              { value: 'once', label: 'Tanggal Tertentu (sekali)' },
+            ]}
+          />
+        </Field>
 
         {recurrence === 'weekly' && (
-          <div>
-            <label className={styles.label}>Hari</label>
-            <div className={styles.weekdays}>
+          <div className="grid gap-1.5">
+            <span className={LABEL} id="task-weekdays-label">
+              Hari
+            </span>
+            <div className="flex flex-wrap gap-2" role="group" aria-labelledby="task-weekdays-label">
               {WEEKDAYS.map((w) => (
                 <button
                   key={w.d}
                   type="button"
-                  className={[styles.dayChip, weekdays.includes(w.d) ? styles.dayActive : ''].join(' ')}
+                  aria-pressed={weekdays.includes(w.d)}
+                  className="h-[38px] w-[46px] rounded-lg bg-card text-sm font-semibold text-foreground ring-1 ring-border outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring aria-pressed:bg-primary aria-pressed:text-primary-foreground aria-pressed:ring-primary pointer-coarse:h-11 pointer-coarse:w-11"
                   onClick={() => toggleWeekday(w.d)}
                 >
                   {w.label}
@@ -360,88 +370,87 @@ export function TaskTemplateModal({
         )}
 
         {recurrence === 'monthly' && (
-          <Input
-            label="Tanggal dalam Bulan"
-            invalid={invalid('monthDays')}
-            name="month-days"
-            value={monthDays}
-            onChange={(e) => setMonthDays(e.target.value)}
-            placeholder="Contoh: 1, 15, 28"
-            hint="Pisahkan dengan koma (1-31)"
-          />
+          <Field label="Tanggal dalam Bulan" hint="Pisahkan dengan koma (1-31)" invalid={invalid('monthDays')}>
+            <TextInput
+              capitalize="none"
+              name="month-days"
+              value={monthDays}
+              onChange={(e) => setMonthDays(e.target.value)}
+              placeholder="Contoh: 1, 15, 28"
+              inputMode="numeric"
+            />
+          </Field>
         )}
 
         {recurrence === 'once' && (
-          <Input
-            label="Tanggal"
-            name="once-date"
-            type="date"
-            value={onceDate}
-            onChange={(e) => setOnceDate(e.target.value)}
-          />
+          <Field label="Tanggal">
+            <Input name="once-date" type="date" value={onceDate} onChange={(e) => setOnceDate(e.target.value)} className="font-mono" />
+          </Field>
         )}
 
-        <Input
-          label="Berakhir Pada (opsional)"
-          name="template-end"
-          type="date"
-          value={endDate}
-          onChange={(e) => setEndDate(e.target.value)}
-          hint="Kosongkan bila template ini berjalan terus"
-        />
+        <Field label="Berakhir Pada (opsional)" hint="Kosongkan bila template ini berjalan terus">
+          <Input name="template-end" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="font-mono" />
+        </Field>
 
-        <Select
-          label="Status"
-          value={active ? 'aktif' : 'nonaktif'}
-          onChange={(e) => setActive(e.target.value === 'aktif')}
-          options={[
-            { value: 'aktif', label: 'Aktif: tugas dibuat sesuai jadwal' },
-            { value: 'nonaktif', label: 'Nonaktif: berhenti membuat tugas baru' },
-          ]}
-          hint="Menonaktifkan tidak menghapus tugas yang sudah ada"
-        />
-
-        <Select
-          label="Tugaskan Ke"
-          value={assigneeType}
-          onChange={(e) => setAssigneeType(e.target.value as AssigneeType)}
-          options={[
-            { value: 'role', label: 'Peran' },
-            { value: 'employee', label: 'Karyawan Spesifik' },
-            ...(outlets.length ? [{ value: 'outlet', label: 'Outlet' }] : []),
-          ]}
-        />
-        {assigneeType === 'role' && (
-          <Select
-            label="Peran"
-            value={assigneeRole}
-            onChange={(e) => setAssigneeRole(e.target.value as Role)}
+        <Field label="Status" hint="Menonaktifkan tidak menghapus tugas yang sudah ada">
+          <SelectBox
+            value={active ? 'aktif' : 'nonaktif'}
+            onValueChange={(v) => setActive(v === 'aktif')}
             options={[
-              { value: 'karyawan', label: 'Semua Karyawan' },
-              { value: 'admin', label: 'Admin' },
-              { value: 'owner', label: 'Owner' },
+              { value: 'aktif', label: 'Aktif: tugas dibuat sesuai jadwal' },
+              { value: 'nonaktif', label: 'Nonaktif: berhenti membuat tugas baru' },
             ]}
           />
+        </Field>
+
+        <Field label="Tugaskan Ke">
+          <SelectBox
+            value={assigneeType}
+            onValueChange={(v) => setAssigneeType(v as AssigneeType)}
+            options={[
+              { value: 'role', label: 'Peran' },
+              { value: 'employee', label: 'Karyawan Spesifik' },
+              ...(outlets.length ? [{ value: 'outlet', label: 'Outlet' }] : []),
+            ]}
+          />
+        </Field>
+        {assigneeType === 'role' && (
+          <Field label="Peran">
+            <SelectBox
+              value={assigneeRole}
+              onValueChange={(v) => setAssigneeRole(v as Role)}
+              options={[
+                { value: 'karyawan', label: 'Semua Karyawan' },
+                { value: 'admin', label: 'Admin' },
+                { value: 'owner', label: 'Owner' },
+              ]}
+            />
+          </Field>
         )}
         {assigneeType === 'employee' && (
-          <Select
-            label="Karyawan"
-            value={assigneeEmployeeId}
-            onChange={(e) => setAssigneeEmployeeId(e.target.value)}
-            options={employees.map((emp) => ({ value: emp.id, label: emp.name }))}
-            placeholder="Pilih karyawan…"
-          />
+          <Field label="Karyawan">
+            <SelectBox
+              value={assigneeEmployeeId}
+              onValueChange={setAssigneeEmployeeId}
+              options={employees.map((emp) => ({ value: emp.id, label: emp.name }))}
+              placeholder="Pilih karyawan…"
+            />
+          </Field>
         )}
         {assigneeType === 'outlet' && (
-          <Select
-            label="Outlet"
-            value={assigneeOutletId}
-            onChange={(e) => setAssigneeOutletId(e.target.value)}
-            options={outlets.map((o) => ({ value: o.id, label: o.name }))}
-            placeholder="Pilih outlet…"
-          />
+          <Field label="Outlet">
+            <SelectBox
+              value={assigneeOutletId}
+              onValueChange={setAssigneeOutletId}
+              options={outlets.map((o) => ({ value: o.id, label: o.name }))}
+              placeholder="Pilih outlet…"
+            />
+          </Field>
         )}
-      </div>
-    </Modal>
+      </form>
+    </FormDialog>
   );
 }
+
+// Sama dengan Label dens, untuk judul kelompok yang bukan label satu isian.
+const LABEL = 'text-sm leading-none font-semibold';

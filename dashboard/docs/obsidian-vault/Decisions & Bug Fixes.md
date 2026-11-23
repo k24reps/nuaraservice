@@ -13,6 +13,33 @@ Catatan keputusan desain penting + bug nyata yang ditemukan saat verifikasi.
 
 ## Keputusan desain
 
+### Absensi dan Tugas pindah ke dens-ui (L-54, 23 Nov 2026)
+`AttendancePage`, `TasksPage`, dan `TaskTemplateModal` ditulis ulang dengan dens-ui; ketiga CSS
+Module dihapus dan `@source` memindai `features/attendance` dan `features/tasks`. Log Aktivitas,
+Glosarium, dan Kalkulator Biaya dipisah ke L-65 (K-19). Logika absen (GPS, server), rekap,
+riwayat, tugas, dan templat tidak disentuh.
+- **Panel jam LCD, spine status, dan kotak centang mekanis dibuang (K-20).** Panel jam = panel navy
+  `bg-primary`; tombol Absen Masuk memakai varian `highlight` karena tombol navy hilang di atas
+  navy. Baris tugas tanpa spine: telat = lencana `destructive-soft` bertitik, selesai = coretan +
+  kotak hijau tercentang.
+- **Ambang tabel Absensi dari lebar terukur, bukan @media 768px.** Uji: klon baris pada lebar N,
+  cari N terkecil tanpa isi meluber, dengan nama berkata 19 huruf dan "199.75 jam". Riwayat
+  pemilik tujuh kolom butuh 715px (kolom nama hanya mendapat 1,6/6,9 bagian ruang karena
+  `min-w-0`, yang tetap perlu supaya catatan panjang terpotong), rekap enam kolom 490px. Kini
+  `@max-[716px]/absen` dan `@max-[491px]/absen`. Media query lama membiarkan tujuh kolom sesak di
+  1025px, saat sidebar muncul dan wadahnya tinggal ±665px.
+- **Kelas `TextInput` jatuh ke `<input>`, bukan ke kotak luarnya, bila ada ikon `start`.**
+  `flex-1` di kolom tugas cepat tidak berefek sampai `TextInput` dibungkus `div.min-w-0.flex-1`.
+- **`size-*` dan `w-*` berdampingan**: tombol `size="icon"` (`size-10`) dengan `w-[26px]` tetap
+  26px; Tailwind menaruh `w-*` sesudah `size-*` (terukur di DOM). tailwind-merge tidak membuang
+  salah satunya.
+- **`::after` diukur dari dalam garis tepi.** Kotak 26px bertepi 2px punya kotak isi 22px, jadi
+  perluasan ke 44px butuh `-inset-[11px]`, bukan 9px (pertama terukur 40px).
+- Bug FixMaster yang ikut diperbaiki: tab Template di 320px meluber 15px (chip meta) dan tombol
+  Template Baru 8px; kini aksi baris turun ke baris kedua di wadah <400px. Hapus absensi dan hapus
+  template kini `loading` (tak bisa diketuk dua kali). Pilihan hari mingguan memakai `aria-pressed`.
+- Teks Tugas yang masih literal (belum lewat i18n, termasuk sapaan "Anda") dibiarkan apa adanya.
+
 ### Laporan pindah ke dens-ui (L-64, 23 Nov 2026)
 `ReportsPage` dan `TrendChart` ditulis ulang dengan dens-ui; kedua CSS Module dihapus dan
 `@source` memindai `features/reports`. Logika periode, vonis, Laba Rugi + break-even, target,

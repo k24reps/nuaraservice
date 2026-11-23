@@ -17,7 +17,7 @@
 | Fase | Tujuan | Langkah |
 |---|---|---|
 | A | Salinan FixMaster jalan sebagai Nuara Dashboard | L-43, L-44, L-45 |
-| B | UI dipindah ke dens-ui dengan warna Nuara, per halaman | L-46, L-47, L-58, L-48, L-49, L-59, L-60, L-50, L-61, L-51, L-62, L-52, L-63, L-53, L-64, L-54 s.d. L-56 |
+| B | UI dipindah ke dens-ui dengan warna Nuara, per halaman | L-46, L-47, L-58, L-48, L-49, L-59, L-60, L-50, L-61, L-51, L-62, L-52, L-63, L-53, L-64, L-54, L-65, L-55, L-56 |
 | C | Selisih PRD yang diputuskan Pemilik | ditentukan dari L-45 |
 | D | Rilis dan berhenti memakai FixMaster | L-57 |
 
@@ -113,7 +113,11 @@ Aturan bersama: satu langkah = satu kelompok halaman dipindah utuh, CSS Module l
   - Logika periode, vonis, Laba Rugi + break-even, target + laju, enam tab, dan ekspor PDF/CSV tidak berubah. Layar vonis bergaya LCD dan motif bench di kartu dibuang (K-18).
   - Selesai jika: keenam tab tampil di desktop, tablet, ponsel sampai 320px tanpa luberan dan tanpa isi keluar dari kartu/baris, juga dengan teks terburuk; tabel bertumpuk di wadah sempit; kontrol baru >= 44px di layar sentuh; probe `audit-*` dan `audit-contrast` (enam tab) bersih; halaman lain sama per piksel; tes, lint, build lolos.
   - Hasil 2026-11-23: lihat Catatan L-64.
-- [ ] **L-54 Absensi, Tugas, Log Aktivitas, Glosarium, Kalkulator Biaya**
+- [x] **L-54 Absensi dan Tugas** (`AttendancePage`, `TasksPage`, `TaskTemplateModal`); sesudahnya folder `features/attendance` dan `features/tasks` utuh di `@source`
+  - Dipecah 2026-11-23 (K-19): Log Aktivitas, Glosarium, dan Kalkulator Biaya pindah ke L-65. Logika absen, rekap, tugas, dan templat tugas tidak berubah. Panel jam bergaya LCD, spine status tugas, dan kotak centang mekanis dibuang (K-20).
+  - Selesai jika: kedua halaman dan jendela templat tampil di desktop, tablet, ponsel sampai 320px tanpa luberan dan tanpa isi keluar dari kartu/baris, juga dengan teks terburuk; kontrol baru >= 44px di layar sentuh; probe `audit-*` dan `audit-contrast` bersih; halaman lain sama per piksel; tes, lint, build lolos.
+  - Hasil 2026-11-23: lihat Catatan L-54.
+- [ ] **L-65 Log Aktivitas, Glosarium, Kalkulator Biaya** (`ActivityLogPage`, `GlossaryPage`, `CalculatorPage`); sesudahnya ketiga folder utuh di `@source`
 - [ ] **L-55 Pengaturan**
 - [ ] **L-56 Halaman lacak pelanggan + bersih-bersih**: lacak pelanggan memakai dunia "Nota Servis Rangkap" (DBD bagian 1, S-07); hapus token, maskot VOLT, dan CSS Modules FixMaster yang tersisa.
 
@@ -171,6 +175,8 @@ Dikumpulkan 2026-11-22 dari log wawancara, catatan IPD, dan langkah L-43 s.d. L-
 | K-16 | Pemecahan L-53 (Dashboard dan Laporan, sekitar 2.800 baris kode + 2.600 baris CSS) | Rencana L-53, 2026-11-23 | Dipecah: L-53 Dashboard, L-64 Laporan | Dipecah (pola K-08) | Sudah berlaku |
 | K-17 | Maskot VOLT di konsol Dashboard dan panel laba bergaya layar LCD (layar gelap, garis pindai, LED bercahaya, bingkai gradien; motif FixMaster) | L-53 | Maskot dibuang; panel laba = panel navy dengan angka putih, arus kas negatif berwarna sorot | Buang (pola K-10, K-13) | Sudah berlaku |
 | K-18 | Layar vonis Laporan bergaya LCD (sumur gelap, garis pindai, LED bercahaya) beserta spine kartu metrik dan kartu Laba Rugi, gerigi tick-gauge, dan label mono huruf kapital (motif FixMaster) | L-64 | Vonis = panel navy dengan titik status; kartu tanpa spine, batang capaian polos, label kalimat biasa; angka tetap mono | Buang (pola K-10, K-13, K-17) | Sudah berlaku |
+| K-19 | Pemecahan L-54 (lima halaman, sekitar 2.600 baris kode + 2.100 baris CSS) | Rencana L-54, 2026-11-23 | Dipecah: L-54 Absensi + Tugas (dengan jendela templat tugas), L-65 Log Aktivitas, Glosarium, Kalkulator Biaya | Dipecah (pola K-08) | Sudah berlaku |
+| K-20 | Panel jam Absensi bergaya LCD (layar gelap, garis pindai, angka bercahaya, LED berdenyut), spine status di baris tugas, dan kotak centang mekanis (motif FixMaster) | L-54 | Panel jam = panel navy dengan angka mono putih dan titik status; telat = lencana merah muda, selesai = coretan + kotak tercentang hijau | Buang (pola K-10, K-13, K-17, K-18) | Sudah berlaku |
 
 **Menunggu tindakan Pemilik (bukan keputusan).** L-44: membuat proyek Supabase tes milik Nuara (region Singapura), proyek Vercel kedua, dan DNS `app.nuaraservice.my.id`; mendaftar sebagai Pemilik dan mengundang satu akun uji. Tes integrasi belum pernah dijalankan sampai proyek itu ada.
 
@@ -246,6 +252,8 @@ Dikumpulkan 2026-11-22 dari log wawancara, catatan IPD, dan langkah L-43 s.d. L-
 - 2026-11-23 - L-53 - Putaran verifikasi memperbaiki dua hal: tautan break-even 37px di layar sentuh (kini 44px) dan tombol dok Servis Baru yang hilang di atas panel laba navy (kini berbayangan + bercincin terang). Tautan `Term` (komponen bersama FixMaster) masih 30-32px seperti sebelumnya; dipindah di L-56. Komponen `Mascot` kini tak dipakai.
 - 2026-11-23 - L-64 - Hasil: keenam tab Laporan diukur di 12 ukuran (1920 sampai 1025 desktop, tablet sentuh 1024/834/744, iPhone 13, 360px, 320px), dengan data contoh dan dengan teks terburuk (Rupiah 8 digit, nama kategori/pelanggan panjang, readout tab 15 karakter): tanpa luberan dan tanpa isi keluar dari kartu atau baris. Tab berpindah dengan panah/Home/End, klik di mana pun pada baris rincian membuka Keuangan tersaring. `audit-contrast` bersih termasuk lima langkah tab baru; probe `audit-mobile`, pita tablet, `audit-zoom`, zoom 1,25, dan Padat identik dengan 16bdb72 (L-53); 12 halaman lain sama per piksel (Dashboard berselisih hanya di jam "Diperbarui"); impeccable 0 temuan; 1196 tes / 91 berkas, lint, build lolos.
 - 2026-11-23 - L-64 - Ikut diperbaiki (bug FixMaster): grup tombol ekspor meluber 32px di 320px (kini selebar baris di wadah sempit, CSV turun ke bawah PDF bila tak muat); judul kolom angka (Nominal, Sisa, Umur, Menunggu) rata kiri padahal isinya rata kanan; tabel transaksi meluber 4px di 1152px dengan nominal 8 digit (lebar minimum 796px, kini 762px); tautan kategori di rincian overhead 37-39px di layar sentuh (kini >= 44px). Tautan `Term` masih 30-33px di layar sentuh, sama dengan sebelumnya; dipindah di L-56.
+- 2026-11-23 - L-54 - Hasil: Absensi dan kedua tab Tugas diukur di 12 ukuran (1920 sampai 1025 desktop, tablet sentuh 1024/834/744, iPhone 13, 360px, 320px), dengan data contoh dan dengan teks terburuk (nama berkata 19 huruf, "199.75 jam"): tanpa luberan, tanpa isi keluar dari kartu atau baris, kontrol >= 44px di layar sentuh. Jendela absen manual, koreksi absensi, template baru, dan ubah template pas di layar sampai 320px dengan fokus awal yang tepat. `audit-contrast` bersih termasuk tiga langkah baru; probe `audit-mobile`, pita tablet, `audit-zoom`, zoom 1,25, dan Padat identik dengan b58be59 (L-64); 11 halaman lain sama per piksel (selisih hanya di wilayah derau); impeccable 0 temuan; 1209 tes / 93 berkas, lint, build lolos.
+- 2026-11-23 - L-54 - Ikut diperbaiki (bug FixMaster): tabel rekap dan riwayat Absensi ditumpuk lewat @media 768px, sehingga di 1025px (sidebar muncul, wadah ±665px) riwayat tujuh kolom tampil sesak; kini container query terukur (riwayat 716px, rekap 491px). Tab Template di 320px meluber 15px (chip) dan tombol Template Baru 8px; kini aksi baris turun ke baris kedua di wadah <400px. Kotak tanda selesai tugas kini berarea 44px di layar sentuh; hapus absensi dan hapus template tak bisa diketuk dua kali. Teks Tugas yang masih literal (belum lewat i18n) dibiarkan apa adanya.
 
 ## Arsip: rencana Next.js (dibatalkan 2026-11-21)
 Langkah di bawah tidak dikerjakan. Disimpan karena rujukan kriteria F-xx dan keputusan di dalamnya dipakai untuk L-45.
