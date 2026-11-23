@@ -13,6 +13,21 @@ Catatan keputusan desain penting + bug nyata yang ditemukan saat verifikasi.
 
 ## Keputusan desain
 
+### Modal Keuangan pindah ke dens-ui, folder Keuangan selesai (L-63, 23 Nov 2026)
+`EntryModal`, `TransferModal`, `CountModal`, `PayrollModal`, dan `LinkEmployeeModal` ditulis ulang
+dengan `FormDialog`; `FinancePage.module.css` dihapus dan `@source` memindai `features/finance`
+utuh. Logika catat, transfer, hitung saldo (koreksi otomatis), bayar gaji (potong kasbon), dan
+tautan karyawan tidak disentuh. `CountModal` yang juga dibuka dari Pengaturan ikut berganti.
+- **`SelectBox` kini menerima `groups`** (opsi berkelompok, dirender sesudah `options`, API sama
+  dengan `Select` FixMaster), untuk kategori catat yang bergrup per jenis biaya.
+- Fokus awal lewat `data-autofocus`, mengikuti FixMaster: cabang bila harus dipilih, selain itu
+  nominal (catat, transfer, hitung) atau karyawan (gaji). Fokus kembali ke tombol pembuka.
+- **Readout hitung saldo** (aplikasi / dihitung / selisih) tetap container query sendiri
+  (`@container/count`, <=420px jadi tiga baris); warna selisih: pas hijau, kurang merah (memang
+  salah), lebih kuning. LED dibuang. FixMaster meluap 6px di 320px; kini tidak.
+- "Simpan & tambah lagi" boleh patah baris di ponsel, seperti sebelumnya.
+- `audit-contrast.mjs` memeriksa jendela catat, hitung saldo (dengan nominal), dan transfer.
+
 ### Halaman Keuangan pindah ke dens-ui (L-52, 23 Nov 2026)
 `FinancePage` ditulis ulang dengan dens-ui. Lima modalnya (catat, transfer, hitung saldo, bayar
 gaji, tautkan karyawan) pindah di L-63 (K-15); selama itu `FinancePage.module.css` dipangkas

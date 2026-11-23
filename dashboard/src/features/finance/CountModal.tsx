@@ -1,6 +1,12 @@
 import { EmptyValue } from '@/components/ui/EmptyValue';
 import { useState } from 'react';
-import { Modal, Input, Select, Button, FormFields, FormError } from '@/components/ui';
+import { LoaderCircle } from 'lucide-react';
+import { Button } from '@/components/dens/button';
+import { Field, FormMessage } from '@/components/dens/field';
+import { FormDialog } from '@/components/dens/form-dialog';
+import { SelectBox } from '@/components/dens/select-box';
+import { TextInput } from '@/components/dens/text-input';
+import { cn } from '@/lib/utils';
 import { useFormFault } from '@/hooks/useFormFault';
 import { fmtRp, fmtRpInput, parseRpInput } from '@/lib/format';
 import { localDateStr } from '@/lib/time';
@@ -12,7 +18,6 @@ import { useSessionStore, resolveCreateOutlet, mustPickOutlet } from '@/stores/s
 import { useCollection } from '@/hooks/useCollection';
 import { useT } from '@/i18n';
 import type { ActivityAction, Wallet } from '@/data/types';
-import styles from './FinancePage.module.css';
 
 interface CountModalProps {
   open: boolean;
@@ -103,17 +108,22 @@ export function CountModal({ open, onClose, wallets, initialWalletId }: CountMod
 
   const tone = !hasCount ? 'idle' : diff === 0 ? 'ok' : diff < 0 ? 'short' : 'over';
 
+  // Warna selisih hitung laci: pas hijau, kurang merah (memang salah), lebih kuning.
+  const TONE_TEXT = { ok: 'text-success-foreground', short: 'text-destructive', over: 'text-warning-foreground' } as const;
+  const TONE_DOT = { ok: 'bg-success-foreground', short: 'bg-destructive', over: 'bg-warning-foreground' } as const;
+  const toneKey = tone as keyof typeof TONE_TEXT | undefined;
   return (
-    <Modal
+    <FormDialog
       open={open}
       onClose={onClose}
       title={t('finance.countTitle')}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="outline" onClick={onClose}>
             {t('common.cancel')}
           </Button>
-          <Button type="submit" form="wallet-count" loading={busy} disabled={!hasCount}>
+          <Button type="submit" form="wallet-count" disabled={busy || !hasCount} aria-busy={busy || undefined}>
+            {busy && <LoaderCircle aria-hidden className="animate-spin motion-reduce:animate-none" />}
             {!hasCount || !entry
               ? t('finance.countConfirm')
               : t('finance.countAdjust').replace('{amount}', `${diff > 0 ? '+' : '−'}${fmtRp(Math.abs(diff))}`)}
@@ -123,34 +133,34 @@ export function CountModal({ open, onClose, wallets, initialWalletId }: CountMod
     >
       <form
         id="wallet-count"
+        className="grid gap-4"
+        noValidate
         onSubmit={(e) => {
           e.preventDefault();
           void apply();
         }}
       >
-        <FormFields>
-          <FormError>{error}</FormError>
-          <div className={styles.countWallets} role="group" aria-label={t('finance.wallet')}>
-            {wallets.map((w) => (
-              <button
-                key={w.id}
-                type="button"
-                className={styles.countWallet}
-                aria-pressed={w.id === walletId}
-                onClick={() => {
-                  setWalletId(w.id);
-                  setError('');
-                }}
-              >
-                <span className={styles.walletLed} aria-hidden />
-                {w.name}
-              </button>
-            ))}
-          </div>
-          <Input
-            label={t('finance.countLabel')}
-            invalid={invalid('count')}
-            hint={t('finance.countHint')}
+        <FormMessage>{error}</FormMessage>
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(110px,1fr))] gap-2" role="group" aria-label={t('finance.wallet')}>
+          {wallets.map((w) => (
+            <button
+              key={w.id}
+              type="button"
+              className="flex min-h-11 items-center gap-2 rounded-xl bg-card px-3 text-left text-sm font-medium ring-1 ring-border outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring aria-pressed:bg-accent aria-pressed:ring-2 aria-pressed:ring-primary"
+              aria-pressed={w.id === walletId}
+              onClick={() => {
+                setWalletId(w.id);
+                setError('');
+              }}
+            >
+              <span className="min-w-0 [overflow-wrap:anywhere]">{w.name}</span>
+            </button>
+          ))}
+        </div>
+        <Field label={t('finance.countLabel')} invalid={invalid('count')} hint={t('finance.countHint')}>
+          <TextInput
+            capitalize="none"
+            className="font-mono placeholder:font-sans"
             inputMode="numeric"
             value={counted}
             onChange={(e) => {
@@ -158,11 +168,17 @@ export function CountModal({ open, onClose, wallets, initialWalletId }: CountMod
               setError('');
             }}
             placeholder="0"
-            autoFocus
+            data-autofocus
           />
-          {/* Readout: saldo aplikasi / dihitung / selisih — satu persamaan, bukan tiga kartu. */}
-          <div className={styles.countBox}>
-          <dl className={styles.countReadout} data-tone={tone}>
+        </Field>
+        {/* Readout: saldo aplikasi / dihitung / selisih — satu persamaan, bukan
+            tiga kartu. Wadahnya container sendiri (jendela ada di portal); di
+            <=420px tiga sel jadi tiga baris. */}
+        <div className="@container/count">
+          <dl
+            data-tone={tone}
+            className="m-0 grid grid-cols-3 overflow-hidden rounded-xl font-mono ring-1 ring-border @max-[421px]/count:grid-cols-1 [&>div]:flex [&>div]:min-w-0 [&>div]:flex-col [&>div]:gap-1 [&>div]:border-r [&>div]:border-dashed [&>div]:border-border [&>div]:p-3 [&>div:last-child]:border-r-0 @max-[421px]/count:[&>div]:flex-row @max-[421px]/count:[&>div]:items-baseline @max-[421px]/count:[&>div]:justify-between @max-[421px]/count:[&>div]:border-r-0 @max-[421px]/count:[&>div]:border-b @max-[421px]/count:[&>div:last-child]:border-b-0 [&_dd]:m-0 [&_dd]:font-semibold [&_dd]:tabular-nums [&_dd]:[overflow-wrap:anywhere] [&_dt]:font-sans [&_dt]:text-xs [&_dt]:text-muted-foreground"
+          >
             <div>
               <dt>{t('finance.countApp')}</dt>
               <dd>{wallet ? fmtRp(wallet.balance) : <EmptyValue />}</dd>
@@ -171,12 +187,12 @@ export function CountModal({ open, onClose, wallets, initialWalletId }: CountMod
               <dt>{t('finance.countCounted')}</dt>
               <dd>{hasCount ? fmtRp(parseRpInput(counted)) : <EmptyValue />}</dd>
             </div>
-            <div className={styles.countDiff}>
-              <dt>
-                <span className={styles.countLed} aria-hidden />
+            <div>
+              <dt className="inline-flex items-center gap-1.5">
+                <span aria-hidden className={cn('size-2 rounded-full bg-muted-foreground/50', toneKey && TONE_DOT[toneKey])} />
                 {t('finance.countDiff')}
               </dt>
-              <dd>
+              <dd className={cn(toneKey && TONE_TEXT[toneKey])}>
                 {!hasCount
                   ? <EmptyValue />
                   : diff === 0
@@ -185,27 +201,26 @@ export function CountModal({ open, onClose, wallets, initialWalletId }: CountMod
               </dd>
             </div>
           </dl>
-          </div>
-          {entry && (
-            <p className={styles.formHint}>
-              {t(entry.kind === 'expense' ? 'finance.countShortHint' : 'finance.countOverHint')}
-            </p>
-          )}
-          {needOutlet && (
-            <Select
-              label={t('finance.outlet')}
-              invalid={invalid('outlet')}
+        </div>
+        {entry && (
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            {t(entry.kind === 'expense' ? 'finance.countShortHint' : 'finance.countOverHint')}
+          </p>
+        )}
+        {needOutlet && (
+          <Field label={t('finance.outlet')} invalid={invalid('outlet')}>
+            <SelectBox
               value={outletId}
-              onChange={(e) => {
-                setOutletId(e.target.value);
+              onValueChange={(v) => {
+                setOutletId(v);
                 setError('');
               }}
               options={outletOptions}
               placeholder={t('finance.outletPlaceholder')}
             />
-          )}
-        </FormFields>
+          </Field>
+        )}
       </form>
-    </Modal>
+    </FormDialog>
   );
 }

@@ -1,5 +1,10 @@
 import { useState } from 'react';
-import { Modal, Input, Select, Button, FormFields, FormRow, FormError } from '@/components/ui';
+import { LoaderCircle } from 'lucide-react';
+import { Button } from '@/components/dens/button';
+import { Field, FormMessage } from '@/components/dens/field';
+import { FormDialog } from '@/components/dens/form-dialog';
+import { SelectBox } from '@/components/dens/select-box';
+import { TextInput } from '@/components/dens/text-input';
 import { fmtRp, fmtRpInput, parseRpInput } from '@/lib/format';
 import { localDateStr } from '@/lib/time';
 import { transferMoneyLocked } from '@/lib/business/finance';
@@ -85,16 +90,17 @@ export function TransferModal({ open, onClose, wallets, editing = null }: Transf
   };
 
   return (
-    <Modal
+    <FormDialog
       open={open}
       onClose={onClose}
       title={editing ? t('finance.editTransfer') : t('finance.transferTitle')}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="outline" onClick={onClose}>
             {t('common.cancel')}
           </Button>
-          <Button type="submit" form="wallet-transfer" loading={busy}>
+          <Button type="submit" form="wallet-transfer" disabled={busy} aria-busy={busy || undefined}>
+            {busy && <LoaderCircle aria-hidden className="animate-spin motion-reduce:animate-none" />}
             {t(editing ? 'common.save' : 'finance.transfer')}
           </Button>
         </>
@@ -103,55 +109,59 @@ export function TransferModal({ open, onClose, wallets, editing = null }: Transf
       {/* <form>: Enter menyimpan, sama seperti jendela Pemasukan/Pengeluaran. */}
       <form
         id="wallet-transfer"
+        className="@container/form grid gap-4"
+        noValidate
         onSubmit={(e) => {
           e.preventDefault();
           void save();
         }}
       >
-      <FormFields>
-        <FormError>{error}</FormError>
-        <p style={{ margin: 0, fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
-          {moneyLocked
-            ? t('finance.transferLockedHint')
-            : t('finance.transferHint')}
+        <FormMessage>{error}</FormMessage>
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          {moneyLocked ? t('finance.transferLockedHint') : t('finance.transferHint')}
         </p>
-        <FormRow>
-          <Select
-            label={t('finance.fromWallet')}
-            value={fromId}
-            onChange={(e) => onFromChange(e.target.value)}
-            options={options(fromId, editing?.fromName ?? '')}
+        <div className="grid gap-4 @sm/form:grid-cols-2">
+          <Field label={t('finance.fromWallet')}>
+            <SelectBox
+              value={fromId}
+              onValueChange={onFromChange}
+              options={options(fromId, editing?.fromName ?? '')}
+              disabled={moneyLocked}
+            />
+          </Field>
+          <Field label={t('finance.toWallet')}>
+            <SelectBox
+              value={toId}
+              onValueChange={setToId}
+              options={options(toId, editing?.toName ?? '')
+                .filter((o) => o.value !== fromId)
+                .map((o) => ({ ...o, label: o.label.replace(/ \(Rp.*\)$/, '') }))}
+              disabled={moneyLocked}
+            />
+          </Field>
+        </div>
+        <Field label={t('finance.amount')}>
+          <TextInput
+            capitalize="none"
+            className="font-mono placeholder:font-sans"
+            value={amount}
+            onChange={(e) => setAmount(fmtRpInput(e.target.value))}
+            placeholder="100.000"
+            inputMode="numeric"
             disabled={moneyLocked}
+            data-autofocus={!moneyLocked || undefined}
           />
-          <Select
-            label={t('finance.toWallet')}
-            value={toId}
-            onChange={(e) => setToId(e.target.value)}
-            options={options(toId, editing?.toName ?? '')
-              .filter((o) => o.value !== fromId)
-              .map((o) => ({ ...o, label: o.label.replace(/ \(Rp.*\)$/, '') }))}
-            disabled={moneyLocked}
+        </Field>
+        <Field label={t('finance.noteOptional')}>
+          <TextInput
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder={t('finance.transferNotePh')}
+            maxLength={120}
+            data-autofocus={moneyLocked || undefined}
           />
-        </FormRow>
-        <Input
-          label={t('finance.amount')}
-          value={amount}
-          onChange={(e) => setAmount(fmtRpInput(e.target.value))}
-          placeholder="100.000"
-          inputMode="numeric"
-          disabled={moneyLocked}
-          autoFocus={!moneyLocked}
-        />
-        <Input
-          label={t('finance.noteOptional')}
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          placeholder={t('finance.transferNotePh')}
-          maxLength={120}
-          autoFocus={moneyLocked}
-        />
-      </FormFields>
+        </Field>
       </form>
-    </Modal>
+    </FormDialog>
   );
 }

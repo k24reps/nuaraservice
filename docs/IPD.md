@@ -1,6 +1,6 @@
 # IPD (Implementation Plan Document) - Nuara Dashboard
 
-> Versi: 0.13 | Diperbarui: 2026-11-23 | Merujuk: PRD, TRD, AFD, DBD, `dashboard/AGENTS.md`
+> Versi: 0.14 | Diperbarui: 2026-11-23 | Merujuk: PRD, TRD, AFD, DBD, `dashboard/AGENTS.md`
 <!-- Versi 0.2 (42 langkah Next.js dari nol) dibatalkan 2026-11-21 (wawancara P13). Langkahnya disimpan di bagian Arsip dengan tanda [DIBATALKAN]; rujukan kriteria F-xx di sana tetap berguna untuk daftar selisih. -->
 
 ## Cara memakai
@@ -101,7 +101,10 @@ Aturan bersama: satu langkah = satu kelompok halaman dipindah utuh, CSS Module l
   - Dipecah 2026-11-23 (K-15): lima modal Keuangan pindah ke L-63. `FinancePage.module.css` dipangkas ke kelas yang masih dipakai modal; `@source` menyebut `FinancePage.tsx` saja. Logika ringkasan, pergerakan wallet, kunci bulan, hapus/batal, dan tautan karyawan tidak berubah.
   - Selesai jika: halaman tampil di desktop, tablet, ponsel sampai 320px tanpa luberan; tepi kanan nominal pita satu kolom dan sejajar arus bersih per hari; kontrol baru >= 44px di layar sentuh; lima modal lama sama per piksel; probe `audit-*` dan `audit-contrast` bersih; halaman lain sama per piksel; tes, lint, build lolos.
   - Hasil 2026-11-23: lihat Catatan L-52.
-- [ ] **L-63 Keuangan: modal** (`EntryModal`, `TransferModal`, `CountModal`, `PayrollModal`, `LinkEmployeeModal`); sesudahnya `FinancePage.module.css` dihapus dan folder `features/finance` utuh di `@source`
+- [x] **L-63 Keuangan: modal** (`EntryModal`, `TransferModal`, `CountModal`, `PayrollModal`, `LinkEmployeeModal`); sesudahnya `FinancePage.module.css` dihapus dan folder `features/finance` utuh di `@source`
+  - Logika catat, transfer, hitung saldo, bayar gaji, dan tautan karyawan tidak berubah. `CountModal` yang dibuka dari Pengaturan ikut berganti.
+  - Selesai jika: kelima jendela tampil di desktop, tablet, ponsel sampai 320px tanpa luberan dan tanpa isi keluar dari jendela; kontrol >= 44px di layar sentuh; fokus kembali ke tombol pembuka; kategori catat tetap bergrup; probe `audit-*` dan `audit-contrast` bersih; halaman sama per piksel; tes, lint, build lolos.
+  - Hasil 2026-11-23: lihat Catatan L-63.
 - [ ] **L-53 Dashboard dan Laporan**
 - [ ] **L-54 Absensi, Tugas, Log Aktivitas, Glosarium, Kalkulator Biaya**
 - [ ] **L-55 Pengaturan**
@@ -227,6 +230,8 @@ Dikumpulkan 2026-11-22 dari log wawancara, catatan IPD, dan langkah L-43 s.d. L-
 - 2026-11-23 - L-62 - Ikut berubah: peta lencana status PO `PO_STATUS_BADGE` (baru, diuji; jendela terima dulu selalu biru apa pun statusnya), label aksesibel untuk isian qty/harga beli/terima (dulu tanpa label), dan tombol konfirmasi batal PO yang kini mati selama diproses (dulu bisa diketuk dua kali). Teks FixMaster yang masih literal di halaman dan modal Supplier dibiarkan apa adanya.
 - 2026-11-23 - L-52 - Hasil: halaman Keuangan diukur di 11 ukuran (1920 sampai 1025 desktop, tablet sentuh 1024/834/744, iPhone 13, 360px, 320px), tampilan awal dan filter wallet: tanpa luberan, tanpa isi keluar dari baris pita; tepi kanan nominal satu kolom dan sejajar arus bersih per hari di desktop dan tablet (sama dengan FixMaster, terpaut 1px). Lima modal FixMaster (pengeluaran, pemasukan, bayar gaji, transfer, hitung saldo) sama per piksel di dalam panelnya; selisih hanya di sudut membulat, tempat halaman baru tampil di balik lapisan gelap. `audit-contrast` bersih dan kini memeriksa sel wallet terpilih; probe `audit-mobile`, pita tablet, `audit-zoom`, zoom 1,25, dan Padat identik dengan ed1108e (L-62); 12 halaman lain sama per piksel (selisih hanya di wilayah derau); impeccable 0 temuan; 1182 tes / 89 berkas, lint, build lolos.
 - 2026-11-23 - L-52 - Tautan `Term` ("Arus Kas Bersih", komponen bersama FixMaster) masih 30px di layar sentuh, sama dengan sebelum langkah ini; dipindah bersama komponen bersama lain di L-56. Konfirmasi batal transfer dan hapus catatan kini mati selama diproses (dulu hanya labelnya berganti).
+- 2026-11-23 - L-63 - Hasil: jendela catat pengeluaran, catat pemasukan, bayar gaji, transfer, dan hitung saldo diukur di 5 ukuran (1440, 1025, tablet sentuh 834, iPhone 13, 320px): pas di layar, tanpa isi keluar dari jendela, kontrol >= 44px di layar sentuh (catatan yang tersisa hanya positif palsu `span.sr-only` dan `<select>` tersembunyi milik Radix), fokus kembali ke tombol pembuka di 25 dari 25 kasus. Dropdown kategori catat menampilkan enam grup. FixMaster meluap 6px di jendela hitung saldo 320px; kini tidak. `audit-contrast` bersih dan kini memeriksa jendela catat, hitung saldo, dan transfer; probe `audit-mobile`, pita tablet, `audit-zoom`, zoom 1,25, dan Padat identik dengan 228d213 (L-52); 13 halaman sama per piksel (selisih hanya di wilayah derau dan 1 piksel anti-alias ikon sidebar Keuangan); impeccable 0 temuan; 1183 tes / 89 berkas, lint, build lolos.
+- 2026-11-23 - L-63 - `SelectBox` dens kini menerima `groups` (opsi berkelompok, API sama dengan `Select` FixMaster). Teks FixMaster di modal Keuangan yang masih literal dibiarkan apa adanya.
 
 ## Arsip: rencana Next.js (dibatalkan 2026-11-21)
 Langkah di bawah tidak dikerjakan. Disimpan karena rujukan kriteria F-xx dan keputusan di dalamnya dipakai untuk L-45.

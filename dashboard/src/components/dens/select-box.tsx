@@ -1,4 +1,4 @@
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/dens/select"
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/dens/select"
 
 /*
  * Select dens-ui dari daftar opsi (Nuara, bukan bagian dens-ui), pengganti
@@ -8,6 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
  * Radix menolak opsi bernilai "" (dipakai untuk "tidak dipilih", mis. teknisi
  * belum ditugaskan), jadi nilai itu diganti penanda internal. Nilai "" TANPA
  * opsi "" berarti belum memilih: yang tampil `placeholder`.
+ *
+ * `groups` = opsi berkelompok (pengganti `<optgroup>`), dirender sesudah
+ * `options`, sama dengan Select FixMaster.
  */
 const EMPTY = "__kosong__"
 
@@ -15,6 +18,7 @@ type SelectBoxProps = {
   value: string
   onValueChange: (value: string) => void
   options: { value: string; label: string }[]
+  groups?: { label: string; options: { value: string; label: string }[] }[]
   placeholder?: string
   size?: "sm" | "default"
   disabled?: boolean
@@ -31,13 +35,14 @@ function SelectBox({
   value,
   onValueChange,
   options,
+  groups,
   placeholder,
   size,
   disabled,
   className,
   ...trigger
 }: SelectBoxProps) {
-  const hasEmpty = options.some((o) => o.value === "")
+  const hasEmpty = options.some((o) => o.value === "") || !!groups?.some((g) => g.options.some((o) => o.value === ""))
   const toItem = (v: string) => (v === "" ? EMPTY : v)
   return (
     <Select
@@ -53,6 +58,16 @@ function SelectBox({
           <SelectItem key={o.value || EMPTY} value={toItem(o.value)}>
             {o.label}
           </SelectItem>
+        ))}
+        {groups?.map((g) => (
+          <SelectGroup key={g.label}>
+            <SelectLabel>{g.label}</SelectLabel>
+            {g.options.map((o) => (
+              <SelectItem key={o.value || EMPTY} value={toItem(o.value)}>
+                {o.label}
+              </SelectItem>
+            ))}
+          </SelectGroup>
         ))}
       </SelectContent>
     </Select>

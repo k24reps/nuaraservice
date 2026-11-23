@@ -346,6 +346,25 @@ for (const theme of ['light']) {
       await page.locator('main button[aria-pressed]').filter({ hasText: /Rp/ }).first().click();
       await page.waitForTimeout(300);
     }],
+    // Modal Keuangan pindah ke dens-ui di L-63.
+    ['Keuangan-Catat', async () => {
+      await page.locator('main button:visible', { hasText: /^Pengeluaran$/ }).first().click();
+      await page.waitForTimeout(400);
+    }],
+    ['Keuangan-Hitung', async () => {
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(300);
+      await page.locator('main button:visible', { hasText: /^Hitung/ }).first().click();
+      await page.waitForTimeout(300);
+      await page.locator('[role="dialog"] input[inputmode="numeric"]').first().fill('1.000');
+      await page.waitForTimeout(200);
+    }],
+    ['Keuangan-Transfer', async () => {
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(300);
+      await page.locator('main button:visible', { hasText: /^Transfer$/ }).first().click();
+      await page.waitForTimeout(400);
+    }],
     ['Supplier-Vendor', async () => {
       await page.keyboard.press('Escape');
       await page.getByRole('link', { name: /^Supplier/ }).first().click();

@@ -1,29 +1,45 @@
 import { describe, expect, it } from 'vitest';
 import pageTsx from './FinancePage.tsx?raw';
-import modulesCss from './FinancePage.module.css?raw';
 import appCss from '@/styles/app.css?raw';
 
 const modalSources = import.meta.glob(['./*Modal.tsx'], { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
+const cssModules = Object.keys(import.meta.glob('./*.module.css'));
 
 /**
- * Mekanisme halaman Keuangan sejak pindah ke dens-ui (L-52). Lima modal masih
- * FixMaster sampai L-63 dan memakai sisa FinancePage.module.css.
+ * Mekanisme halaman Keuangan (L-52) dan lima modalnya (L-63) sejak pindah ke
+ * dens-ui.
  */
 describe('halaman Keuangan', () => {
-  it('halaman bertailwind: berkasnya di @source, tanpa CSS Module, satu data-nu di akar', () => {
-    expect(appCss).toContain('@source "../features/finance/FinancePage.tsx";');
-    expect(appCss).not.toContain('@source "../features/finance";');
-    expect(pageTsx).not.toContain('styles.');
-    expect(pageTsx).not.toContain('.module.css');
+  it('folder bertailwind: di @source utuh, tanpa CSS Module, satu data-nu di akar halaman', () => {
+    expect(appCss).toContain('@source "../features/finance";');
+    expect(appCss).not.toContain('@source "../features/finance/');
+    expect(cssModules).toEqual([]);
+    for (const src of [pageTsx, ...Object.values(modalSources)]) {
+      expect(src).not.toContain('styles.');
+      expect(src).not.toContain('.module.css');
+      for (const [, names] of src.matchAll(/import \{([^}]*)\} from '@\/components\/ui';/g)) {
+        for (const n of names.split(',').map((x) => x.trim()).filter(Boolean)) {
+          expect(['LoadState', 'loadPending', 'Term']).toContain(n);
+        }
+      }
+    }
     expect(pageTsx).toContain('<div data-nu className="@container/finance flex flex-col gap-4 bg-transparent phone:gap-3">');
     expect(pageTsx.match(/\bdata-nu\b/g)).toHaveLength(1);
   });
 
-  it('sisa CSS Module hanya memuat kelas yang dipakai modal', () => {
-    const classes = new Set([...modulesCss.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/\.([A-Za-z][\w-]*)/g)].map((m) => m[1]));
-    const used = new Set(Object.values(modalSources).flatMap((src) => [...src.matchAll(/styles\.(\w+)/g)].map((m) => m[1])));
-    for (const c of classes) expect(used, `kelas .${c} tak dipakai modal mana pun`).toContain(c);
-    for (const c of used) expect(classes, `modal memakai .${c} yang hilang`).toContain(c);
+  it('lima modal: FormDialog, fokus awal lewat data-autofocus', () => {
+    expect(Object.keys(modalSources)).toHaveLength(5);
+    for (const [file, src] of Object.entries(modalSources)) {
+      expect(src, file).toContain('<FormDialog');
+      expect(src, file).not.toMatch(/\bautoFocus\b/);
+      expect(src, file).toContain('data-autofocus');
+    }
+  });
+
+  it('kategori catat tetap bergrup; readout hitung saldo turun jadi baris di jendela sempit', () => {
+    expect(modalSources['./EntryModal.tsx']).toContain('groups={categoryGroups}');
+    expect(modalSources['./CountModal.tsx']).toContain('<div className="@container/count">');
+    expect(modalSources['./CountModal.tsx']).toContain('@max-[421px]/count:grid-cols-1');
   });
 
   it('pita buku kas: kolom aksi tetap dua tombol, baris turun dua tingkat lewat container query', () => {

@@ -1,5 +1,10 @@
 import { useState } from 'react';
-import { Modal, Input, Button, Select, FormFields, FormRow, FormError } from '@/components/ui';
+import { LoaderCircle } from 'lucide-react';
+import { Button } from '@/components/dens/button';
+import { Field, FormMessage } from '@/components/dens/field';
+import { FormDialog } from '@/components/dens/form-dialog';
+import { SelectBox } from '@/components/dens/select-box';
+import { TextInput } from '@/components/dens/text-input';
 import { useFormFault } from '@/hooks/useFormFault';
 import { useCollection } from '@/hooks/useCollection';
 import { useSessionStore, mustPickOutlet } from '@/stores/session';
@@ -13,7 +18,6 @@ import { toast } from '@/stores/toast';
 import { interpolate } from '@/lib/business/notify';
 import { useT } from '@/i18n';
 import type { Wallet } from '@/data/types';
-import styles from './FinancePage.module.css';
 
 interface PayrollModalProps {
   open: boolean;
@@ -138,112 +142,132 @@ export function PayrollModal({ open, onClose, wallets }: PayrollModalProps) {
     }
   };
 
+  const row2 = 'grid gap-4 @sm/form:grid-cols-2';
   return (
-    <Modal
+    <FormDialog
       open={open}
       onClose={onClose}
       title={t('payroll.title')}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="outline" onClick={onClose}>
             {t('common.cancel')}
           </Button>
-          <Button variant="secondary" onClick={() => void save(true)} loading={busy}>
+          <Button variant="outline" onClick={() => void save(true)} disabled={busy}>
             {t('payroll.saveAnother')}
           </Button>
-          <Button onClick={() => void save(false)} loading={busy}>
+          <Button onClick={() => void save(false)} disabled={busy} aria-busy={busy || undefined}>
+            {busy && <LoaderCircle aria-hidden className="animate-spin motion-reduce:animate-none" />}
             {/* Nominal rupiah tak bisa dipatah: di ponsel tombol 3 kolom meluber. Jumlahnya ada di readout. */}
             {t('payroll.payShort')}
           </Button>
         </>
       }
     >
-      <FormFields>
-        <FormError>{error}</FormError>
+      <div className="@container/form grid gap-4">
+        <FormMessage>{error}</FormMessage>
         {needOutlet && (
-          <Select
-            label={t('finance.outlet')}
-            invalid={invalid('outlet')}
-            value={outletId}
-            onChange={(e) => setOutletId(e.target.value)}
-            options={outlets
-              .filter((o) => allowedOutletIds.length === 0 || allowedOutletIds.includes(o.id))
-              .map((o) => ({ value: o.id, label: o.name }))}
-            placeholder={t('finance.outletPlaceholder')}
-          />
+          <Field label={t('finance.outlet')} invalid={invalid('outlet')}>
+            <SelectBox
+              value={outletId}
+              onValueChange={setOutletId}
+              options={outlets
+                .filter((o) => allowedOutletIds.length === 0 || allowedOutletIds.includes(o.id))
+                .map((o) => ({ value: o.id, label: o.name }))}
+              placeholder={t('finance.outletPlaceholder')}
+              data-autofocus
+            />
+          </Field>
         )}
-        <Select
-          label={t('payroll.employee')}
-          invalid={invalid('employee')}
-          value={employeeId}
-          onChange={(e) => pickEmployee(e.target.value)}
-          placeholder={t('payroll.pickEmployee')}
-          options={staff.map((e) => {
-            const r = overview.get(e.id);
-            const tags = [
-              paid.includes(e.id) ? t('payroll.tagPaid') : '',
-              r && r.advanceOutstanding > 0 ? interpolate(t('payroll.tagAdvance'), { amount: fmtRp(r.advanceOutstanding) }) : '',
-            ].filter(Boolean);
-            return { value: e.id, label: tags.length ? `${e.name} · ${tags.join(' · ')}` : e.name };
-          })}
-        />
-        <FormRow>
-          <Input
+        <Field label={t('payroll.employee')} invalid={invalid('employee')}>
+          <SelectBox
+            value={employeeId}
+            onValueChange={pickEmployee}
+            placeholder={t('payroll.pickEmployee')}
+            options={staff.map((e) => {
+              const r = overview.get(e.id);
+              const tags = [
+                paid.includes(e.id) ? t('payroll.tagPaid') : '',
+                r && r.advanceOutstanding > 0 ? interpolate(t('payroll.tagAdvance'), { amount: fmtRp(r.advanceOutstanding) }) : '',
+              ].filter(Boolean);
+              return { value: e.id, label: tags.length ? `${e.name} · ${tags.join(' · ')}` : e.name };
+            })}
+            data-autofocus={!needOutlet || undefined}
+          />
+        </Field>
+        <div className={row2}>
+          <Field
             label={t('payroll.gross')}
             invalid={invalid('gross')}
-            inputMode="numeric"
-            value={gross}
-            onChange={(e) => {
-              setGross(fmtRpInput(e.target.value));
-              setError('');
-            }}
-            placeholder="2.500.000"
             hint={row?.lastSalary ? interpolate(t('payroll.lastSalary'), { amount: fmtRp(row.lastSalary) }) : undefined}
-          />
-          <Input
+          >
+            <TextInput
+              capitalize="none"
+              className="font-mono placeholder:font-sans"
+              inputMode="numeric"
+              value={gross}
+              onChange={(e) => {
+                setGross(fmtRpInput(e.target.value));
+                setError('');
+              }}
+              placeholder="2.500.000"
+            />
+          </Field>
+          <Field
             label={t('payroll.deduction')}
             invalid={invalid('deduction')}
-            inputMode="numeric"
-            value={deduction}
-            onChange={(e) => {
-              setDeduction(fmtRpInput(e.target.value));
-              setError('');
-            }}
-            placeholder="0"
-            disabled={!employee || outstanding <= 0}
             hint={employee ? interpolate(t('payroll.outstanding'), { amount: fmtRp(outstanding) }) : undefined}
+          >
+            <TextInput
+              capitalize="none"
+              className="font-mono placeholder:font-sans"
+              inputMode="numeric"
+              value={deduction}
+              onChange={(e) => {
+                setDeduction(fmtRpInput(e.target.value));
+                setError('');
+              }}
+              placeholder="0"
+              disabled={!employee || outstanding <= 0}
+            />
+          </Field>
+        </div>
+        <div className={row2}>
+          <Field label={t('payroll.wallet')} invalid={invalid('wallet')}>
+            <SelectBox
+              value={walletId}
+              onValueChange={(v) => {
+                setWalletId(v);
+                const picked = wallets.find((w) => w.id === v);
+                if (needOutlet && picked?.outletId) setOutletId(picked.outletId);
+              }}
+              options={usableWallets.map((w) => ({ value: w.id, label: `${w.name} · ${fmtRp(w.balance)}` }))}
+            />
+          </Field>
+          <Field label={t('finance.date')} invalid={invalid('date')}>
+            <TextInput
+              type="date"
+              className="font-mono"
+              value={date}
+              min={today.slice(0, 8) + '01'}
+              max={today}
+              onChange={(e) => setDate(e.target.value)}
+            />
+          </Field>
+        </div>
+        <Field label={t('finance.noteOptional')}>
+          <TextInput
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder={employee ? interpolate(t('payroll.notePh'), { name: employee.name }) : ''}
           />
-        </FormRow>
-        <FormRow>
-          <Select
-            label={t('payroll.wallet')}
-            invalid={invalid('wallet')}
-            value={walletId}
-            onChange={(e) => {
-              setWalletId(e.target.value);
-              const picked = wallets.find((w) => w.id === e.target.value);
-              if (needOutlet && picked?.outletId) setOutletId(picked.outletId);
-            }}
-            options={usableWallets.map((w) => ({ value: w.id, label: `${w.name} · ${fmtRp(w.balance)}` }))}
-          />
-          <Input
-            label={t('finance.date')}
-            invalid={invalid('date')}
-            type="date"
-            value={date}
-            min={today.slice(0, 8) + '01'}
-            max={today}
-            onChange={(e) => setDate(e.target.value)}
-          />
-        </FormRow>
-        <Input
-          label={t('finance.noteOptional')}
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder={employee ? interpolate(t('payroll.notePh'), { name: employee.name }) : ''}
-        />
+        </Field>
+        {/* Gaji penuh − potongan kasbon = yang ditransfer. */}
         {employee && grossNum > 0 && (
-          <div className={styles.payReadout} aria-live="polite">
+          <div
+            className="flex flex-wrap gap-x-4 gap-y-1.5 rounded-xl border border-dashed border-border bg-surface/60 p-3 font-mono text-xs text-muted-foreground [&_b]:font-semibold [&_b]:text-foreground"
+            aria-live="polite"
+          >
             <span>
               {t('payroll.rGross')} <b>{fmtRp(grossNum)}</b>
             </span>
@@ -252,7 +276,7 @@ export function PayrollModal({ open, onClose, wallets }: PayrollModalProps) {
                 {t('payroll.rDeduct')} <b>−{fmtRp(deductNum)}</b>
               </span>
             )}
-            <span className={styles.payNet}>
+            <span className="text-foreground [&_b]:text-sm">
               {t('payroll.rNet')} <b>{fmtRp(netPay(grossNum, deductNum))}</b>
             </span>
             {outstanding > 0 && (
@@ -262,7 +286,7 @@ export function PayrollModal({ open, onClose, wallets }: PayrollModalProps) {
             )}
           </div>
         )}
-      </FormFields>
-    </Modal>
+      </div>
+    </FormDialog>
   );
 }

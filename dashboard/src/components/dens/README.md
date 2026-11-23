@@ -11,7 +11,7 @@ Tambahan Nuara (bukan dari dens-ui; tiap berkas menyebutnya di komentar kepala).
 | `field.tsx` | `Field` (label + petunjuk/galat tertaut, `invalid`), `FormMessage` | `FormFields`/`FormError` |
 | `password-input.tsx`, `password-strength.tsx` | password dengan tombol tampil/sembunyi, kekuatan password | `Input revealable`, `PasswordStrength` |
 | `text-input.tsx` | `TextInput`: kapitalisasi otomatis, ikon depan, tombol hapus isi | `Input` |
-| `select-box.tsx` | `SelectBox`: Select dari daftar opsi, opsi bernilai "" diizinkan | `Select`, `<select>` |
+| `select-box.tsx` | `SelectBox`: Select dari daftar opsi, opsi bernilai "" diizinkan, `groups` untuk opsi berkelompok | `Select`, `<select>` |
 | `form-dialog.tsx` | `FormDialog`: jendela form, lembar bawah di <=640px, fokus awal `data-autofocus` | `Modal` (form) |
 | `confirm-dialog.tsx` | `ConfirmDialog` | `ConfirmDialog` |
 | `summary-strip.tsx` | `SummaryStrip`: strip ringkasan halaman | `PageSummary` |

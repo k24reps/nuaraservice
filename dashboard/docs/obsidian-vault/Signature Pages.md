@@ -638,8 +638,8 @@ Sejak 7 Nov 2026 deret itu memakai `PageSummary` bersama. Dulu ada tiga kotak de
 
 **Nuara (L-52, 23 Nov 2026).** Halaman Keuangan kini dens-ui + Tailwind; strip wallet, ringkasan,
 dan pita buku kas per hari tetap, motif bench-nya tidak: spine warna dan LED dibuang, arah uang
-dibawa warna nominal dan tanda +/−. Lima modalnya masih FixMaster sampai L-63. Uraian di bawah
-adalah tampilan FixMaster.
+dibawa warna nominal dan tanda +/−. Lima modalnya ikut pindah di L-63 (`FormDialog`, kategori catat
+bergrup lewat `SelectBox groups`). Uraian di bawah adalah tampilan FixMaster.
 
 - **Per cabang & ponsel (0095, 28 Sep 2026).** Tampilan satu cabang hanya memuat wallet bersama + wallet cabang itu; wallet khusus cabang punya persamaan lengkap (awal + masuk − keluar ± transfer), wallet bersama tetap "gerak cabang ini"; Total berlabel "cabang ini + bersama". Catat Pemasukan/Pengeluaran menawarkan wallet yang sah untuk cabangnya (memilih wallet cabang di "Semua Outlet" mengisi cabangnya), Hitung saldo membuka Tunai cabang dan tak bertanya cabang untuk wallet khusus cabang. Ponsel (≤560px wadah): ringkasan satu baris tiga sel, gerak wallet tanpa "Rp", tombol **Hitung** menempel di sel Total — baris pertama buku kas naik dari y=735 (tertutup navigasi) ke y=709 di 375×812. Pengaturan › Wallet: wallet bisa diubah cabang & penanda **Uang tunai (laci)** kapan saja (dulu hanya ganti nama).
 

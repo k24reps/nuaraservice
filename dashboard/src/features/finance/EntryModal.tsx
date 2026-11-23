@@ -1,13 +1,10 @@
 import { useRef, useState } from 'react';
-import {
-  Modal,
-  Input,
-  Select,
-  Button,
-  FormFields,
-  FormRow,
-  FormError,
-} from '@/components/ui';
+import { LoaderCircle } from 'lucide-react';
+import { Button } from '@/components/dens/button';
+import { Field, FormMessage } from '@/components/dens/field';
+import { FormDialog } from '@/components/dens/form-dialog';
+import { SelectBox } from '@/components/dens/select-box';
+import { TextInput } from '@/components/dens/text-input';
 import { useFormFault } from '@/hooks/useFormFault';
 import { repository } from '@/data';
 import { fmtRp, fmtRpInput, parseRpInput } from '@/lib/format';
@@ -44,7 +41,6 @@ import type {
   Expense,
   Income,
 } from '@/data/types';
-import styles from './FinancePage.module.css';
 import type { TranslationKey } from '@/i18n';
 
 interface EntryModalProps {
@@ -344,8 +340,9 @@ export function EntryModal({ open, onClose, kind, wallets, editing, existing = [
         }))
       : INCOME_GROUPS.map((g) => ({ label: t(g.label), options: g.categories.map((c) => ({ value: c, label: c })) }));
 
+  const hint = 'text-xs leading-relaxed text-muted-foreground';
   return (
-    <Modal
+    <FormDialog
       open={open}
       onClose={onClose}
       title={
@@ -361,13 +358,14 @@ export function EntryModal({ open, onClose, kind, wallets, editing, existing = [
       }
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="outline" onClick={onClose}>
             {t('common.cancel')}
           </Button>
           {!editing && (
+            // Boleh patah di ponsel (dulu terpotong di 375px).
             <Button
-              variant="secondary"
-              className={styles.saveAgain}
+              variant="outline"
+              className="h-auto min-h-10 py-2 leading-tight whitespace-normal"
               onClick={() => void save(true)}
               disabled={busy}
               title="Ctrl+Enter"
@@ -375,7 +373,8 @@ export function EntryModal({ open, onClose, kind, wallets, editing, existing = [
               {t('finance.saveAgain')}
             </Button>
           )}
-          <Button type="submit" form={formId} loading={busy}>
+          <Button type="submit" form={formId} disabled={busy} aria-busy={busy || undefined}>
+            {busy && <LoaderCircle aria-hidden className="animate-spin motion-reduce:animate-none" />}
             {t('common.save')}
           </Button>
         </>
@@ -384,6 +383,8 @@ export function EntryModal({ open, onClose, kind, wallets, editing, existing = [
       {/* <form>: Enter di field mana pun menyimpan. */}
       <form
         id={formId}
+        className="@container/form grid gap-4"
+        noValidate
         onSubmit={(e) => {
           e.preventDefault();
           void save();
@@ -396,34 +397,36 @@ export function EntryModal({ open, onClose, kind, wallets, editing, existing = [
           }
         }}
       >
-        <FormFields>
-          <FormError>{error}</FormError>
-          {needOutlet && (
-            <Select
-              label={t('finance.outlet')}
-              invalid={invalid('outlet')}
+        <FormMessage>{error}</FormMessage>
+        {needOutlet && (
+          <Field label={t('finance.outlet')} invalid={invalid('outlet')}>
+            <SelectBox
               value={outletId}
-              onChange={(e) => change(setOutletId)(e.target.value)}
+              onValueChange={change(setOutletId)}
               options={outletOptions}
               placeholder={t('finance.outletPlaceholder')}
-              autoFocus
+              data-autofocus
             />
-          )}
-          <Select
-            label={t('finance.category')}
-            invalid={invalid('category')}
+          </Field>
+        )}
+        <Field label={t('finance.category')} invalid={invalid('category')}>
+          <SelectBox
             value={category}
-            onChange={(e) => change(setCategory)(e.target.value)}
+            onValueChange={change(setCategory)}
             options={legacy.map((c) => ({ value: c, label: categoryLabel(c) }))}
             groups={categoryGroups}
             placeholder={t('finance.pickCategory')}
           />
-          {EMPLOYEE_CATEGORIES.has(category) && (
-            <Select
-              label={EMPLOYEE_REQUIRED.has(category) ? t('finance.employee') : t('finance.employeeOptional')}
-              invalid={invalid('employee')}
+        </Field>
+        {EMPLOYEE_CATEGORIES.has(category) && (
+          <Field
+            label={EMPLOYEE_REQUIRED.has(category) ? t('finance.employee') : t('finance.employeeOptional')}
+            invalid={invalid('employee')}
+            hint={category === 'Gaji' ? t('finance.gajiUsePayroll') : undefined}
+          >
+            <SelectBox
               value={employeeId}
-              onChange={(e) => change(setEmployeeId)(e.target.value)}
+              onValueChange={change(setEmployeeId)}
               placeholder={t('finance.pickEmployee')}
               options={employees
                 .filter((e) => e.active)
@@ -434,62 +437,60 @@ export function EntryModal({ open, onClose, kind, wallets, editing, existing = [
                     label: left > 0 ? `${e.name} · ${interpolate(t('payroll.tagAdvance'), { amount: fmtRp(left) })}` : e.name,
                   };
                 })}
-              hint={category === 'Gaji' ? t('finance.gajiUsePayroll') : undefined}
             />
-          )}
-          {CATEGORY_HINT[category] && <p className={styles.formHint}>{t(CATEGORY_HINT[category])}</p>}
-          {expenseHint && (
-            <p className={styles.formHint}>
-              {t(expenseHint)}
-              {category === 'Sewa' && (annualRent || isOwner) && ' '}
-              {annualRent
-                ? interpolate(t('finance.rentYearlyHint'), { amount: fmtRp(annualRent.yearly / 12) })
-                : category === 'Sewa' && isOwner && t('finance.rentAnnualAsk')}
-            </p>
-          )}
-          {kind === 'income' && !editing && (
-            <p className={styles.formHint}>{t('finance.autoIncomeHint')}</p>
-          )}
-          <Input
-            label={t('finance.date')}
-            invalid={invalid('date')}
+          </Field>
+        )}
+        {CATEGORY_HINT[category] && <p className={hint}>{t(CATEGORY_HINT[category])}</p>}
+        {expenseHint && (
+          <p className={hint}>
+            {t(expenseHint)}
+            {category === 'Sewa' && (annualRent || isOwner) && ' '}
+            {annualRent
+              ? interpolate(t('finance.rentYearlyHint'), { amount: fmtRp(annualRent.yearly / 12) })
+              : category === 'Sewa' && isOwner && t('finance.rentAnnualAsk')}
+          </p>
+        )}
+        {kind === 'income' && !editing && <p className={hint}>{t('finance.autoIncomeHint')}</p>}
+        <Field label={t('finance.date')} invalid={invalid('date')} hint={editing ? undefined : t('finance.dateHint')}>
+          <TextInput
             type="date"
+            className="font-mono"
             value={date}
             min={editing ? undefined : monthStart}
             max={today}
             onChange={(e) => change(setDate)(e.target.value)}
-            hint={editing ? undefined : t('finance.dateHint')}
           />
-          <FormRow>
-            <Input
+        </Field>
+        {/* Dua kolom selama jendela cukup lebar (container query: zoom ikut dihitung). */}
+        <div className="grid gap-4 @sm/form:grid-cols-2">
+          <Field label={t('finance.amount')} invalid={invalid('amount')}>
+            <TextInput
               ref={amountRef}
-              label={t('finance.amount')}
-              invalid={invalid('amount')}
+              capitalize="none"
+              className="font-mono placeholder:font-sans"
               value={amount}
               inputMode="numeric"
               onChange={(e) => change(setAmount)(fmtRpInput(e.target.value))}
               placeholder="100.000"
-              autoFocus={!needOutlet}
+              data-autofocus={!needOutlet || undefined}
             />
-            <Select
-              label={t('finance.wallet')}
-              invalid={invalid('wallet')}
+          </Field>
+          <Field label={t('finance.wallet')} invalid={invalid('wallet')}>
+            <SelectBox
               value={walletId}
-              onChange={(e) => {
-                change(setWalletId)(e.target.value);
-                const picked = wallets.find((w) => w.id === e.target.value);
+              onValueChange={(v) => {
+                change(setWalletId)(v);
+                const picked = wallets.find((w) => w.id === v);
                 if (needOutlet && picked?.outletId) setOutletId(picked.outletId);
               }}
               options={usableWallets.map((w) => ({ value: w.id, label: `${w.name} · ${fmtRp(w.balance)}` }))}
             />
-          </FormRow>
-          <Input
-            label={t('finance.noteOptional')}
-            value={description}
-            onChange={(e) => change(setDescription)(e.target.value)}
-          />
-        </FormFields>
+          </Field>
+        </div>
+        <Field label={t('finance.noteOptional')}>
+          <TextInput value={description} onChange={(e) => change(setDescription)(e.target.value)} />
+        </Field>
       </form>
-    </Modal>
+    </FormDialog>
   );
 }
