@@ -132,6 +132,22 @@
   }
 }
 
+/* Kalkulator Biaya (L-65): fokus dari Tab tak boleh mendarat di balik register
+   yang menempel di bawah layar (WCAG 2.4.11). Yang menggulir adalah dokumen,
+   jadi padding dipasang di <html> selama halaman ini terbuka; utilitas di
+   halaman tak bisa menjangkau leluhurnya. 6.5rem ≈ tinggi register (90px) + celah. */
+@layer utilities {
+  html:has([data-calc-page]) {
+    scroll-padding-top: calc(var(--topbar-height) + var(--space-3));
+    scroll-padding-bottom: calc(var(--space-3) + 6.5rem);
+  }
+  @media (max-width: 720px) {
+    html:has([data-calc-page]) {
+      scroll-padding-bottom: calc(var(--mobile-nav-height) + var(--space-2) + env(safe-area-inset-bottom) + 6.5rem);
+    }
+  }
+}
+
 /* Kelas Tailwind hanya dibuat dari folder ini. Kata seperti "hidden" atau
    "grid" di kode FixMaster tidak boleh melahirkan utilitas yang mengalahkan
    kelas global lama. Tambahkan folder halaman saat halamannya dipindah. */
@@ -151,3 +167,6 @@
 @source "../features/reports";
 @source "../features/attendance";
 @source "../features/tasks";
+@source "../features/glossary";
+@source "../features/calculator";
+@source "../features/activity";

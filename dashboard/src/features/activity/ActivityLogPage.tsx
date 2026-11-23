@@ -1,7 +1,39 @@
 import { EmptyValue } from '@/components/ui/EmptyValue';
 import { useMemo, useState } from 'react';
-import { Card, CardBody, Button, EmptyState, Icon, Input, Select, Badge } from '@/components/ui';
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import {
+  Activity,
+  ArrowLeftRight,
+  CalendarDays,
+  CircleCheck,
+  CircleX,
+  ClipboardList,
+  History,
+  Info,
+  ListChecks,
+  LoaderCircle,
+  LogIn,
+  LogOut,
+  Package,
+  Pencil,
+  Search,
+  ShoppingCart,
+  Trash2,
+  TrendingDown,
+  TrendingUp,
+  User,
+  Users,
+  Wrench,
+  X,
+  type LucideIcon,
+} from 'lucide-react';
+import { Badge } from '@/components/dens/badge';
+import { Button } from '@/components/dens/button';
+import { ConfirmDialog } from '@/components/dens/confirm-dialog';
+import { EmptyState } from '@/components/dens/empty-state';
+import { SelectBox } from '@/components/dens/select-box';
+import { SummaryStrip } from '@/components/dens/summary-strip';
+import { TextInput } from '@/components/dens/text-input';
+import { cn } from '@/lib/utils';
 import { useCollectionRange, rangeForTimestamp } from '@/hooks/useCollectionRange';
 import { actionMeta, roleLabel, filterActivity, groupedActionOptions } from '@/lib/business/activity';
 import { fmtDate, localDateOf, localDateStr, localTimeStr } from '@/lib/time';
@@ -10,7 +42,6 @@ import { isCloudMode } from '@/stores/demo';
 import { useSessionStore } from '@/stores/session';
 import { toast } from '@/stores/toast';
 import type { Role } from '@/data/types';
-import styles from './ActivityLogPage.module.css';
 
 /** "HH:MM" local time via localTimeStr — NOT toLocaleTimeString (see time.ts:
  * known Chrome/Edge Windows bug rendering 11AM as 23). */
@@ -44,11 +75,9 @@ const ROLE_OPTIONS: { value: Role | 'all'; label: string }[] = [
 ];
 
 /**
- * Owner-only audit trail, styled as a bench "Event Recorder — Diagnostic
- * Trace": a multi-channel data-logger faceplate (live REC LED + readout)
- * feeding a continuous vertical trace rail where each action is a glowing
- * signal-node. Read access is enforced server-side by RLS (migration 0019);
- * this page is also guarded by OwnerRoute.
+ * Jejak audit khusus pemilik: ringkasan jumlah event, saringan, lalu event per
+ * hari, terbaru di atas. Akses baca ditegakkan RLS di server (migrasi 0019);
+ * halaman ini juga dijaga OwnerRoute.
  */
 export function ActivityLogPage() {
   const [query, setQuery] = useState('');
@@ -78,6 +107,7 @@ export function ActivityLogPage() {
   const [purging, setPurging] = useState(false);
 
   const purge = async () => {
+    if (purging) return;
     setConfirmPurge(false);
     setPurging(true);
     try {
@@ -124,175 +154,149 @@ export function ActivityLogPage() {
   const hasFilter = query !== '' || role !== 'all' || action !== 'all';
 
   return (
-    <div className={styles.wrap}>
-      {/* ---------- Recorder faceplate ---------- */}
-      <div className={styles.recorder}>
-        <div className={styles.recLeft}>
-          <span className={styles.recLed} aria-hidden />
-          <div className={styles.recTitle}>
-            <span className={styles.recTag}>EVENT RECORDER</span>
-            <strong>Jejak Audit · Khusus Pemilik</strong>
-          </div>
-        </div>
-        <div className={styles.readout}>
-          {/* "TERMUAT", bukan "TOTAL": angkanya kini jumlah event dalam jendela
-              waktu yang dimuat, bukan seluruh riwayat. Melabelinya TOTAL akan
-              menyesatkan — pemilik bisa menyimpulkan timnya lebih sepi dari
-              kenyataan hanya karena jendelanya sempit. */}
-          <div className={styles.readItem}>
-            <span className={styles.readLabel}>TERMUAT</span>
-            <strong className={styles.readValue}>{String(logs.length).padStart(3, '0')}</strong>
-          </div>
-          <div className={styles.readSep} aria-hidden />
-          <div className={styles.readItem}>
-            <span className={styles.readLabel}>TAMPIL</span>
-            <strong className={styles.readValue}>{String(filtered.length).padStart(3, '0')}</strong>
-          </div>
-          <div className={styles.readSep} aria-hidden />
-          <div className={styles.readItem}>
-            <span className={styles.readLabel}>KANAL</span>
-            <strong className={styles.readValue}>{String(channels).padStart(2, '0')}</strong>
-          </div>
-        </div>
-      </div>
+    <div data-nu className="@container/log flex flex-col gap-4 bg-transparent">
+      {/* "Termuat", bukan "Total": angkanya jumlah event dalam jendela waktu yang
+          dimuat, bukan seluruh riwayat. Melabelinya total akan menyesatkan —
+          pemilik bisa menyimpulkan timnya lebih sepi dari kenyataan hanya karena
+          jendelanya sempit. */}
+      <SummaryStrip
+        label="Jejak Audit · Khusus Pemilik"
+        items={[
+          { label: 'Termuat', value: logs.length },
+          { label: 'Tampil', value: filtered.length },
+          { label: 'Kanal', value: channels },
+        ]}
+      />
 
-      {/* ---------- Control strip (filters) ---------- */}
-      <div className={styles.toolbar}>
-        <div className={styles.search}>
-          <Icon name="magnifying-glass" className={styles.searchIcon} aria-hidden />
-          <Input
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="min-w-[220px] flex-1 @max-[641px]/log:min-w-0 @max-[641px]/log:basis-full">
+          <TextInput
             placeholder="Cari nama atau objek…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            onClear={() => setQuery('')}
+            start={<Search aria-hidden />}
             aria-label="Cari aktivitas"
           />
         </div>
-        <Select
+        <SelectBox
+          className="w-auto @max-[641px]/log:w-full"
           value={role}
-          onChange={(e) => setRole(e.target.value as Role | 'all')}
+          onValueChange={(v) => setRole(v as Role | 'all')}
           options={ROLE_OPTIONS}
           aria-label="Filter peran"
         />
-        <Select
+        <SelectBox
+          className="w-auto @max-[641px]/log:w-full"
           value={action}
-          onChange={(e) => setAction(e.target.value)}
+          onValueChange={setAction}
           options={ACTION_ALL}
           groups={ACTION_GROUPS}
           aria-label="Filter aksi"
         />
         {hasFilter && (
           <Button
-            variant="secondary"
+            variant="outline"
+            className="@max-[641px]/log:w-full"
             onClick={() => {
               setQuery('');
               setRole('all');
               setAction('all');
             }}
           >
-            <Icon name="times" aria-hidden /> Reset
+            <X aria-hidden />
+            Reset
           </Button>
         )}
       </div>
 
-      <Card className={styles.traceCard}>
-        <CardBody className={styles.noPad}>
-          {loading ? (
-            <p className={styles.loading}>
-              <Icon name="circle-notch" className={styles.spin} aria-hidden /> Merekam…
-            </p>
-          ) : filtered.length === 0 ? (
-            <EmptyState
-              icon={<Icon name="pulse" aria-hidden />}
-              title={hasFilter ? 'Tidak ada event cocok' : 'Belum ada aktivitas'}
-              description={
-                hasFilter
-                  ? 'Coba longgarkan filter pencarian.'
-                  : 'Jejak aktivitas tim akan terekam di sini saat mereka bekerja.'
-              }
-            />
-          ) : (
-            <div className={styles.trace}>
-              {filtered.length > MAX_RENDERED && (
-                <p className={styles.loading} role="note">
-                  Menampilkan {MAX_RENDERED} event terbaru dari {filtered.length}. Persempit
-                  filter untuk melihat event lama.
-                </p>
-              )}
-              {groups.map(([day, rows]) => (
-                <section key={day} className={styles.segment}>
-                  <div className={styles.segHead}>
-                    <Icon name="calendar" aria-hidden /> {fmtDate(day)}
-                    <span className={styles.segCount}>{rows.length} event</span>
-                  </div>
-                  <ul className={styles.events}>
-                    {rows.map((log) => {
-                      const meta = actionMeta(log.action);
-                      return (
-                        <li key={log.id} className={styles.event}>
-                          <span
-                            className={[styles.node, styles[`tone_${meta.tone}`]].join(' ')}
-                            aria-hidden
-                          >
-                            <Icon name={meta.icon} aria-hidden />
-                          </span>
-                          <div className={styles.evBody}>
-                            <div className={styles.evTop}>
-                              <strong className={styles.action}>{meta.label}</strong>
-                              {log.entityLabel && <span className={styles.entity}>{log.entityLabel}</span>}
-                            </div>
-                            <div className={styles.evMeta}>
-                              <span className={styles.actor}>
-                                <Icon name="user" className={styles.actorIcon} aria-hidden />
-                                {log.actorName || <EmptyValue />}
+      <div className="overflow-hidden rounded-2xl bg-card text-card-foreground shadow-panel ring-1 ring-border/60">
+        {loading ? (
+          <p className={NOTE}>
+            <LoaderCircle aria-hidden className="size-4 animate-spin motion-reduce:animate-none" />
+            Memuat…
+          </p>
+        ) : filtered.length === 0 ? (
+          <EmptyState
+            icon={<Activity aria-hidden />}
+            title={hasFilter ? 'Tidak ada event cocok' : 'Belum ada aktivitas'}
+            description={
+              hasFilter ? 'Coba longgarkan filter pencarian.' : 'Jejak aktivitas tim akan terekam di sini saat mereka bekerja.'
+            }
+          />
+        ) : (
+          <div>
+            {filtered.length > MAX_RENDERED && (
+              <p className={NOTE} role="note">
+                Menampilkan {MAX_RENDERED} event terbaru dari {filtered.length}. Persempit filter untuk melihat event lama.
+              </p>
+            )}
+            {groups.map(([day, rows]) => (
+              <section key={day} className="border-b border-border last:border-b-0">
+                <div className="sticky top-0 z-[2] flex items-center gap-2 border-b border-dashed border-border bg-surface px-5 py-2.5 text-xs font-medium text-muted-foreground @max-[641px]/log:px-4 [&>svg]:size-3.5">
+                  <CalendarDays aria-hidden />
+                  {fmtDate(day)}
+                  <span className="ml-auto tabular-nums">{rows.length} event</span>
+                </div>
+                <ul className="py-1">
+                  {rows.map((log) => {
+                    const meta = actionMeta(log.action);
+                    const ActionIcon = ICONS[meta.icon] ?? Info;
+                    return (
+                      <li key={log.id} className="flex items-center gap-3 px-5 py-2.5 hover:bg-accent/40 @max-[641px]/log:px-4">
+                        <span className={cn('grid size-8 shrink-0 place-items-center rounded-full [&>svg]:size-4', TONE[meta.tone] ?? TONE.neutral)} aria-hidden>
+                          <ActionIcon />
+                        </span>
+                        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                            <strong className="text-sm font-semibold">{meta.label}</strong>
+                            {log.entityLabel && (
+                              <span className="min-w-0 rounded-md bg-secondary px-1.5 font-mono text-xs text-secondary-foreground [overflow-wrap:anywhere]">
+                                {log.entityLabel}
                               </span>
-                              <Badge tone="neutral">{roleLabel(log.actorRole)}</Badge>
-                            </div>
+                            )}
                           </div>
-                          <span className={styles.leader} aria-hidden />
-                          <time className={styles.time}>{fmtClock(log.createdAt)}</time>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </section>
-              ))}
-            </div>
-          )}
+                          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                            <span className="inline-flex items-center gap-1 [&>svg]:size-3">
+                              <User aria-hidden />
+                              {log.actorName || <EmptyValue />}
+                            </span>
+                            <Badge variant="secondary">{roleLabel(log.actorRole)}</Badge>
+                          </div>
+                        </div>
+                        <time className="shrink-0 font-mono text-xs whitespace-nowrap tabular-nums text-muted-foreground">{fmtClock(log.createdAt)}</time>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            ))}
+          </div>
+        )}
 
-          {/* DI LUAR cabang loading/empty/isi — sengaja. Kalau tombol ini hanya
-              muncul saat ada isi, bulan yang sepi jadi jalan buntu: pengguna
-              melihat "Belum ada aktivitas" tanpa cara memuat bulan lama. */}
-          {!loading && (
-            <div className={styles.loadMore}>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => setMonthsBack((m) => m + 1)}
-                iconLeft={<Icon name="clock-rotate-left" aria-hidden />}
-              >
-                Muat bulan sebelumnya
+        {/* DI LUAR cabang loading/empty/isi — sengaja. Kalau tombol ini hanya
+            muncul saat ada isi, bulan yang sepi jadi jalan buntu: pengguna
+            melihat "Belum ada aktivitas" tanpa cara memuat bulan lama. */}
+        {!loading && (
+          <div className="flex flex-wrap items-center gap-3 border-t border-dashed border-border px-5 py-4 @max-[641px]/log:px-4">
+            <Button variant="outline" size="sm" onClick={() => setMonthsBack((m) => m + 1)}>
+              <History aria-hidden />
+              Muat bulan sebelumnya
+            </Button>
+            {/* Pemangkasan hanya di cloud: di mode lokal jejaknya ada di
+                perangkat ini saja, dan menghapusnya tak punya lawan biaya. */}
+            {isCloudMode() && (
+              <Button variant="outline" size="sm" onClick={() => setConfirmPurge(true)} disabled={purging} aria-busy={purging || undefined}>
+                {purging ? <LoaderCircle aria-hidden className="animate-spin motion-reduce:animate-none" /> : <Trash2 aria-hidden />}
+                Pangkas log lama
               </Button>
-              {/* Pemangkasan hanya di cloud: di mode lokal jejaknya ada di
-                  perangkat ini saja, dan menghapusnya tak punya lawan biaya. */}
-              {isCloudMode() && (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => setConfirmPurge(true)}
-                  loading={purging}
-                  iconLeft={<Icon name="trash" aria-hidden />}
-                >
-                  Pangkas log lama
-                </Button>
-              )}
-              <span className={styles.loadMoreHint}>
-                {monthsBack === 0 ? 'Bulan ini' : `${monthsBack + 1} bulan terakhir`} ·{' '}
-                {logs.length} event termuat
-              </span>
-            </div>
-          )}
-        </CardBody>
-      </Card>
+            )}
+            <span className="font-mono text-xs tabular-nums text-muted-foreground">
+              {monthsBack === 0 ? 'Bulan ini' : `${monthsBack + 1} bulan terakhir`} · {logs.length} event termuat
+            </span>
+          </div>
+        )}
+      </div>
 
       <ConfirmDialog
         open={confirmPurge}
@@ -300,9 +304,45 @@ export function ActivityLogPage() {
         message={`Event yang lebih tua dari ${KEEP_DAYS} hari akan dihapus permanen. Jejak ${KEEP_DAYS} hari terakhir tetap utuh, dan pemangkasan ini sendiri ikut tercatat di log.`}
         confirmLabel="Pangkas"
         danger
+        loading={purging}
         onConfirm={purge}
         onCancel={() => setConfirmPurge(false)}
       />
     </div>
   );
 }
+
+const NOTE = 'flex items-center justify-center gap-2 px-5 py-12 text-sm text-muted-foreground';
+
+/* Nama ikon di ACTION_META (lib/business/activity.ts) memakai set ikon FixMaster;
+   halaman dens memakai lucide, jadi dipetakan di sini. Nama yang belum ada di
+   peta jatuh ke Info. */
+const ICONS: Record<string, LucideIcon> = {
+  trash: Trash2,
+  pen: Pencil,
+  users: Users,
+  'circle-xmark': CircleX,
+  'right-to-bracket': LogIn,
+  'right-from-bracket': LogOut,
+  'clock-rotate-left': History,
+  wrench: Wrench,
+  'screwdriver-wrench': Wrench,
+  times: X,
+  'list-check': ListChecks,
+  'info-circle': Info,
+  'circle-check': CircleCheck,
+  'cash-register': ShoppingCart,
+  box: Package,
+  'arrow-trend-up': TrendingUp,
+  'arrow-trend-down': TrendingDown,
+  'arrow-right-arrow-left': ArrowLeftRight,
+  'clipboard-list': ClipboardList,
+};
+
+const TONE: Record<string, string> = {
+  neutral: 'bg-secondary text-muted-foreground',
+  success: 'bg-success text-success-foreground',
+  warning: 'bg-warning text-warning-foreground',
+  danger: 'bg-destructive-soft text-destructive',
+  info: 'bg-info text-info-foreground',
+};

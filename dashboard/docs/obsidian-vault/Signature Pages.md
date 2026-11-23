@@ -724,6 +724,10 @@ Wallet jadi **meter readout**. Buku kas jadi **pita thermal monospace** dengan s
 
 ## Kamus Istilah — Datasheet (29 Sep 2026)
 
+**Nuara (L-65, 23 Nov 2026).** Kamus Istilah kini dens-ui + Tailwind; indeks berkolom (baris geser
+di wadah <54rem) dan lembar istilah tetap. Kode TERM-nn + LED jadi nomor polos (K-21). Uraian di
+bawah adalah tampilan FixMaster.
+
 Rute `/istilah` (semua peran, **tanpa item sidebar**): dibuka dari istilah bergaris titik (`Term`)
 dan tombol "Kamus istilah" di Laporan & Keuangan. Tiap istilah = lembar data `TERM-nn` dengan LED,
 definisi, readout rumus mono, contoh angka konter, dan "muncul di". Anchor yang dibuka menyalakan
@@ -911,6 +915,10 @@ memuat tabel yang sama dengan daftar barang lengkap.
 ![[rep-dark.png]]
 
 ## Log Aktivitas — Event Recorder · Diagnostic Trace (owner-only)
+
+**Nuara (L-65, 23 Nov 2026).** Log Aktivitas kini dens-ui + Tailwind; ringkasan jumlah, saringan,
+event per hari, dan tombol muat/pangkas tetap. Pelat EVENT RECORDER dan rel jejak dibuang (K-21):
+ringkasan = `SummaryStrip`, event bernode bulat bernada. Uraian di bawah adalah tampilan FixMaster.
 
 Halaman `/activity` ([`ActivityLogPage`](src/features/activity/ActivityLogPage.tsx)), **khusus owner** (dijaga `OwnerRoute` + RLS SELECT owner-only, migration `0019`). Menjawab kebutuhan owner mengawasi aktivitas tiap peran. Metafora: **perekam data multi-kanal (event recorder)** sebench dengan POS Register & Cashbook Tape:
 - **Faceplate bersekrup** ber-wash grid blueprint: **LED REC merah berdenyut** (`recBlink`) + judul, dan **panel readout LCD** mono ber-glow amber (`TERMUAT` / `TAMPIL` / `KANAL`, angka zero-pad tabular). `KANAL` = jumlah aktor unik pada hasil filter.
@@ -1146,6 +1154,10 @@ Fitur tambahan (profit per unit — revisi 11 Jun 2026):
   lagi menggulir.
 
 ## Kalkulator Biaya — Register Tape (10 Nov 2026)
+
+**Nuara (L-65, 23 Nov 2026).** Kalkulator Biaya kini dens-ui + Tailwind; lima kolom + chip tarif,
+register harga yang menempel, struk, dan angka dapur tetap. Layar LCD harga jadi panel navy (K-21).
+Uraian di bawah adalah tampilan FixMaster.
 
 Route `/calculator`, kanal grup `ops` tepat setelah Servis, terbuka untuk **semua peran** (fitur
 `services`). Gunanya menyeragamkan harga yang diajukan ke pelanggan. Sejak 10 Nov 2026 sore

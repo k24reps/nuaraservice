@@ -13,6 +13,32 @@ Catatan keputusan desain penting + bug nyata yang ditemukan saat verifikasi.
 
 ## Keputusan desain
 
+### Log Aktivitas, Kamus Istilah, Kalkulator Biaya pindah ke dens-ui (L-65, 23 Nov 2026)
+`ActivityLogPage`, `GlossaryPage`, dan `CalculatorPage` ditulis ulang dengan dens-ui; ketiga CSS
+Module dihapus dan `@source` memindai ketiga foldernya. Logika jendela waktu + pemangkasan log,
+anchor istilah, dan hitungan harga tidak disentuh.
+- **Motif bench dibuang (K-21).** Pelat "EVENT RECORDER" (LED REC, sekrup, angka "012") jadi
+  `SummaryStrip` Termuat/Tampil/Kanal; rel jejak bertitik dan garis penuntun ke jam hilang, event
+  tinggal node bulat bernada. Kode "TERM-nn" + LED di Kamus Istilah jadi nomor polos. Layar LCD
+  harga Kalkulator jadi panel navy berangka mono putih; ukurannya tetap
+  `min(2.35rem, 100cqi / (karakter × 0.62))` terhadap `@container/register`.
+- **Ikon Log Aktivitas**: `ACTION_META` (lib/business/activity.ts) menyimpan nama ikon set
+  FixMaster. Halaman memetakannya ke lucide lewat tabel `ICONS`; tes memastikan setiap nama di
+  `ACTION_META` punya padanan, jadi verba baru tanpa ikon akan ketahuan.
+- **Kalkulator**: struktur sempit tetap `display:contents` (register jadi anak flex yang menempel
+  di bawah layar sepanjang kartu isian). Ambang tetap container query (`@container/calc` 49rem,
+  `@container/fields` 34rem); offset bawah register tetap media query `phone:` karena terikat menu
+  bawah. Penjajaran chip dengan kotak isian kini `pt-5` (label dens 14px + jarak 6px), bukan
+  `::before` berhuruf label.
+- **Aturan `<html>` pindah ke `app.css`.** `html:has([data-calc-page])` memasang scroll-padding
+  supaya fokus Tab tak mendarat di balik register menempel (WCAG 2.4.11). Utilitas di halaman tak
+  bisa menjangkau leluhurnya, jadi aturan ini satu-satunya CSS khusus halaman di `app.css`.
+- **Kamus Istilah**: indeks berkolom 17rem jadi baris geser di wadah <54rem seperti dulu, kini
+  dengan `scroll-fade-x`. Varian container datang sesudah `aria-*` di CSS, jadi chip aktif di
+  baris geser butuh varian gabungan `@max-[54rem]/glossary:aria-[current=location]:...`.
+- Toolbar Log Aktivitas menumpuk lewat `@max-[641px]/log`, bukan @media 640px. Pangkas log tak
+  bisa diketuk dua kali.
+
 ### Absensi dan Tugas pindah ke dens-ui (L-54, 23 Nov 2026)
 `AttendancePage`, `TasksPage`, dan `TaskTemplateModal` ditulis ulang dengan dens-ui; ketiga CSS
 Module dihapus dan `@source` memindai `features/attendance` dan `features/tasks`. Log Aktivitas,

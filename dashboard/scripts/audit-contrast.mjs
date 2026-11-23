@@ -428,6 +428,24 @@ for (const theme of ['light']) {
       await page.locator('[role="dialog"] button[aria-pressed]').first().click();
       await page.waitForTimeout(200);
     }],
+    // L-65: Kamus Istilah tidak di menu (dibuka dari Laporan), dengan satu istilah
+    // dituju; Kalkulator dengan chip tarif menyala.
+    ['Glosarium', async () => {
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(300);
+      await page.getByRole('link', { name: /^Laporan/ }).first().click();
+      await page.waitForTimeout(900);
+      await page.locator('main a[href="/istilah"]').first().click();
+      await page.waitForTimeout(600);
+      await page.locator('main nav a').nth(2).click();
+      await page.waitForTimeout(400);
+    }],
+    ['Kalkulator-Chip', async () => {
+      await page.getByRole('link', { name: /^Kalkulator Biaya/ }).first().click();
+      await page.waitForTimeout(900);
+      await page.locator('main button[aria-pressed]').first().click();
+      await page.waitForTimeout(300);
+    }],
     // Kartu Tampilan (Pengaturan › Sistem) dan chip pembesaran Topbar di ketiga
     // rona LED: nominal 100%, aksen 110% + Padat, jingga 90%. Tab Sistem tidak
     // terbuka oleh menu Pengaturan di atas, jadi kartu ini perlu langkah sendiri.

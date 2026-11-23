@@ -82,6 +82,9 @@ tetap relevan, tetapi bagian merek, harga, dan infrastruktur FixMaster tidak ber
   seperti aturan target sentuh 44px: `!important` tidak bisa dikalahkan utilitas. Nama variabel
   tema Tailwind yang juga dipakai tokens.css (`--text-sm`, `--radius-lg`, ...) ditulis langsung di
   `@theme inline`; tambahkan di sana bila menemukan bentrokan baru.
+  Aturan yang harus menyentuh leluhur halaman (utilitas tak bisa menjangkaunya, mis.
+  scroll-padding `<html>` Kalkulator) ditulis di `app.css` dengan kait atribut `data-*` di akar
+  halaman (`html:has([data-calc-page])`), bukan nama kelas.
 - **Breakpoint kerangka**: varian kustom `drawer:` (<=1024px), `narrow:` (<=768px), `phone:`
   (<=720px), `compact:` (<=640px), kuerinya sama persis dengan media query CSS lama. Jangan
   memakai `max-lg:` dan sejenisnya untuk breakpoint yang harus sejalan dengan halaman lama
