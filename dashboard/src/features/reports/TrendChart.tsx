@@ -3,16 +3,19 @@ import { fmtRp, fmtRpCompact } from '@/lib/format';
 import { trendGeometry, type TrendPoint } from '@/lib/business/reports';
 import { useT } from '@/i18n';
 import { interpolate } from '@/lib/business/notify';
-import styles from './TrendChart.module.css';
+
+const AXIS_LABEL = 'fill-muted-foreground font-mono text-xs';
+const SWATCH = 'h-[3px] w-3.5 rounded-full';
+const LINE = { strokeLinejoin: 'round', strokeLinecap: 'round' } as const;
 
 interface TrendChartProps {
   points: TrendPoint[];
 }
 
 /**
- * Pure-SVG dual line chart (income vs expense) with a hover crosshair. No chart
- * library — keeps the bundle lean and matches the bench aesthetic (mono
- * readouts, tick gauge, brand spine). viewBox selebar wadahnya yang terukur,
+ * Grafik garis ganda (pemasukan vs pengeluaran) SVG murni dengan garis bidik
+ * saat disorot. Tanpa pustaka grafik supaya bundel tetap ramping. viewBox selebar
+ * wadahnya yang terukur,
  * bukan 720 tetap: dulu SVG diskalakan turun, dan label sumbu di ponsel
  * tinggal ±5px (diukur 7px tinggi kotaknya di 390px).
  *
@@ -58,10 +61,10 @@ export function TrendChart({ points }: TrendChartProps) {
   });
 
   return (
-    <div className={styles.wrap} ref={wrapRef}>
+    <div className="flex flex-col gap-3" ref={wrapRef}>
       <svg
         viewBox={`0 0 ${W} ${H}`}
-        className={styles.svg}
+        className="block h-auto w-full"
         role="img"
         aria-label={`${t('reports.chartAria')}. ${summary}`}
         preserveAspectRatio="xMidYMid meet"
@@ -70,8 +73,8 @@ export function TrendChart({ points }: TrendChartProps) {
         {/* Gridlines + y labels */}
         {gridYs.map((g, i) => (
           <g key={i}>
-            <line x1={PAD.left} y1={g.y} x2={W - PAD.right} y2={g.y} className={styles.grid} />
-            <text x={PAD.left - 8} y={g.y + 3} className={styles.yLabel} textAnchor="end">
+            <line x1={PAD.left} y1={g.y} x2={W - PAD.right} y2={g.y} strokeWidth={1} className="stroke-border" />
+            <text x={PAD.left - 8} y={g.y + 3} className={AXIS_LABEL} textAnchor="end">
               {g.label}
             </text>
           </g>
@@ -79,7 +82,7 @@ export function TrendChart({ points }: TrendChartProps) {
 
         {/* x labels */}
         {g.xLabels.map((l) => (
-          <text key={l.x} x={l.x} y={H - 8} className={styles.xLabel} textAnchor="middle">
+          <text key={l.x} x={l.x} y={H - 8} className={AXIS_LABEL} textAnchor="middle">
             {l.label}
           </text>
         ))}
@@ -92,18 +95,20 @@ export function TrendChart({ points }: TrendChartProps) {
               y={PAD.top}
               width={W - PAD.right - g.nowX}
               height={plotH}
-              className={styles.future}
+              className="fill-secondary opacity-60"
             />
-            <line x1={g.nowX} y1={PAD.top} x2={g.nowX} y2={PAD.top + plotH} className={styles.nowLine} />
+            <line x1={g.nowX} y1={PAD.top} x2={g.nowX} y2={PAD.top + plotH} strokeWidth={1} strokeDasharray="2 3" className="stroke-muted-foreground/60" />
           </g>
         )}
 
         {/* Area under income for depth */}
-        <path d={g.incArea} className={styles.incArea} />
+        <path d={g.incArea} className="fill-success" />
 
         {/* Lines */}
-        <path d={g.expPath} className={styles.expLine} fill="none" />
-        <path d={g.incPath} className={styles.incLine} fill="none" />
+        {/* Pengeluaran = garis putus tinta kedua, bukan merah: arus keluar rutin
+            bukan kegagalan, dan garis putus sudah membedakan seri tanpa warna. */}
+        <path d={g.expPath} {...LINE} strokeWidth={2} strokeDasharray="4 3" className="stroke-muted-foreground" fill="none" />
+        <path d={g.incPath} {...LINE} strokeWidth={2.5} className="stroke-success-foreground" fill="none" />
 
         {/* Hover hit areas + crosshair */}
         {points.map((_, i) => (
@@ -119,38 +124,38 @@ export function TrendChart({ points }: TrendChartProps) {
         ))}
         {active && hover != null && (
           <g>
-            <line x1={x(hover)} y1={PAD.top} x2={x(hover)} y2={PAD.top + plotH} className={styles.crosshair} />
+            <line x1={x(hover)} y1={PAD.top} x2={x(hover)} y2={PAD.top + plotH} strokeWidth={1} strokeDasharray="3 3" className="stroke-muted-foreground/60" />
             {!active.future && (
               <>
-                <circle cx={x(hover)} cy={yInc(active.income)} r={4} className={styles.incDot} />
-                <circle cx={x(hover)} cy={yExp(active.expense)} r={4} className={styles.expDot} />
+                <circle cx={x(hover)} cy={yInc(active.income)} r={4} strokeWidth={2} className="fill-success-foreground stroke-card" />
+                <circle cx={x(hover)} cy={yExp(active.expense)} r={4} strokeWidth={2} className="fill-muted-foreground stroke-card" />
               </>
             )}
           </g>
         )}
       </svg>
 
-      <div className={styles.legend}>
-        <span className={styles.legendItem}>
-          <i className={[styles.swatch, styles.incSwatch].join(' ')} /> {t('reports.pemasukan')}
+      <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+        <span className="inline-flex items-center gap-2">
+          <i className={`${SWATCH} bg-success-foreground`} /> {t('reports.pemasukan')}
         </span>
-        <span className={styles.legendItem}>
-          <i className={[styles.swatch, styles.expSwatch].join(' ')} /> {t('reports.pengeluaran')}
+        <span className="inline-flex items-center gap-2">
+          <i className={`${SWATCH} bg-muted-foreground`} /> {t('reports.pengeluaran')}
         </span>
         {g.nowX != null && (
-          <span className={styles.legendItem}>
-            <i className={[styles.swatch, styles.futureSwatch].join(' ')} /> {t('reports.chartFuture')}
+          <span className="inline-flex items-center gap-2">
+            <i className="h-2.5 w-3.5 rounded-xs border border-dashed border-muted-foreground/60 bg-secondary" /> {t('reports.chartFuture')}
           </span>
         )}
         {active && (
-          <span className={styles.readout}>
+          <span className="ml-auto font-mono text-xs tabular-nums">
             {active.label}:{' '}
             {active.future ? (
               t('reports.chartFuture')
             ) : (
               <>
-                <strong className={styles.inc}>{fmtRp(active.income)}</strong> ·{' '}
-                <strong className={styles.exp}>{fmtRp(active.expense)}</strong>
+                <strong className="text-success-foreground">{fmtRp(active.income)}</strong> ·{' '}
+                <strong className="text-foreground">{fmtRp(active.expense)}</strong>
               </>
             )}
           </span>

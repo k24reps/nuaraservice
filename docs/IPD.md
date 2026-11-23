@@ -1,6 +1,6 @@
 # IPD (Implementation Plan Document) - Nuara Dashboard
 
-> Versi: 0.15 | Diperbarui: 2026-11-23 | Merujuk: PRD, TRD, AFD, DBD, `dashboard/AGENTS.md`
+> Versi: 0.16 | Diperbarui: 2026-11-23 | Merujuk: PRD, TRD, AFD, DBD, `dashboard/AGENTS.md`
 <!-- Versi 0.2 (42 langkah Next.js dari nol) dibatalkan 2026-11-21 (wawancara P13). Langkahnya disimpan di bagian Arsip dengan tanda [DIBATALKAN]; rujukan kriteria F-xx di sana tetap berguna untuk daftar selisih. -->
 
 ## Cara memakai
@@ -109,7 +109,10 @@ Aturan bersama: satu langkah = satu kelompok halaman dipindah utuh, CSS Module l
   - Dipecah 2026-11-23 (K-16): halaman Laporan pindah ke L-64. Logika KPI, peringatan, target + laju, break-even, dan papan teknisi tidak berubah. Maskot VOLT dan layar LCD panel laba dibuang (K-17).
   - Selesai jika: Dashboard tampil di desktop, tablet, ponsel sampai 320px tanpa luberan dan tanpa isi keluar dari panel/baris; kontrol baru >= 44px di layar sentuh; probe `audit-*` dan `audit-contrast` bersih; halaman lain sama per piksel; tes, lint, build lolos.
   - Hasil 2026-11-23: lihat Catatan L-53.
-- [ ] **L-64 Laporan** (`ReportsPage`, `TrendChart`); sesudahnya folder `features/reports` utuh di `@source`
+- [x] **L-64 Laporan** (`ReportsPage`, `TrendChart`); sesudahnya folder `features/reports` utuh di `@source`
+  - Logika periode, vonis, Laba Rugi + break-even, target + laju, enam tab, dan ekspor PDF/CSV tidak berubah. Layar vonis bergaya LCD dan motif bench di kartu dibuang (K-18).
+  - Selesai jika: keenam tab tampil di desktop, tablet, ponsel sampai 320px tanpa luberan dan tanpa isi keluar dari kartu/baris, juga dengan teks terburuk; tabel bertumpuk di wadah sempit; kontrol baru >= 44px di layar sentuh; probe `audit-*` dan `audit-contrast` (enam tab) bersih; halaman lain sama per piksel; tes, lint, build lolos.
+  - Hasil 2026-11-23: lihat Catatan L-64.
 - [ ] **L-54 Absensi, Tugas, Log Aktivitas, Glosarium, Kalkulator Biaya**
 - [ ] **L-55 Pengaturan**
 - [ ] **L-56 Halaman lacak pelanggan + bersih-bersih**: lacak pelanggan memakai dunia "Nota Servis Rangkap" (DBD bagian 1, S-07); hapus token, maskot VOLT, dan CSS Modules FixMaster yang tersisa.
@@ -167,6 +170,7 @@ Dikumpulkan 2026-11-22 dari log wawancara, catatan IPD, dan langkah L-43 s.d. L-
 | K-15 | Pemecahan L-52 (Keuangan, sekitar 2.220 baris kode + 890 baris CSS) | Rencana L-52, 2026-11-23 | Dipecah: L-52 halaman Keuangan, L-63 lima modalnya (catat, transfer, hitung saldo, bayar gaji, tautkan karyawan) | Dipecah (pola K-08) | Sudah berlaku |
 | K-16 | Pemecahan L-53 (Dashboard dan Laporan, sekitar 2.800 baris kode + 2.600 baris CSS) | Rencana L-53, 2026-11-23 | Dipecah: L-53 Dashboard, L-64 Laporan | Dipecah (pola K-08) | Sudah berlaku |
 | K-17 | Maskot VOLT di konsol Dashboard dan panel laba bergaya layar LCD (layar gelap, garis pindai, LED bercahaya, bingkai gradien; motif FixMaster) | L-53 | Maskot dibuang; panel laba = panel navy dengan angka putih, arus kas negatif berwarna sorot | Buang (pola K-10, K-13) | Sudah berlaku |
+| K-18 | Layar vonis Laporan bergaya LCD (sumur gelap, garis pindai, LED bercahaya) beserta spine kartu metrik dan kartu Laba Rugi, gerigi tick-gauge, dan label mono huruf kapital (motif FixMaster) | L-64 | Vonis = panel navy dengan titik status; kartu tanpa spine, batang capaian polos, label kalimat biasa; angka tetap mono | Buang (pola K-10, K-13, K-17) | Sudah berlaku |
 
 **Menunggu tindakan Pemilik (bukan keputusan).** L-44: membuat proyek Supabase tes milik Nuara (region Singapura), proyek Vercel kedua, dan DNS `app.nuaraservice.my.id`; mendaftar sebagai Pemilik dan mengundang satu akun uji. Tes integrasi belum pernah dijalankan sampai proyek itu ada.
 
@@ -240,6 +244,8 @@ Dikumpulkan 2026-11-22 dari log wawancara, catatan IPD, dan langkah L-43 s.d. L-
 - 2026-11-23 - L-63 - `SelectBox` dens kini menerima `groups` (opsi berkelompok, API sama dengan `Select` FixMaster). Teks FixMaster di modal Keuangan yang masih literal dibiarkan apa adanya.
 - 2026-11-23 - L-53 - Hasil: Dashboard diukur di 11 ukuran (1920 sampai 1025 desktop, tablet sentuh 1024/834/744, iPhone 13, 360px, 320px): tanpa luberan, tanpa isi keluar dari panel atau baris, tepat satu tombol Servis Baru terlihat di tiap ukuran (konsol di layar lebar, dok zona jempol di ponsel). `audit-contrast` bersih (Dashboard 119 elemen, termasuk panel navy); probe `audit-mobile`, pita tablet, `audit-zoom`, zoom 1,25, dan Padat identik dengan ec97774 (L-63); 12 halaman lain sama per piksel (selisih hanya di wilayah derau); impeccable 0 temuan; 1188 tes / 90 berkas, lint, build lolos.
 - 2026-11-23 - L-53 - Putaran verifikasi memperbaiki dua hal: tautan break-even 37px di layar sentuh (kini 44px) dan tombol dok Servis Baru yang hilang di atas panel laba navy (kini berbayangan + bercincin terang). Tautan `Term` (komponen bersama FixMaster) masih 30-32px seperti sebelumnya; dipindah di L-56. Komponen `Mascot` kini tak dipakai.
+- 2026-11-23 - L-64 - Hasil: keenam tab Laporan diukur di 12 ukuran (1920 sampai 1025 desktop, tablet sentuh 1024/834/744, iPhone 13, 360px, 320px), dengan data contoh dan dengan teks terburuk (Rupiah 8 digit, nama kategori/pelanggan panjang, readout tab 15 karakter): tanpa luberan dan tanpa isi keluar dari kartu atau baris. Tab berpindah dengan panah/Home/End, klik di mana pun pada baris rincian membuka Keuangan tersaring. `audit-contrast` bersih termasuk lima langkah tab baru; probe `audit-mobile`, pita tablet, `audit-zoom`, zoom 1,25, dan Padat identik dengan 16bdb72 (L-53); 12 halaman lain sama per piksel (Dashboard berselisih hanya di jam "Diperbarui"); impeccable 0 temuan; 1196 tes / 91 berkas, lint, build lolos.
+- 2026-11-23 - L-64 - Ikut diperbaiki (bug FixMaster): grup tombol ekspor meluber 32px di 320px (kini selebar baris di wadah sempit, CSV turun ke bawah PDF bila tak muat); judul kolom angka (Nominal, Sisa, Umur, Menunggu) rata kiri padahal isinya rata kanan; tabel transaksi meluber 4px di 1152px dengan nominal 8 digit (lebar minimum 796px, kini 762px); tautan kategori di rincian overhead 37-39px di layar sentuh (kini >= 44px). Tautan `Term` masih 30-33px di layar sentuh, sama dengan sebelumnya; dipindah di L-56.
 
 ## Arsip: rencana Next.js (dibatalkan 2026-11-21)
 Langkah di bawah tidak dikerjakan. Disimpan karena rujukan kriteria F-xx dan keputusan di dalamnya dipakai untuk L-45.

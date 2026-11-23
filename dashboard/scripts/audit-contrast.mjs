@@ -386,6 +386,22 @@ for (const theme of ['light']) {
       await page.getByRole('button', { name: /Terima$/ }).first().click();
       await page.waitForTimeout(400);
     }],
+    // Laporan pindah ke dens-ui di L-64. Menu Laporan di atas hanya memeriksa tab
+    // Ringkasan; lima tab lain (rincian, tabel, lencana umur) perlu langkah sendiri.
+    ['Laporan-Uang', async () => {
+      await page.keyboard.press('Escape');
+      await page.getByRole('link', { name: /^Laporan/ }).first().click();
+      await page.waitForTimeout(900);
+      await page.locator('#lap-tab-uang').click();
+      await page.waitForTimeout(300);
+    }],
+    ...['servis', 'stok', 'pelanggan', 'piutang'].map((tab) => [
+      `Laporan-${tab[0].toUpperCase()}${tab.slice(1)}`,
+      async () => {
+        await page.locator(`#lap-tab-${tab}`).click();
+        await page.waitForTimeout(300);
+      },
+    ]),
     // Kartu Tampilan (Pengaturan › Sistem) dan chip pembesaran Topbar di ketiga
     // rona LED: nominal 100%, aksen 110% + Padat, jingga 90%. Tab Sistem tidak
     // terbuka oleh menu Pengaturan di atas, jadi kartu ini perlu langkah sendiri.

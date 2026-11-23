@@ -737,6 +737,11 @@ topbar diambil di `AppLayout` (bukan NAV_ITEMS). Isi di `features/glossary/terms
 
 ## Laporan — Analyzer Printout
 
+**Nuara (L-64, 23 Nov 2026).** Laporan kini dens-ui + Tailwind; pemilih periode, vonis, empat
+kartu metrik, enam tab, dan isi tiap tab tetap, begitu pula semua ambang container query. Layar
+vonis bergaya LCD jadi panel navy, spine/LED/tick-gauge jadi titik status dan batang polos (K-18).
+Uraian di bawah adalah tampilan FixMaster.
+
 Metric tile mono (spine + LED), break-even jadi **tick gauge**, breakdown kategori + leaderboard jadi **channel analyzer** dengan bar proporsi relatif. Sejak 19 Jun 2026 diperkaya **8 visual analitik** (logika agregasi murni di [`lib/business/reports.ts`](src/lib/business/reports.ts), teruji 19 unit test):
 
 Deret empat metrik: empat kolom sebaris (ikon di kiri) bila wadah ≥1063px, empat kolom dengan

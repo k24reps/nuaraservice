@@ -13,6 +13,40 @@ Catatan keputusan desain penting + bug nyata yang ditemukan saat verifikasi.
 
 ## Keputusan desain
 
+### Laporan pindah ke dens-ui (L-64, 23 Nov 2026)
+`ReportsPage` dan `TrendChart` ditulis ulang dengan dens-ui; kedua CSS Module dihapus dan
+`@source` memindai `features/reports`. Logika periode, vonis, Laba Rugi + break-even, target,
+enam tab, dan ekspor PDF/CSV tidak disentuh.
+- **Layar vonis dan motif bench dibuang (K-18).** Vonis (sumur LCD bergaris pindai) jadi panel navy
+  `bg-primary` seperti panel laba Dashboard (K-17), titik status hijau/sorot. Spine kartu metrik dan
+  kartu Laba Rugi, LED bercahaya, gerigi tick-gauge, dan label mono huruf kapital ikut hilang. Angka
+  (Rupiah, persen, readout tab) tetap `font-mono tabular-nums`.
+- **Ambang sama, kini kelas container query**: `@container/laporan` di akar (kartu metrik
+  1063/871/510, tab 922/457, dua kartu 1025, readout 767, ponsel 721), `@container/laba` (Laba Rugi
+  dua kolom di 52rem), `@container/tabel` (tabel bertumpuk di bawah 779px). Tanpa media query.
+- **Baris rincian = komponen `Channel`** (dulu 11 blok salinan). Tautan kategori di baris memakai
+  `CAT_LINK_ROW`: `::after` selebar baris (`after:inset-0`, z di atas batang), karena nama yang
+  dipotong `overflow: hidden` ikut memotong `::after` biasa.
+- **Saat tabel bertumpuk, hanya kolom angka pertama didorong ke kanan**: dulu `td.num ~ td.num`,
+  kini eksplisit `NUM_PUSH` (kolom pertama) vs `NUM`.
+- **Varian container query beda wadah diurutkan menurut angka, bukan nama.** Tailwind mengurutkan
+  `@max-*` menurun, jadi `@max-[721px]/laporan:[&_tr]:px-4` menang atas
+  `@max-[779px]/tabel:[&_tr]:px-5` (terukur di DOM). Akibatnya padding ponsel tidak boleh dipasang
+  di `td` dengan cara ini: ia akan mengalahkan `p-0` milik tabel bertumpuk.
+- Bug FixMaster yang ikut diperbaiki:
+  - grup tombol ekspor meluber 32px di 320px. Kini di wadah ≤720px grupnya selebar baris dan
+    tombolnya `flex-auto`; keduanya butuh 272px, jadi di wadah <304px CSV turun ke bawah PDF;
+  - judul kolom angka (Nominal, Sisa, Umur, Menunggu) rata kiri padahal isinya rata kanan:
+    `.table th { text-align: left }` mengalahkan `.num`. Kini `[&_th[data-num]]:text-right`;
+  - tabel transaksi meluber 4px di 1152px dengan nominal 8 digit (lebar minimum 796px > wadah
+    792px). Padding dens lebih ramping, lebar minimum kini 762px, di bawah ambang tumpuk 779px;
+  - tautan kategori di rincian overhead 37-39 x 42px di layar sentuh, kini ≥44px
+    (`pointer-coarse:after:-inset-x-2 -inset-y-4`).
+- Tautan `Term` (komponen bersama) masih 30-33px di layar sentuh; dipindah di L-56.
+- Tab berpindah lewat parameter URL (`setSearchParams`), jadi panel baru tampil sesudah render
+  berikutnya. Skrip Playwright yang menekan panah lalu langsung membaca `aria-selected` akan
+  membaca nilai lama; beri jeda sebentar.
+
 ### Dashboard pindah ke dens-ui (L-53, 23 Nov 2026)
 `DashboardPage` ditulis ulang dengan dens-ui; CSS Module-nya dihapus dan `@source` memindai
 `features/dashboard`. Laporan dipisah ke L-64 (K-16). Logika KPI, peringatan, target + laju,
