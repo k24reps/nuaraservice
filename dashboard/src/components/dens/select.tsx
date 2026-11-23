@@ -6,6 +6,8 @@ import { cn } from "@/lib/utils"
 
 const Select = SelectPrimitive.Root
 const SelectGroup = SelectPrimitive.Group
+// Tanpa data-slot kelas `*:data-[slot=select-value]:...` di SelectTrigger tidak pernah cocok,
+// jadi pemotongan teks dipasang juga lewat `[&>span:first-child]` (anak pertama pemicu = nilai).
 const SelectValue = SelectPrimitive.Value
 
 function SelectTrigger({
@@ -19,7 +21,7 @@ function SelectTrigger({
       data-slot="select-trigger"
       data-size={size}
       className={cn(
-        "flex w-full items-center justify-between gap-2 whitespace-nowrap rounded-lg pointer-coarse:min-h-11 border border-input bg-card px-3.5 text-sm shadow-[0_1px_2px_rgb(6_32_54/0.05)] transition-[border-color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/20 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive data-[placeholder]:text-muted-foreground data-[size=default]:h-10 data-[size=sm]:h-8 data-[size=sm]:rounded-full data-[size=sm]:px-3 data-[size=sm]:text-[13px] *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+        "flex w-full items-center justify-between gap-2 whitespace-nowrap rounded-lg pointer-coarse:min-h-11 border border-input bg-card px-3.5 text-sm shadow-[0_1px_2px_rgb(6_32_54/0.05)] transition-[border-color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/20 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive data-[placeholder]:text-muted-foreground data-[size=default]:h-10 data-[size=sm]:h-8 data-[size=sm]:rounded-full data-[size=sm]:px-3 data-[size=sm]:text-[13px] *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2 [&>span:first-child]:min-w-0 [&>span:first-child]:truncate [&_svg]:pointer-events-none [&_svg]:shrink-0",
         className
       )}
       {...props}

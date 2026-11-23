@@ -453,6 +453,22 @@ for (const theme of ['light']) {
       await page.locator('main [role="group"] button', { hasText: 'Operasional' }).first().click();
       await page.waitForTimeout(400);
     }],
+    // L-66: tab Tim, Wallet, Outlet (editor geofence terbuka), dan Navigasi Pengaturan.
+    // Dengan BASE_URL ke dev server berenv Supabase palsu, kartu undangan dan kontrol
+    // anggota (mode cloud) ikut diperiksa.
+    ...['Tim', 'Wallet', 'Outlet', 'Navigasi'].map((tab) => [
+      `Pengaturan-${tab}`,
+      async () => {
+        await page.getByRole('link', { name: /^Pengaturan/ }).first().click();
+        await page.waitForTimeout(700);
+        await page.locator('main [role="group"] button', { hasText: new RegExp(`^${tab}$`) }).first().click();
+        await page.waitForTimeout(400);
+        if (tab === 'Outlet') {
+          await page.locator('main button', { hasText: /^Geofence$/ }).first().click();
+          await page.waitForTimeout(300);
+        }
+      },
+    ]),
     // Kartu Tampilan (Pengaturan › Sistem) dan chip pembesaran Topbar di ketiga
     // rona LED: nominal 100%, aksen 110% + Padat, jingga 90%. Tab Sistem tidak
     // terbuka oleh menu Pengaturan di atas, jadi kartu ini perlu langkah sendiri.

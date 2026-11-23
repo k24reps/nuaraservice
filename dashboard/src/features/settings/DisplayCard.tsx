@@ -1,17 +1,15 @@
-import { Button, Card, CardBody, CardHeader, Icon } from '@/components/ui';
+import { RotateCcw, SlidersHorizontal } from 'lucide-react';
+import { Button } from '@/components/dens/button';
 import { DensitySwitch, ZoomGauge } from '@/components/layout/DisplayControls';
 import { usePointerFine } from '@/components/layout/zoomDisplay';
 import { useT } from '@/i18n';
 import { useZoomStore } from '@/stores/zoom';
-import styles from './DisplayCard.module.css';
+import { SettingsCard } from './settingsUi';
 
 /**
  * Pengaturan › Sistem › Tampilan: dua kenop yang terpisah, Pembesaran dan
  * Kerapatan (stores/zoom.ts). Untuk semua peran — setelan ini milik perangkat,
  * bukan usaha, jadi tidak tersinkron dan tidak butuh izin owner.
- *
- * Kartu "Tampilan" lama (skala font Kecil/Normal/Besar) dihapus karena
- * bertabrakan dengan zoom; yang ini justru antarmuka zoom itu sendiri.
  */
 export function DisplayCard() {
   const t = useT();
@@ -20,63 +18,72 @@ export function DisplayCard() {
   const pointerFine = usePointerFine();
 
   return (
-    <Card className={styles.card}>
-      <CardHeader icon={<Icon name="sliders" aria-hidden />} title={t('display.title')} />
-      <CardBody>
-        <div className={styles.dials}>
-          <section className={styles.dial} aria-labelledby="display-zoom">
-            <div className={styles.dialHead}>
-              <h3 id="display-zoom" className={styles.dialTitle}>
+    <SettingsCard icon={<SlidersHorizontal aria-hidden />} title={t('display.title')}>
+      {/* Dua kenop berdampingan seperti dua instrumen di satu panel, dan menumpuk saat
+          kartunya sendiri sempit. Ambang = dua kolom yang masing-masing masih memuat dua
+          sel Kerapatan (2 x 190px + celah) plus padding kartu. */}
+      <div className="@container/display">
+        <div className="grid gap-6 @min-[900px]/display:grid-cols-2 @min-[900px]/display:gap-0">
+          <section className="flex min-w-0 flex-col gap-4 @min-[900px]/display:pr-6" aria-labelledby="display-zoom">
+            <div className="grid gap-1">
+              <h3 id="display-zoom" className="text-base font-semibold">
                 {t('display.zoom.title')}
               </h3>
-              <p className={styles.dialHint}>{t('display.zoom.hint')}</p>
+              <p className="max-w-[60ch] text-sm leading-normal text-muted-foreground">{t('display.zoom.hint')}</p>
             </div>
             <ZoomGauge />
-            <div className={styles.dialFoot}>
+            <div className="flex flex-wrap items-center justify-between gap-3">
               {pointerFine && (
-                <span className={styles.shortcut}>
-                  <span className="fm-visually-hidden">
-                    {t('display.zoom.shortcut')}:{' '}
+                <span className="inline-flex flex-wrap items-center gap-1.5">
+                  <span className="sr-only">{t('display.zoom.shortcut')}: </span>
+                  <kbd className={KBD}>Ctrl</kbd>
+                  <kbd className={KBD}>Alt</kbd>
+                  <span className="inline-flex gap-1 border-l border-dashed border-border pl-1.5" aria-hidden>
+                    <kbd className={KBD}>=</kbd>
+                    <kbd className={KBD}>−</kbd>
+                    <kbd className={KBD}>0</kbd>
                   </span>
-                  <kbd>Ctrl</kbd>
-                  <kbd>Alt</kbd>
-                  <span className={styles.keys} aria-hidden>
-                    <kbd>=</kbd>
-                    <kbd>−</kbd>
-                    <kbd>0</kbd>
-                  </span>
-                  <span className="fm-visually-hidden">= − 0</span>
+                  <span className="sr-only">= − 0</span>
                 </span>
               )}
-              {/* aria-disabled, bukan disabled: tombol yang baru diklik lalu
-                jadi disabled melempar fokus keyboard ke body. */}
+              {/* aria-disabled, bukan disabled: tombol yang baru diklik lalu jadi disabled
+                  melempar fokus keyboard ke body. */}
               <Button
-                variant="secondary"
+                variant="outline"
                 size="sm"
-                className={styles.reset}
+                className="aria-disabled:cursor-not-allowed aria-disabled:opacity-50"
                 onClick={() => zoom !== 1 && resetZoom()}
                 aria-disabled={zoom === 1 || undefined}
-                iconLeft={<Icon name="arrows-rotate" aria-hidden />}
               >
+                <RotateCcw aria-hidden />
                 {t('display.zoom.reset')}
               </Button>
             </div>
           </section>
 
-          <section className={styles.dial} aria-labelledby="display-density">
-            <div className={styles.dialHead}>
-              <h3 id="display-density" className={styles.dialTitle}>
+          <section
+            className="flex min-w-0 flex-col gap-4 border-t border-dashed border-border pt-5 @min-[900px]/display:border-t-0 @min-[900px]/display:border-l @min-[900px]/display:pt-0 @min-[900px]/display:pl-6"
+            aria-labelledby="display-density"
+          >
+            <div className="grid gap-1">
+              <h3 id="display-density" className="text-base font-semibold">
                 {t('display.density.title')}
               </h3>
-              <p className={styles.dialHint}>{t('display.density.hint')}</p>
+              <p className="max-w-[60ch] text-sm leading-normal text-muted-foreground">{t('display.density.hint')}</p>
             </div>
             <DensitySwitch />
-            {!pointerFine && <p className={styles.note}>{t('display.density.touch')}</p>}
+            {!pointerFine && <p className="text-sm leading-normal text-muted-foreground">{t('display.density.touch')}</p>}
           </section>
         </div>
 
-        <p className={styles.note}>{t('display.deviceNote')}</p>
-      </CardBody>
-    </Card>
+        <p className="mt-5 border-t border-dashed border-border pt-4 text-sm leading-normal text-muted-foreground">
+          {t('display.deviceNote')}
+        </p>
+      </div>
+    </SettingsCard>
   );
 }
+
+// Tuts mekanis kecil, pola yang sama dengan petunjuk "/" di Kasir.
+const KBD =
+  'inline-flex h-[26px] min-w-[26px] items-center justify-center rounded-md border border-b-[3px] border-border bg-surface px-1.5 font-mono text-xs text-muted-foreground';

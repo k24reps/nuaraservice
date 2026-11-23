@@ -13,6 +13,34 @@ Catatan keputusan desain penting + bug nyata yang ditemukan saat verifikasi.
 
 ## Keputusan desain
 
+### Pengaturan: Tim, Wallet, Outlet, Navigasi, Sistem pindah ke dens-ui (L-66, 23 Nov 2026)
+`SettingsPage.tsx` turun dari 1.972 ke 154 baris: tinggal kerangka, tab Nota & Struk dan Tarif
+(L-67), dan konfirmasi reset. Setiap tab kini berkas sendiri (`TeamSettings`, `WalletSettings`,
+`OutletSettings`, `NavigationSettings`, `SystemSettings` + `DisplayCard` ditulis ulang di
+tempat); logika disalin apa adanya lewat skrip, hanya JSX yang ditulis ulang. Berkas-berkas ini
+masuk `@source` satu per satu; `SettingsPage.module.css` tinggal `.wrap`, `DisplayCard.module.css`
+dihapus.
+- **Komponen bersama baru di `settingsUi.tsx`**: `SettingsCard` mendapat `flush` (daftar baris
+  selebar kartu) dan `danger` (cincin merah muda); `ToggleChip` (chip pilihan cabang) dan
+  `CheckOption` (kotak centang berbingkai, seluruh baris bisa diketuk).
+- **Motif dibuang (K-23)**: spine kartu Navigasi dan Zona Berbahaya, kicker ber-LED, label mono
+  kapital, tuts-tuts kecil. Pratinjau menu bawah memakai `NAV_ICONS` (sama dengan menu bawah
+  sungguhan), menu pertama menyala navy seperti item aktif.
+- **Dev server berenv Supabase palsu** (`VITE_SUPABASE_URL=https://x.invalid VITE_SUPABASE_ANON_KEY=x
+  npx vite --port 5175`) memaksa `isSupabaseConfigured` benar di `/demo`, jadi cabang cloud yang
+  tak tampil di mode lokal (kartu undangan, pemilih peran, tombol Cabang, backup otomatis)
+  bisa diukur dan diaudit kontrasnya. Panggilan jaringannya gagal dan ditangkap seperti biasa.
+- **`SelectValue` dens tanpa `data-slot`** (bug di komponen bersama): kelas
+  `*:data-[slot=select-value]:...` di `SelectTrigger` tak pernah cocok, jadi nilai yang lebih
+  lebar dari pemicu meluber (terukur 31px di 320px dengan "Bersama (semua cabang)" di pemicu
+  142px). Perbaikan: `[&>span:first-child]:min-w-0 [&>span:first-child]:truncate` di pemicu.
+  Tak mengubah halaman lain (foto per piksel 12 halaman sama). Pemakai yang labelnya panjang
+  tetap sebaiknya memberi lebar minimum (kas/cabang: 210px).
+- **Isian email undangan tak lagi dikapitalkan otomatis**: `Input` lama mengapitalkan huruf
+  pertama bila tanpa `type`; kini `type="email"`.
+- Tombol yang memicu permintaan (undang, tambah kas, transfer, simpan/hapus cabang, pulihkan)
+  mati selama diproses, bukan hanya berspinner.
+
 ### Pengaturan dipindah per tab, mulai dari Usaha dan Operasional (L-55, 23 Nov 2026)
 Pengaturan terlalu besar untuk satu langkah (±4.100 baris kode + 2.170 baris CSS; `SettingsPage.tsx`
 saja 2.829 baris), jadi dipecah per tab (K-22): L-55 kerangka + Usaha + Operasional, L-66 Tim,

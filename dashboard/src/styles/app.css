@@ -176,3 +176,9 @@
 @source "../features/settings/SettingsTabs.tsx";
 @source "../features/settings/BusinessSettings.tsx";
 @source "../features/settings/OperationsSettings.tsx";
+@source "../features/settings/TeamSettings.tsx";
+@source "../features/settings/WalletSettings.tsx";
+@source "../features/settings/OutletSettings.tsx";
+@source "../features/settings/NavigationSettings.tsx";
+@source "../features/settings/SystemSettings.tsx";
+@source "../features/settings/DisplayCard.tsx";

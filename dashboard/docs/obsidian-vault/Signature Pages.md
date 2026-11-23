@@ -1370,6 +1370,11 @@ di y 706–767 dengan menu bawah mulai 768 di 320, 360, 390, 430px; di 744px (ta
 
 ## Pengaturan — Navigasi Mobile
 
+**Nuara (L-66, 23 Nov 2026).** Tab Tim, Wallet, Outlet, Navigasi, dan Sistem (termasuk kartu
+Tampilan, Backup & Restore, Ekspor Data, Zona Berbahaya) kini dens-ui + Tailwind, masing-masing berkas
+`*Settings.tsx`. Spine/kicker/label mono dibuang (K-23). Tinggal Nota & Struk dan Tarif (L-67).
+Uraian di bawah adalah tampilan FixMaster.
+
 Tab owner-only **Navigasi** mengatur empat slot utama bottom navigation ponsel.
 Setiap posisi berupa selector eksplisit; memilih menu yang sudah dipakai menukar kedua
 posisi agar tak menghasilkan duplikat. Preview lima slot selalu memperlihatkan
