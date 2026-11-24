@@ -1,28 +1,28 @@
 /* ==========================================================================
    Pintu masuk CSS Nuara Dashboard (diimpor main.tsx).
 
-   Selama Fase B, CSS FixMaster dan Tailwind + dens-ui hidup berdampingan.
-   Urutan cascade layer, dari terlemah ke terkuat:
+   Tailwind + dens-ui adalah satu-satunya sistem gaya (L-69: CSS FixMaster,
+   tokens.css dan global.css, sudah dicabut). Urutan cascade layer, dari
+   terlemah ke terkuat:
 
      theme      variabel tema Tailwind
-     legacy     global.css + tokens.css FixMaster
+     base       reset dan dasar global (base.css)
      nu-base    reset dan perisai dens-ui, dibatasi ke data-slot/data-nu
      components (cadangan)
-     utilities  kelas Tailwind di komponen dens-ui
+     utilities  kelas Tailwind di komponen
 
-   CSS Module per halaman tidak berlayer, jadi tetap mengalahkan semuanya,
-   sama seperti sebelum Tailwind dipasang. Preflight Tailwind tidak dipasang
-   global (lihat dens-base.css), jadi halaman FixMaster tidak berubah.
-   Utilitas di atas legacy, sehingga `button { background: none }` milik
-   FixMaster tidak mengalahkan `bg-primary` pada tombol dens-ui.
+   Preflight Tailwind tidak dipasang global (lihat dens-base.css): reset
+   global kita sendiri ada di base.css. Utilitas di atas base, sehingga
+   `button { background: none }` tidak mengalahkan `bg-primary` pada tombol.
    ========================================================================== */
-@layer theme, legacy, nu-base, components, utilities;
+@layer theme, base, nu-base, components, utilities;
 
 @import "tailwindcss/theme.css" layer(theme);
-@import "./global.css" layer(legacy);
 @import "tailwindcss/utilities.css" layer(utilities) source(none);
 
 @import "@fontsource-variable/figtree";
+@import "./layout-tokens.css";
+@import "./base.css";
 @import "./nuara-theme.css";
 @import "./dens-base.css";
 

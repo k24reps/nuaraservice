@@ -24,7 +24,7 @@ function subscribePointer(onChange: () => void) {
   return () => query?.removeEventListener?.('change', onChange);
 }
 
-/** Token Padat hanya berlaku di pointer presisi (tokens.css). */
+/** Token Padat hanya berlaku di pointer presisi (layout-tokens.css). */
 export function usePointerFine(): boolean {
   return useSyncExternalStore(
     subscribePointer,

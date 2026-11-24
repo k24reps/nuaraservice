@@ -7,7 +7,7 @@ created: 2026-06-04
 
 # 🎨 Design System — "Precision Electronics Bench"
 
-> [!warning] Nuara Dashboard: digantikan bertahap (Fase 2)
+> [!warning] Nuara Dashboard: digantikan (L-69: tokens.css dan audit-tokens dicabut)
 > Sistem visual di catatan ini milik FixMaster. Di Nuara Dashboard, halaman yang dipindah memakai
 > komponen dens-ui (`src/components/dens/`, Tailwind v4) dengan tema `src/styles/nuara-theme.css`
 > (warna dari `nuaraservice/docs/DBD.md`). Katalog hidup: `/dev/komponen` di dev server. Cara kedua

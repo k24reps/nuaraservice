@@ -51,10 +51,11 @@ tetap relevan, tetapi bagian merek, harga, dan infrastruktur FixMaster tidak ber
 
 ## 4. Konvensi
 
-- **Warna**: jangan hardcode hex. Halaman lama: `var(--token)` dari `src/styles/tokens.css`
-  (palet FixMaster). Komponen dens-ui dan halaman yang dipindah: kelas Tailwind bertema
-  (`bg-card`, `text-muted-foreground`, `bg-highlight`, ...) yang dipetakan ke `--nu-*` di
-  `src/styles/nuara-theme.css` (warna DBD). Jangan baca `--nu-*` langsung kecuali di CSS tema.
+- **Warna**: jangan hardcode hex. Kelas Tailwind bertema (`bg-card`, `text-muted-foreground`,
+  `bg-highlight`, ...) yang dipetakan ke `--nu-*` di `src/styles/nuara-theme.css` (warna DBD).
+  Jangan baca `--nu-*` langsung kecuali di CSS tema. Token tata letak (jarak `--space-*`, ukuran
+  kerangka, `--app-vh`, `--z-*`) ada di `src/styles/layout-tokens.css`; `tokens.css` dan `global.css`
+  FixMaster sudah dicabut (L-69).
 - **UI baru dan halaman yang dipindah (Fase B)**: komponen dens-ui di `src/components/dens/`
   (dens-ui v0.2.0, MIT, model shadcn, lihat README di folder itu) di atas Tailwind v4.
   `cn()` dari `@/lib/utils`. Satu halaman dipindah utuh, lalu CSS Module lamanya dihapus.
@@ -74,17 +75,18 @@ tetap relevan, tetapi bagian merek, harga, dan infrastruktur FixMaster tidak ber
   Sebaliknya, bila halaman yang dipindah masih merender komponen FixMaster inline (bukan lewat
   portal), pasang `data-nu` per bagian, bukan di akar: reset `[data-nu] *` mengubah komponen lama
   (Kasir L-50: tombol `PosHistory` mengecil).
-- **Arsitektur CSS Fase B** (`src/styles/app.css`): layer `theme` < `legacy` (global.css) <
-  `nu-base` (reset dens-ui) < `utilities`; CSS Module tidak berlayer dan selalu menang.
-  Preflight Tailwind sengaja TIDAK global (`dens-base.css`, terbatas ke `[data-slot]`/`[data-nu]`):
-  versi global terukur mengubah halaman lama. Aturan `!important` di global.css yang mengenai
-  elemen dens-ui harus mengecualikan lingkup itu (`:not(:where([data-slot], [data-nu], ...))`),
-  seperti aturan target sentuh 44px: `!important` tidak bisa dikalahkan utilitas. Nama variabel
-  tema Tailwind yang juga dipakai tokens.css (`--text-sm`, `--radius-lg`, ...) ditulis langsung di
-  `@theme inline`; tambahkan di sana bila menemukan bentrokan baru.
-  Aturan yang harus menyentuh leluhur halaman (utilitas tak bisa menjangkaunya, mis.
-  scroll-padding `<html>` Kalkulator) ditulis di `app.css` dengan kait atribut `data-*` di akar
-  halaman (`html:has([data-calc-page])`), bukan nama kelas.
+- **Arsitektur CSS** (`src/styles/app.css`): layer `theme` < `base` (`base.css`: reset, tipografi
+  dasar, fokus, bilah gulir, aturan target sentuh) < `nu-base` (reset dens-ui) < `utilities`. Tak
+  ada CSS Module dan tak ada layer `legacy`. Semua aturan global HARUS di layer `base`: aturan tak
+  berlayer mengalahkan utilitas (mis. `::selection` global menimpa `selection:bg-amber`).
+  Preflight Tailwind sengaja TIDAK global (`dens-base.css`, terbatas ke `[data-slot]`/`[data-nu]`).
+  Aturan `!important` di `base.css` yang mengenai elemen dens-ui harus mengecualikan lingkup itu
+  (`:not(:where([data-slot], [data-nu], ...))`), seperti aturan target sentuh 44px: `!important`
+  di layer lebih awal tidak bisa dikalahkan utilitas. Nama variabel tema Tailwind (`--text-sm`,
+  `--radius-lg`, ...) ditulis langsung di `@theme inline`. Aturan yang harus menyentuh leluhur
+  halaman (utilitas tak bisa menjangkaunya, mis. scroll-padding `<html>` Kalkulator) ditulis di
+  `app.css` dengan kait atribut `data-*` di akar halaman (`html:has([data-calc-page])`), bukan
+  nama kelas.
 - **Breakpoint kerangka**: varian kustom `drawer:` (<=1024px), `narrow:` (<=768px), `phone:`
   (<=720px), `compact:` (<=640px), kuerinya sama persis dengan media query CSS lama. Jangan
   memakai `max-lg:` dan sejenisnya untuk breakpoint yang harus sejalan dengan halaman lama
@@ -150,7 +152,6 @@ buat dulu bila belum ada.
 ```bash
 BASE_URL=http://localhost:5173 node scripts/audit-mobile.mjs   # 5 lebar ponsel x 14 halaman
 BASE_URL=http://localhost:5173 node scripts/audit-zoom.mjs     # 11 lebar desktop x 14 halaman
-node scripts/audit-tokens.mjs                                  # gerbang token FixMaster
 BASE_URL=http://localhost:5173 node scripts/audit-contrast.mjs  # kontras DOM: /demo, wizard, /dev/komponen, /dev/layar
 ```
 

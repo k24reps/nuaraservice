@@ -25,7 +25,7 @@ Pola & gaya yang dipakai konsisten di FixMaster. Baca ini di awal sesi untuk lan
 | `i18n/` | Mesin terjemahan type-safe (ID/EN) |
 | `lib/` | `business/` (logika domain murni) + util (`time`, `id`) |
 | `stores/` | Zustand: `session`, `settings`, `theme`, `displayScale` (skala font root 90/100/110%) |
-| `styles/` | `tokens.css` (sumber kebenaran), `global.css` |
+| `styles/` | `app.css` (pintu masuk + layer), `base.css`, `layout-tokens.css`, `nuara-theme.css` (warna), `dens-base.css` |
 | `test/` | Setup test |
 
 ## Penamaan
@@ -36,7 +36,7 @@ Pola & gaya yang dipakai konsisten di FixMaster. Baca ini di awal sesi untuk lan
 - **Import alias**: `@/` → `src/` (mis. `@/components/ui`)
 
 ## Pola kunci
-- **Warna**: SELALU `var(--token)` dari [[Design System]] — jangan hardcode hex. Otomatis benar di dark/light. **Satu-satunya pengecualian: dokumen cetak** (`lib/print.ts`, `features/services/printReceipt.ts`, `features/reports/printReport.ts`). Dokumen itu dibuka lewat `window.open` sebagai halaman terpisah sehingga tidak mewarisi `tokens.css` sama sekali — dan tinta di kertas tidak punya tema gelap. Di luar ketiga berkas itu (plus `features/services/receiptStyle.ts`, CSS kertas termal yang dipecah dari `printReceipt.ts`), hex literal tetap terlarang. **Ukuran di dokumen termal dihitung dalam titik head, bukan angka bulat**: 1 titik = 96/203 px, huruf dasar 20 titik (±9,46px), tinggi baris 28 titik, semua lewat `dotsToPx()` di `lib/business/receiptPaper.ts`. Ukuran yang jatuh di antara titik dirender dengan tepi lunak lalu menjadi kabur setelah threshold 1-bit. **Warna di nota termal hanya `#000` dan `#fff`** (diuji di `receiptStyle.test.ts`): abu-abu di bawah ambang 50% hilang dari kertas, jadi hierarki dibuat dari bobot, ukuran, dan jarak huruf. **Teks nota & struk lewat `receiptText(key)`** (`features/services/receiptText.ts`, kunci `receipt.*`), bukan literal, karena jendela cetak dibangun di luar React.
+- **Warna**: SELALU `var(--token)` dari [[Design System]] — jangan hardcode hex. Otomatis benar di dark/light. **Satu-satunya pengecualian: dokumen cetak** (`lib/print.ts`, `features/services/printReceipt.ts`, `features/reports/printReport.ts`). Dokumen itu dibuka lewat `window.open` sebagai halaman terpisah sehingga tidak mewarisi CSS aplikasi sama sekali — dan tinta di kertas tidak punya tema gelap. Di luar ketiga berkas itu (plus `features/services/receiptStyle.ts`, CSS kertas termal yang dipecah dari `printReceipt.ts`), hex literal tetap terlarang. **Ukuran di dokumen termal dihitung dalam titik head, bukan angka bulat**: 1 titik = 96/203 px, huruf dasar 20 titik (±9,46px), tinggi baris 28 titik, semua lewat `dotsToPx()` di `lib/business/receiptPaper.ts`. Ukuran yang jatuh di antara titik dirender dengan tepi lunak lalu menjadi kabur setelah threshold 1-bit. **Warna di nota termal hanya `#000` dan `#fff`** (diuji di `receiptStyle.test.ts`): abu-abu di bawah ambang 50% hilang dari kertas, jadi hierarki dibuat dari bobot, ukuran, dan jarak huruf. **Teks nota & struk lewat `receiptText(key)`** (`features/services/receiptText.ts`, kunci `receipt.*`), bukan literal, karena jendela cetak dibangun di luar React.
 - **Baris nota lewat `receiptRow(label, value, cls, paper)`, jangan menulis `<tr>` sendiri dan jangan mematok lebar kolom persen.** Yang menentukan berdampingan atau bertumpuk adalah `fitsBeside` (hitungan huruf mono, murni, teruji). Baris dibangun flex per baris, bukan tabel otomatis: sel tumpuk selebar baris di tabel biasa menyempitkan kolom baris lain. Barang struk lewat `saleItemRow`.
 - **Pratinjau nota = dokumen cetak yang sama.** Jangan membuat render kedua: pratinjau memanggil `receiptPreviewHtml(org, doc)` (HTML cetak dengan `roll: null`) di iframe. Fungsi cetak (`printServiceReceipt`, `printSaleReceipt`) tetap sinkron; data yang butuh `useCollection` (mis. `outlets`) dibawa pemanggil sebagai argumen.
 - **Dokumen batal diberi tahu lewat `ReceiptDoc.voided`, bukan dengan menyaring HTML.** Nota servis dan struk memakai `voidMarkHtml()` yang sama untuk kotak BATAL, dan `receiptParts` membuang ucapan kaki bila `voided`. Dokumen baru yang bisa batal wajib mengisi bendera itu.
@@ -92,19 +92,17 @@ Saring tiga positif palsu sebelum membaca hasil: `caption._srOnly` dan `*.fm-vis
 dalam SVG (label sumbu grafik). Tanpa itu tiap laporan terlihat merah total. Untuk **dokumen cetak**, ukur pada lebar medianya (A4 = 186 mm setelah
 margin), bukan lebar viewport — dua cacat tata letak PDF hanya muncul di sana.
 
-Untuk perubahan **warna/token**, dua gerbang tambahan:
+Untuk perubahan **warna/token**: pasangan kontras tema Nuara diuji `nuaraTheme.test.ts` (ikut
+`npm run test`), dan `audit-contrast` mengukur DOM sungguhan (`/demo`, menu demo, `/dev/komponen`,
+`/dev/layar`, dan `/dev/lacak`); ia menangkap racikan `color-mix` dan lapisan transparan yang tak
+terlihat dari daftar token.
 
 ```bash
-node scripts/audit-tokens.mjs                                     # tanpa server
 BASE_URL=http://localhost:5173 node scripts/audit-contrast.mjs    # DOM sungguhan
 ```
 
-`audit-tokens` memeriksa kontras pasangan token **dan** pemisahan antar warna sinyal
-(dE OKLab) — rona yang terlalu mirip langsung membuat status servis tak terbedakan,
-karena `STATUS_TONE` memetakan 8 status ke 6 nada (abu + 5 rona). `audit-contrast` mengukur DOM
-sungguhan, menangkap racikan `color-mix`/lapisan transparan yang tak terlihat dari daftar
-token; ia pernah menemukan 18 elemen yang diloloskan gerbang token. Bandingkan dengan
-palet lama lewat `BASELINE=<tokens.css lama>` untuk memisahkan regresi baru dari warisan.
+`audit-tokens.mjs` (gerbang token FixMaster: kontras token dan pemisahan rona sinyal) dipensiunkan
+di L-69 bersama `tokens.css`.
 
 > [!tip] Default verifikasi
 > Setelah perubahan kode: jalankan build + test + lint. Untuk perubahan UI, foto render asli (bukan asumsi). Lihat pelajaran di [[Decisions & Bug Fixes]].

@@ -5,9 +5,9 @@
    (https://github.com/dendense/dens-ui, MIT). Warna mengikuti token DBD
    bagian 2 (docs/DBD.md), bukan Mars Green. Hanya tema terang (DBD P9.5).
 
-   Variabel mentah memakai awalan --nu- karena FixMaster (tokens.css) sudah
+   Variabel mentah memakai awalan --nu- (dulu karena tokens.css FixMaster
    memakai --brand, --accent, --border, --ring, --success, --warning, --info
-   untuk arti lain. Komponen dens-ui tidak membaca variabel mentah ini secara
+   untuk arti lain; dicabut di L-69). Komponen dens-ui tidak membaca variabel mentah ini secara
    langsung; mereka memakai kelas Tailwind (bg-card, text-foreground, ...)
    yang dipetakan di blok @theme inline di bawah.
    ========================================================================== */
@@ -18,9 +18,8 @@
 
 :root {
   --nu-radius: 0.875rem;
-  /* Font: Figtree untuk teks, JetBrains Mono (sudah di-host global.css) untuk
-     angka dan ID. Ditulis sebagai --nu- karena --font-sans/--font-mono juga
-     dipakai tokens.css FixMaster. */
+  /* Font: Figtree untuk teks, JetBrains Mono (@font-face di base.css) untuk
+     angka dan ID. */
   --nu-font-sans: "Figtree Variable", "Figtree", ui-sans-serif, system-ui, sans-serif;
   --nu-font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", monospace;
 
@@ -147,10 +146,9 @@
   --shadow-panel: var(--nu-elevation-panel);
   --shadow-raised: var(--nu-elevation-raised);
 
-  /* Nama berikut juga dipakai tokens.css FixMaster dengan nilai lain. CSS
-     lama ada di layer di atas tema Tailwind (app.css), jadi tanpa nilai
-     langsung di sini kelas text-sm, shadow-md, ease-out, dst. di komponen
-     dens-ui akan membaca angka FixMaster. Nilainya = bawaan Tailwind 4. */
+  /* Nilai tema Tailwind yang ditulis langsung supaya kelas text-sm, shadow-md,
+     ease-out, dst. di komponen dens-ui tak bergantung pada urutan layer.
+     Nilainya = bawaan Tailwind 4. */
   --text-xs: 0.75rem;
   --text-sm: 0.875rem;
   --text-base: 1rem;

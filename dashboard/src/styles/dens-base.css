@@ -10,10 +10,9 @@
  *   - [data-sonner-toaster] toast sonner
  * Di luar lingkup itu, halaman FixMaster dirender persis seperti sebelumnya.
  *
- * Layer nu-base ada di ATAS layer legacy (global.css), jadi di dalam lingkup
- * aturan di sini juga menjadi perisai dari aturan elemen global.css
- * (mis. `h2 { font-family: Space Grotesk }`, `a { color }`). Utilitas Tailwind
- * tetap di atas keduanya. Hapus perisai saat CSS FixMaster dibuang (L-56).
+ * Layer nu-base ada di ATAS layer base (base.css), jadi di dalam lingkup
+ * aturan di sini juga menjadi perisai dari aturan elemen base.css (judul,
+ * tautan). Utilitas Tailwind tetap di atas keduanya.
  */
 
 @layer nu-base {
@@ -42,7 +41,7 @@
       border-top-width: 1px;
     }
 
-    /* Perisai global.css: judul memakai font dan warna induknya. */
+    /* Perisai base.css: judul memakai font dan warna induknya. */
     &:is(h1, h2, h3, h4, h5, h6) {
       font-family: inherit;
       font-size: inherit;

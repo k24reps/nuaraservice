@@ -1,0 +1,59 @@
+/* ==========================================================================
+   Token tata letak Nuara Dashboard (L-69). Hanya yang benar-benar dibaca TSX
+   dan CSS tema: skala jarak, ukuran kerangka, tinggi viewport yang
+   mengompensasi zoom, dan tangga z-index. Menggantikan tokens.css FixMaster
+   (163 token warna, tipografi, radius, gerak, dan dua tema) yang kini tak
+   dibaca siapa pun. Warna dan bentuk komponen ada di nuara-theme.css.
+   ========================================================================== */
+:root {
+  /* Skala jarak 4px. Kerapatan Padat menggantikan sebagian di bawah. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+
+  /* Tinggi kontrol tap di kerangka (44px = target sentuh). */
+  --control-h: 44px;
+
+  --sidebar-width: 278px;
+  --sidebar-collapsed: 78px;
+  --topbar-height: 76px;
+  --mobile-nav-height: 68px;
+  --content-max: 1380px;
+  /* Jarak bingkai app dari tepi atas viewport. Shell yang menyisipkan chrome
+     sendiri di atas app menimpanya supaya elemen `fixed` seperti sidebar
+     berhenti menutupi chrome itu. */
+  --app-inset-top: 14px;
+  /* Tinggi viewport yang sudah mengompensasi `zoom` di :root (stores/zoom.ts).
+     `100dvh` ikut terskala zoom, jadi shell setinggi layar akan menyisakan
+     ruang kosong di zoom <100% dan terpotong di >100%. */
+  --zoom: 1;
+  --app-vh: calc(100dvh / var(--zoom));
+
+  --z-sticky: 50;
+  --z-sidebar: 100;
+  --z-overlay: 150;
+  --z-toast: 9000;
+}
+
+/* Kerapatan Padat (Pengaturan > Sistem > Tampilan, stores/zoom.ts): hanya
+   jarak dan tinggi, ukuran teks tidak disentuh. Hanya pointer presisi: di
+   layar sentuh target 44px adalah kontrak, jadi atribut yang tersimpan
+   diabaikan di sana. */
+@media (pointer: fine) {
+  :root[data-density='padat'] {
+    --space-3: 10px;
+    --space-4: 12px;
+    --space-5: 16px;
+    --space-6: 18px;
+    --space-8: 24px;
+    --space-10: 32px;
+    --control-h: 36px;
+    --sidebar-width: 248px;
+    --topbar-height: 60px;
+  }
+}

@@ -29,7 +29,7 @@ SPA statis di Vercel. Browser memakai `@supabase/supabase-js` dengan kunci publi
 - Toast: helper `src/stores/toast.ts` (`toast.success/error/warning/info`) meneruskan ke sonner; `<AppToaster />` dirender lewat portal ke body (P15.2).
 - Tema: hanya terang; `data-theme="light"` di index.html (P14.1).
 - Harness pengembangan (hanya dev server, tidak ada di build produksi): `/demo` (`src/dev/DevSandbox.tsx`) = aplikasi lengkap berisi data contoh di RAM untuk skrip foto dan probe UI; `/dev/komponen` (`src/dev/ComponentShowcase.tsx`) = katalog komponen dens-ui bertema Nuara; `/dev/layar?layar=...` (`src/dev/AuthPreview.tsx`) = layar masuk, daftar, PIN, password baru, dan wizard, yang di mode lokal tidak pernah tampil.
-- CSS selama Fase B (`src/styles/app.css`): urutan cascade layer `theme`, `legacy` (global.css + tokens.css FixMaster), `nu-base` (reset dens-ui), `utilities`. Aturan target sentuh `!important` di global.css mengecualikan lingkup dens-ui. Breakpoint kerangka memakai varian kustom `drawer` (<=1024px), `narrow` (<=768px), `phone` (<=720px), `compact` (<=640px) dengan kueri sama persis CSS lama. Preflight Tailwind tidak dipasang global; salinannya di `dens-base.css` dibatasi ke `[data-slot]` (komponen dens-ui) dan `[data-nu]` (akar halaman yang dipindah). Utilitas hanya dibuat dari folder yang didaftarkan `@source`. Variabel tema memakai awalan `--nu-` karena tokens.css sudah memakai `--brand`, `--border`, dst.
+- CSS (`src/styles/app.css`): urutan cascade layer `theme`, `base` (base.css), `nu-base` (reset dens-ui), `utilities`; sejak L-69 tak ada lagi CSS FixMaster (tokens.css, global.css) maupun CSS Module. Aturan target sentuh `!important` di base.css mengecualikan lingkup dens-ui. Breakpoint kerangka memakai varian kustom `drawer` (<=1024px), `narrow` (<=768px), `phone` (<=720px), `compact` (<=640px) dengan kueri sama persis CSS lama. Preflight Tailwind tidak dipasang global; salinannya di `dens-base.css` dibatasi ke `[data-slot]` (komponen dens-ui) dan `[data-nu]` (akar halaman yang dipindah). Utilitas hanya dibuat dari folder yang didaftarkan `@source`. Variabel tema memakai awalan `--nu-` karena tokens.css sudah memakai `--brand`, `--border`, dst.
 
 Keputusan penting:
 | Keputusan | Alternatif ditolak | Alasan |
@@ -55,7 +55,7 @@ dashboard/
     features/<fitur>/     # halaman per fitur (services, pos, customers, finance, ...)
     lib/business/         # logika domain murni + tes
     data/                 # repository, adapter Supabase/IndexedDB, tipe entity
-    styles/               # app.css (pintu masuk), nuara-theme.css, dens-base.css, global.css + tokens.css (FixMaster)
+    styles/               # app.css (pintu masuk), base.css, layout-tokens.css, nuara-theme.css, dens-base.css
     stores/ hooks/ i18n/ config/
     dev/                  # data contoh, DevSandbox (/demo), ComponentShowcase (/dev/komponen), AuthPreview (/dev/layar); hanya dev
   supabase/migrations/    # 0001 s.d. 0105

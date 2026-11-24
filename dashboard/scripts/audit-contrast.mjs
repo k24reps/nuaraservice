@@ -1,7 +1,7 @@
 /**
  * Probe kontras DOM — mengukur warna teks yang BENAR-BENAR dirender, bukan
  * daftar token. Ini menangkap warna hasil racikan (`color-mix`, lapisan
- * semi-transparan, tumpukan latar) yang tak terlihat di scripts/audit-tokens.mjs.
+ * semi-transparan, tumpukan latar) yang tak terlihat dari daftar token.
  *
  * Komposit yang tidak bisa dipastikan — latar bergambar, atau rantai induk
  * yang tetap transparan — DILEWATI dan dihitung terpisah, bukan ditebak.
@@ -11,19 +11,10 @@
  *
  * Butuh dev server jalan:
  *   BASE_URL=http://localhost:5173 node scripts/audit-contrast.mjs
- *
- * Membandingkan dengan palet lama (tanpa menyentuh berkas kerja):
- *   git show <commit>:src/styles/tokens.css > /tmp/old.css
- *   BASELINE=/tmp/old.css node scripts/audit-contrast.mjs
  */
 import { chromium } from '@playwright/test';
-import { readFileSync } from 'node:fs';
 
 const BASE = process.env.BASE_URL || 'http://localhost:5173';
-/* BASELINE=<path ke tokens.css lama> menyuntikkan palet lama sebagai blok
-   terakhir di dokumen, sehingga selektor yang identik menang. Ini memberi
-   pembanding "sebelum" tanpa menyentuh berkas kerja. */
-const BASELINE = process.env.BASELINE ? readFileSync(process.env.BASELINE, 'utf8') : null;
 // PW_CHROMIUM: jalur Chromium lain bila versi bawaan @playwright/test tidak terpasang (mis. container cloud).
 const browser = await chromium.launch(
   process.env.PW_CHROMIUM ? { executablePath: process.env.PW_CHROMIUM } : {},
@@ -199,13 +190,6 @@ for (const theme of ['light']) {
     // Demo baru merender dashboard setelah seed selesai; tanpa menunggu ini
     // tema terang hanya memeriksa 1 elemen (terukur 27 Sep 2026).
     if (path === '/demo') await page.locator('a[href="/services"]').first().waitFor({ timeout: 20000 });
-    if (BASELINE) {
-      await page.evaluate((css) => {
-        const el = document.createElement('style');
-        el.textContent = css;
-        document.head.appendChild(el);
-      }, BASELINE);
-    }
     await page.waitForTimeout(2500);
     await report(page, `${name} / ${theme}`);
     await page.close();
@@ -225,13 +209,6 @@ for (const theme of ['light']) {
   await page.evaluate((t) => localStorage.setItem('fixmaster-theme', t), theme);
   await page.goto(BASE + '/demo', { waitUntil: 'networkidle' });
   await page.locator('a[href="/services"]').first().waitFor({ timeout: 20000 });
-  if (BASELINE) {
-    await page.evaluate((css) => {
-      const el = document.createElement('style');
-      el.textContent = css;
-      document.head.appendChild(el);
-    }, BASELINE);
-  }
   for (const menu of MENUS) {
     try {
       await page.getByRole('link', { name: new RegExp('^' + menu) }).first().click();

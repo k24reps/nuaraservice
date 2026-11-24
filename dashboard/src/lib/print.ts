@@ -8,7 +8,7 @@ import { useSettingsStore } from '@/stores/settings';
  * sejajar dengan `@/lib/csv` untuk unduhan CSV.
  *
  * Dokumen cetak dibuka lewat `window.open` sebagai halaman terpisah, jadi ia
- * tidak bisa menjangkau `tokens.css` maupun webfont aplikasi: setiap pemanggil
+ * tidak bisa menjangkau token CSS maupun webfont aplikasi: setiap pemanggil
  * membawa `style`-nya sendiri, dan itulah satu-satunya tempat di produk yang
  * boleh menulis warna literal. Bukan pelanggaran Token-Only Rule, melainkan
  * konsekuensi media — tinta di kertas tidak punya tema gelap dan tidak punya

@@ -8,7 +8,7 @@ import { create } from 'zustand';
  *   (DESIGN.md), jadi itu hanya terjadi atas pilihan pengguna dan UI
  *   menandainya.
  * - **Kerapatan** (`density`): atribut `data-density` di :root yang mengganti
- *   token jarak dan tinggi (tokens.css). Ukuran teks tidak disentuh, jadi Padat
+ *   token jarak dan tinggi (layout-tokens.css). Ukuran teks tidak disentuh, jadi Padat
  *   tidak pernah menembus lantai. Token Padat hanya aktif di `pointer: fine`:
  *   di layar sentuh target 44px adalah kontrak.
  *

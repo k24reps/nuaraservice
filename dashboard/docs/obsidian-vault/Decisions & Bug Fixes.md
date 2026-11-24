@@ -13,6 +13,32 @@ Catatan keputusan desain penting + bug nyata yang ditemukan saat verifikasi.
 
 ## Keputusan desain
 
+### Bersih-bersih FixMaster: token dan CSS global (L-69, 24 Nov 2026)
+`tokens.css` (433 baris) dan `global.css` (264 baris) dicabut. Penggantinya: `layout-tokens.css` (21
+token tata letak) dan `base.css` (dasar global di layer `base`). Urutan layer kini
+`theme < base < nu-base < components < utilities`; layer `legacy` tak ada lagi, dan tak ada CSS Module.
+- **Token yang benar-benar dibaca**: dari 163 token, 21 (skala jarak, ukuran kerangka, `--app-vh` dan
+  `--zoom`, `--z-*`, `--control-h`). Pencocokan nama dilakukan ke seluruh `src`, bukan hanya `var(--x)`:
+  sintaks Tailwind `z-(--z-sticky)` dan `min-h-(--mobile-nav-height)` juga membaca token, dan PosPage
+  membacanya lewat `getPropertyValue`. `cssCleanup.test.ts` kini memeriksa tiap `var(--x)` punya definisi.
+- **Kerapatan Padat tetap hidup**: hanya jarak dan tinggi (`--space-3..10`, `--control-h`,
+  `--sidebar-width`, `--topbar-height`) di `layout-tokens.css`, di dalam `@media (pointer: fine)`.
+- **Semua aturan global di layer `base`.** Aturan tak berlayer mengalahkan utilitas Tailwind: `::selection`
+  global tak berlayer menimpa `selection:bg-amber` halaman lacak. Aturan `!important` target sentuh 44px
+  tetap di layer `base`, karena `!important` di layer lebih awal mengalahkan utilitas (perilaku yang
+  dulu didapat dari layer `legacy`) dan tak berlayer akan melemahkannya.
+- **Dibuang (K-28)**: kisi PCB dan cahaya di latar (`body::before`), tautan amber, font judul Space Grotesk
+  dan Inter (empat woff2 dan dua preload ikut dihapus), keyframe `fm-*`, `.spin`, `.fm-visually-hidden`,
+  `scripts/audit-tokens.mjs`, dan fitur `BASELINE` di `audit-contrast`.
+- **Satu-satunya perbedaan tampilan**: latar `body` dulu `#ebeef2` (`--bg-app` FixMaster), kini `#f4f6f9`
+  (`--nu-background`), sama dengan latar aplikasi. Terlihat sebagai strip di bawah isi di layar sentuh
+  (area di bawah menu bawah dan gulir-lebih); dulu pita yang sedikit lebih gelap dari halaman. Foto penuh
+  dengan kerangka (78 foto per putaran, 1440/744/390px) selebihnya sama per piksel kecuali teks berwaktu.
+- **Pelajaran tooling**: perbandingan dengan `-fuzz 2%` menandai strip itu sebagai selisih besar
+  (kelipatan lebar halaman: 9.360 = 390 x 24 baris); menemukan barisnya lewat selisih per baris (PIL)
+  langsung menunjuk ke strip bawah. `-fuzz 5%` mengabaikan beda nada latar sehingga selisih nyata
+  (teks berwaktu) terlihat sendiri.
+
 ### Bersih-bersih FixMaster: komponen (L-68, 24 Nov 2026)
 Inventaris sebelum menghapus: dari 17 CSS Module di `components/`, hanya lima yang dirender (`Term`,
 `ErrorBoundary`, `NotFoundPage`, `ThumbDock`, `DisplayControls`); `LoadState` (14 halaman) masih memakai
