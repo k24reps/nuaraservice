@@ -13,6 +13,49 @@ Catatan keputusan desain penting + bug nyata yang ditemukan saat verifikasi.
 
 ## Keputusan desain
 
+### Pengaturan: Nota & Struk dan Tarif pindah ke dens-ui, Pengaturan utuh (L-67, 24 Nov 2026)
+Langkah terakhir pemindahan Pengaturan (K-22). Folder `features/settings` kini utuh di `@source`
+dan tak punya CSS Module lagi (`ReceiptTab`, `QuoteRatesTab`, `SettingsPage`: sekitar 1.070 baris
+CSS dihapus). `data-nu` dan wadah `@container/settings` pindah ke akar `SettingsPage`;
+`SettingsSection` tinggal tumpukan kartu dan `SettingsTabs` tak memasang `data-nu` sendiri.
+Konfirmasi reset memakai `ConfirmDialog` dens. Logika disalin apa adanya; hanya JSX yang ditulis ulang.
+- **Dok pratinjau Nota dipertahankan** (keputusan Pemilik): di wadah `settings` < 720px kartu
+  Pratinjau menjadi bar menempel setinggi satu baris di atas menu bawah; panelnya terbuka ke
+  atas dan melayang (`absolute`, `bottom-full`) supaya tak menambah tinggi kotak sticky. Tertutup
+  = `invisible max-h-0` (BUKAN `display:none`): iframe mengukur tinggi isinya dan meja kerja
+  mengukur lebar untuk zoom, keduanya terbaca 0 bila tak ter-layout. Esc menutup dan
+  mengembalikan fokus ke tombol dok; fokus ke kolom lain di luar kartu juga menutup. Layout
+  menjadi blok di wadah sempit karena sticky dibatasi containing block-nya, dan untuk item grid itu
+  sel gridnya sendiri. Jarak dari dasar (`--dock-bottom`) terikat kehadiran menu bawah, jadi
+  memakai `phone:` (media query) yang sah, bukan container query.
+- **Motif dibuang (K-24)**: LED dan miniatur gulungan di sel lebar kertas (kini `RadioGroup` dens
+  di dalam kartu `<label>` yang seluruhnya bisa diketuk), saklar tombol ber-LED bertulisan status
+  (kini `Switch` dens tanpa teks status; kondisinya terbaca dari posisi dan `aria-checked`),
+  spine tepi dan LED dok, label mono kapital, bar simpan berkaca ber-LED amber (kini panel
+  ber-cincin dengan titik status bulat; tetap menempel hanya saat draf berubah). Landasan kertas
+  tetap putih (tinta tak punya mode gelap).
+- **Bug: kata panjang tanpa spasi meluberkan seluruh formulir.** `Textarea` dens berukuran
+  `field-sizing: content`, jadi lebar min-content-nya mengikuti kata terpanjang. Di grid dengan
+  lintasan `auto` (default `grid`), kolom formulir melebar sampai 1.675px dan, di emulasi ponsel,
+  viewport ikut membengkak. Perbaikan: `grid-cols-1` (`minmax(0,1fr)`) di kolom formulir. Berlaku untuk
+  tata letak mana pun yang menaruh `Textarea` dens di grid berlintasan `auto` (kolom `Field` di
+  dalam kartu tetap aman karena kartunya kini terbatas).
+- **Bug probe: `/settings?tab=nota` tak pernah mengukur tab Nota.** `SettingsPage` membaca
+  `?tab=` hanya saat dipasang (`useState`), jadi `pushState` + `popstate` membiarkan Usaha terbuka.
+  `audit-mobile` dan `audit-zoom` kini mengklik chip tab; Tarif ditambahkan (14 halaman).
+  Pelajaran umum: probe yang "bersih" belum berarti mengukur halaman yang dimaksud; lihat
+  `aria-pressed` tab yang aktif sebelum percaya hasilnya.
+- **Kelas Tailwind tak boleh dirangkai dari konstanta.** `${NARROW}:grid` tak pernah menjadi
+  kelas karena pemindai membaca teks sumber. Tulis utuh (`@max-[720px]/settings:grid`); tes
+  mengunci. `calc()` dalam nilai arbitrer memakai garis bawah untuk operator `*` (`_*_`).
+- **Probe `tiny` hanya mengukur kotak elemen.** `Switch` dens (42x24) dan `RadioGroupItem` (18x18)
+  diperluas area ketuknya lewat `::after`, jadi terbaca "kecil" di `audit-mobile`, seperti
+  `button.relative` Tugas dan Pelanggan. Area ketuk sebenarnya diuji dengan `elementFromPoint`
+  di tepi 44px (setelah mengguling elemen ke tengah layar, supaya bar menempel tak menutupinya).
+- Aturan scroll-padding bar simpan Tarif ada di `app.css` dengan kait `html:has([data-save-bar='dirty'])`
+  (pola Kalkulator); tes Kalkulator yang menolak semua `html:has(` selain `data-calc-page` kini
+  menerima kait `data-*` lain, tetap menolak nama kelas.
+
 ### Pengaturan: Tim, Wallet, Outlet, Navigasi, Sistem pindah ke dens-ui (L-66, 23 Nov 2026)
 `SettingsPage.tsx` turun dari 1.972 ke 154 baris: tinggal kerangka, tab Nota & Struk dan Tarif
 (L-67), dan konfirmasi reset. Setiap tab kini berkas sendiri (`TeamSettings`, `WalletSettings`,

@@ -3,15 +3,14 @@ import { Checkbox } from '@/components/dens/checkbox';
 import { cn } from '@/lib/utils';
 
 /*
- * Kerangka kartu Pengaturan versi dens-ui (L-55). Tab yang sudah dipindah
- * dibungkus `SettingsSection` (akar `data-nu` sendiri): selama L-55 s.d. L-67
- * halaman ini masih merender tab FixMaster inline, jadi `data-nu` dipasang per
- * bagian, bukan di akar halaman (pola Kasir L-50).
+ * Kerangka kartu Pengaturan versi dens-ui (L-55, L-67). Akar halaman
+ * (`SettingsPage`) memegang `data-nu` dan wadah `@container/settings`: semua
+ * ambang di dalam tab membaca wadah itu, bukan layar.
  */
 
-/** Wadah satu tab. Ambang di dalamnya membaca wadah `settings`, bukan layar. */
+/** Wadah satu tab: kartu bertumpuk dengan jarak yang sama di semua tab. */
 export function SettingsSection({ children }: { children: ReactNode }) {
-  return <div data-nu className="@container/settings flex flex-col gap-4 bg-transparent">{children}</div>;
+  return <div className="flex flex-col gap-4">{children}</div>;
 }
 
 export function SettingsCard({

@@ -1201,6 +1201,15 @@ Kalkulator **tidak membuat tiket dan tidak mengurangi stok**. Rumus dan penyimpa
 
 ## Pengaturan — Tarif (10 Nov 2026)
 
+**Nuara (L-67, 24 Nov 2026).** Tab Tarif kini dens-ui + Tailwind (`QuoteRatesTab.tsx`, tanpa CSS
+Module). Empat kartu `SettingsCard`; baris template empat kolom (nama, nilai, Otomatis, hapus) di
+wadah lapang, tiga kolom di <= 640px, dan nilai serta saklar masing-masing satu baris penuh di
+<= 420px. Saklar Otomatis = `Switch` dens (tanpa teks YA/TIDAK; nama chip ada di `aria-label`);
+hapus = `Button` ikon 40px (44px di layar sentuh). Bar simpan menempel hanya saat draf berubah
+(di ponsel di atas menu bawah): panel ber-cincin, titik status bulat, tautan Kalkulator, Buang,
+Simpan; aturan scroll-padding-nya di `app.css` (`data-save-bar`). Uraian di bawah adalah
+tampilan FixMaster (saklar LED dan bar berkaca sudah dibuang, K-24).
+
 Tab owner-only **Tarif** (`QuoteRatesTab.tsx`) mengatur **template chip** kalkulator. Sejak
 10 Nov 2026 sore ada empat kartu, satu per kolom sheet: Ongkir/Waste, Jasa Pasang, Cover
 Garansi (%), Target Profit. Modal tidak punya kartu karena harga part selalu diketik.
@@ -1229,8 +1238,8 @@ menyusut di bawah ±5rem. Bar simpan memakai pola fokus yang sama dengan kalkula
 ## Pengaturan — Operasional
 
 **Nuara (L-55, 23 Nov 2026).** Tab Usaha dan Operasional kini dens-ui + Tailwind (berkas
-`BusinessSettings.tsx`, `OperationsSettings.tsx`), begitu pula deret tab. Tab lain menyusul di
-L-66 dan L-67 (K-22). Uraian di bawah adalah tampilan FixMaster.
+`BusinessSettings.tsx`, `OperationsSettings.tsx`), begitu pula deret tab. Seluruh tab Pengaturan kini dens-ui
+(L-66 dan L-67, K-22). Uraian di bawah adalah tampilan FixMaster.
 
 Halaman `/settings` punya sepuluh tab untuk owner cloud, termasuk **Nota & Struk** sejak 11 Nov 2026 (tab yang tak relevan tetap
 difilter menurut peran/mode). Tab **Operasional** mengelompokkan konfigurasi alur kerja:
@@ -1257,6 +1266,14 @@ difilter menurut peran/mode). Tab **Operasional** mengelompokkan konfigurasi alu
   utama nonaktif kini netral bergaris putus (lihat [[Conventions]]).
 
 ## Pengaturan — Nota & Struk (11 Nov 2026)
+
+**Nuara (L-67, 24 Nov 2026).** Tab Nota & Struk kini dens-ui + Tailwind (`ReceiptTab.tsx`, tanpa CSS
+Module); logika dan urutan kartu sama. Lebar kertas = `RadioGroup` dens di dalam kartu `<label>`
+(tanpa LED dan miniatur gulungan), lima saklar cetak dan saklar "Simulasi 1-bit" = `Switch` dens
+berlabel, teks nota memakai `Textarea` dens dengan hitungan sisa karakter, S&K memakai `Field` +
+`TextInput`. Dua kolom (formulir | pratinjau menempel) mulai wadah `settings` 720px; di bawahnya
+pratinjau menjadi dok menempel di atas menu bawah (lihat Decisions & Bug Fixes, L-67). Foto di
+bawah adalah tampilan FixMaster dan belum diperbarui (tak ada PowerShell di cloud).
 
 Tab **Nota & Struk** (`?tab=nota`, komponen `ReceiptTab.tsx`) adalah satu rumah untuk kertas yang
 dibawa pulang pelanggan. Tahap 1 berisi kartu **Kertas termal**: radiogroup 58 mm / 80 mm
@@ -1372,7 +1389,7 @@ di y 706–767 dengan menu bawah mulai 768 di 320, 360, 390, 430px; di 744px (ta
 
 **Nuara (L-66, 23 Nov 2026).** Tab Tim, Wallet, Outlet, Navigasi, dan Sistem (termasuk kartu
 Tampilan, Backup & Restore, Ekspor Data, Zona Berbahaya) kini dens-ui + Tailwind, masing-masing berkas
-`*Settings.tsx`. Spine/kicker/label mono dibuang (K-23). Tinggal Nota & Struk dan Tarif (L-67).
+`*Settings.tsx`. Spine/kicker/label mono dibuang (K-23). Nota & Struk dan Tarif menyusul di L-67.
 Uraian di bawah adalah tampilan FixMaster.
 
 Tab owner-only **Navigasi** mengatur empat slot utama bottom navigation ponsel.

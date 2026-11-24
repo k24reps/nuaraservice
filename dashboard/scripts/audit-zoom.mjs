@@ -69,20 +69,22 @@ const WIDTHS = [
 
 const PAGES = ['/', '/services', '/calculator', '/pos', '/customers', '/suppliers',
   '/finance', '/tasks', '/attendance', '/reports', '/activity', '/settings',
-  // Tab Nota & Struk: dok pratinjau menempel dan panelnya melayang, hal yang tak
-  // terlihat dari /settings (tab pertama).
-  '/settings?tab=nota'];
+  // Tab Nota & Struk (dok pratinjau menempel, panelnya melayang) dan Tarif (baris
+  // template bertumpuk): tak terlihat dari /settings, yang membuka tab pertama.
+  '/settings?tab=nota', '/settings?tab=tarif'];
 
 /** Navigasi in-app ke `path`, memilih klik yang benar untuk lebar saat ini. */
 async function gotoInApp(page, path, w) {
-  // Tab di dalam halaman (mis. /settings?tab=nota) bukan tautan menu: SPA
-  // membacanya dari URL, jadi cukup dorong riwayat. Reload akan mengunci ulang
-  // ke layar PIN.
+  // Tab di dalam halaman (mis. /settings?tab=nota) bukan tautan menu. Mendorong
+  // riwayat TIDAK berguna: SettingsPage membaca ?tab= hanya saat dipasang, jadi
+  // pushState membiarkan tab pertama (Usaha) terbuka dan probe mengukur halaman
+  // yang salah (terbukti 24 Nov 2026, L-67). Klik chip tabnya; halaman Pengaturan
+  // sudah terbuka karena '/settings' mendahului di PAGES. Reload akan mengunci
+  // ulang ke layar PIN.
   if (path.includes('?')) {
-    await page.evaluate((p) => {
-      history.pushState({}, '', p);
-      dispatchEvent(new PopStateEvent('popstate'));
-    }, path);
+    const tab = new URLSearchParams(path.split('?')[1]).get('tab');
+    const label = { nota: 'Nota & Struk', tarif: 'Tarif' }[tab];
+    await page.locator('main [role="group"] button', { hasText: new RegExp(`^${label}$`) }).first().click();
     return;
   }
   if (w > 1024) {

@@ -148,6 +148,20 @@
   }
 }
 
+/* Tarif (L-67): selama bar simpan menempel di bawah layar, fokus dari Tab tak
+   boleh mendarat di baliknya (WCAG 2.4.11). Yang menggulir adalah dokumen, jadi
+   padding dipasang di <html>. 7rem ≈ bar yang patah dua baris di ponsel + celah. */
+@layer utilities {
+  html:has([data-save-bar='dirty']) {
+    scroll-padding-bottom: calc(var(--space-3) + 7rem);
+  }
+  @media (max-width: 720px) {
+    html:has([data-save-bar='dirty']) {
+      scroll-padding-bottom: calc(var(--mobile-nav-height) + var(--space-2) + env(safe-area-inset-bottom) + 7rem);
+    }
+  }
+}
+
 /* Kelas Tailwind hanya dibuat dari folder ini. Kata seperti "hidden" atau
    "grid" di kode FixMaster tidak boleh melahirkan utilitas yang mengalahkan
    kelas global lama. Tambahkan folder halaman saat halamannya dipindah. */
@@ -172,13 +186,4 @@
 @source "../features/activity";
 /* Pengaturan dipindah per tab (L-55, L-66, L-67): selama folder ini masih memuat
    tab FixMaster, hanya berkas tab yang sudah dipindah yang dipindai. */
-@source "../features/settings/settingsUi.tsx";
-@source "../features/settings/SettingsTabs.tsx";
-@source "../features/settings/BusinessSettings.tsx";
-@source "../features/settings/OperationsSettings.tsx";
-@source "../features/settings/TeamSettings.tsx";
-@source "../features/settings/WalletSettings.tsx";
-@source "../features/settings/OutletSettings.tsx";
-@source "../features/settings/NavigationSettings.tsx";
-@source "../features/settings/SystemSettings.tsx";
-@source "../features/settings/DisplayCard.tsx";
+@source "../features/settings";

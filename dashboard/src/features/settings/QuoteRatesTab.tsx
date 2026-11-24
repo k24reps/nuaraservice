@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Button, Card, CardBody, CardHeader, Icon, Input } from '@/components/ui';
-import type { IconName } from '@/components/ui/Icon';
+import { PackageOpen, Plus, ShieldCheck, Target, Trash2, Wrench, type LucideIcon } from 'lucide-react';
+import { Button } from '@/components/dens/button';
+import { Field } from '@/components/dens/field';
+import { Switch } from '@/components/dens/switch';
+import { TextInput } from '@/components/dens/text-input';
 import { setQuoteRates } from '@/config/orgConfig';
 import type { QuoteField, QuoteRates } from '@/data/types';
 import { fmtPctInput, fmtRp, fmtRpInput, parsePctInput, parseRpInput } from '@/lib/format';
@@ -15,10 +18,11 @@ import {
   sanitizeQuoteRates,
 } from '@/lib/business/quote';
 import { useT, type TranslationKey } from '@/i18n';
+import { cn } from '@/lib/utils';
 import { demoGuard } from '@/stores/demo';
 import { useSessionStore } from '@/stores/session';
 import { toast } from '@/stores/toast';
-import styles from './QuoteRatesTab.module.css';
+import { SettingsCard, SettingsHint, SettingsSection } from './settingsUi';
 
 /*
  * Pengaturan → Tarif: template chip untuk empat kolom Kalkulator Biaya. Satu
@@ -26,6 +30,10 @@ import styles from './QuoteRatesTab.module.css';
  * menyimpan per kartu akan menimpa kartu lain dengan nilai lama. Angka
  * disimpan sebagai teks selama diedit supaya "12,5" dan "150.000" tidak
  * melompat saat diketik.
+ *
+ * Ambang baris membaca wadah `settings` (SettingsSection) dan diturunkan dari
+ * isi terlebar yang harus muat sebaris: empat kolom butuh ±36rem isi kartu
+ * (nama 11rem, nilai 8rem, saklar ±5rem, hapus 44px, tiga celah).
  */
 
 interface ChipDraft {
@@ -41,31 +49,31 @@ type Draft = Record<QuoteField, PresetDraft>;
 
 const FIELD_COPY: Record<
   QuoteField,
-  { icon: IconName; title: TranslationKey; hint: TranslationKey; placeholder: TranslationKey; sample: string }
+  { icon: LucideIcon; title: TranslationKey; hint: TranslationKey; placeholder: TranslationKey; sample: string }
 > = {
   ongkir: {
-    icon: 'box-open',
+    icon: PackageOpen,
     title: 'quoteRates.ongkirTitle',
     hint: 'quoteRates.ongkirHint',
     placeholder: 'quoteRates.ongkirPlaceholder',
     sample: '15.000',
   },
   jasa: {
-    icon: 'screwdriver-wrench',
+    icon: Wrench,
     title: 'quoteRates.jasaTitle',
     hint: 'quoteRates.jasaHint',
     placeholder: 'quoteRates.jasaPlaceholder',
     sample: '150.000',
   },
   coverPct: {
-    icon: 'shield-halved',
+    icon: ShieldCheck,
     title: 'quoteRates.coverTitle',
     hint: 'quoteRates.coverHint',
     placeholder: 'quoteRates.coverPlaceholder',
     sample: '10',
   },
   targetProfit: {
-    icon: 'bullseye',
+    icon: Target,
     title: 'quoteRates.profitTitle',
     hint: 'quoteRates.profitHint',
     placeholder: 'quoteRates.profitPlaceholder',
@@ -104,45 +112,25 @@ function fromDraft(d: Draft): QuoteRates {
   }));
 }
 
-/** Saklar panel: LED + nilai (Lit-Signal Rule). */
-function LedSwitch({
-  on,
-  label,
-  onLabel,
-  offLabel,
-  ariaLabel,
-  onToggle,
-}: {
-  on: boolean;
-  label: string;
-  onLabel: string;
-  offLabel: string;
-  ariaLabel: string;
-  onToggle: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={on}
-      aria-label={ariaLabel}
-      className={styles.switch}
-      data-on={on}
-      onClick={onToggle}
-    >
-      <span className={styles.switchLed} aria-hidden />
-      <span>{label}</span>
-      <span className={styles.switchState}>{on ? onLabel : offLabel}</span>
-    </button>
-  );
-}
+/**
+ * Kolom tanpa kotak isian (saklar, tombol hapus) duduk sejajar dengan kotak
+ * isian di sebelahnya: judul kolom setinggi label Field (`leading-none` 14px +
+ * celah 6px), kontrolnya setinggi kotak isian (40px, 44px di layar sentuh).
+ */
+const COLUMN = 'grid content-start gap-1.5';
+const COLUMN_HEAD = 'text-sm leading-none font-semibold select-none';
+const CONTROL_ROW = 'flex h-10 items-center pointer-coarse:h-11';
 
 export function QuoteRatesTab() {
   const stored = useSessionStore((s) => s.org?.settings?.quoteRates);
   const current = useMemo(() => sanitizeQuoteRates(stored), [stored]);
   // Draf dibuat ulang hanya bila nilai tersimpan berubah dari luar (simpan,
   // perangkat lain), bukan setiap render.
-  return <QuoteRatesEditor key={JSON.stringify(current)} current={current} />;
+  return (
+    <SettingsSection>
+      <QuoteRatesEditor key={JSON.stringify(current)} current={current} />
+    </SettingsSection>
+  );
 }
 
 function QuoteRatesEditor({ current }: { current: QuoteRates }) {
@@ -199,117 +187,174 @@ function QuoteRatesEditor({ current }: { current: QuoteRates }) {
 
   return (
     <>
-      <p className={styles.intro}>{t('quoteRates.intro')}</p>
+      <p className="max-w-[70ch] text-sm leading-normal text-muted-foreground">{t('quoteRates.intro')}</p>
 
       {QUOTE_FIELDS.map((field) => {
         const copy = FIELD_COPY[field];
         const preset = draft[field];
         const title = t(copy.title);
+        const Icon = copy.icon;
         return (
-          <Card key={field}>
-            <CardHeader icon={<Icon name={copy.icon} aria-hidden />} title={title} />
-            <CardBody>
-              <p className={styles.hint}>{t(copy.hint)}</p>
-              {preset.chips.length === 0 ? (
-                <p className={styles.empty}>{t('quoteRates.empty')}</p>
-              ) : (
-                <ul className={styles.chipList}>
-                  {preset.chips.map((chip, index) => {
-                    const duplicate =
-                      showIssues && duplicates.some((i) => i.field === field && i.index === index);
-                    const blank = showIssues && blanks.some((i) => i.field === field && i.index === index);
-                    const on = preset.defaultId === chip.id;
-                    const name = chipName(field, chip);
-                    return (
-                      <li key={chip.id} className={styles.chipRow}>
-                        <Input
+          <SettingsCard key={field} icon={<Icon aria-hidden />} title={title}>
+            <SettingsHint className="max-w-[70ch]">{t(copy.hint)}</SettingsHint>
+            {preset.chips.length === 0 ? (
+              <p className="mb-4 rounded-xl border border-dashed border-border p-4 text-center text-sm leading-normal text-muted-foreground">
+                {t('quoteRates.empty')}
+              </p>
+            ) : (
+              <ul className="mb-4">
+                {preset.chips.map((chip, index) => {
+                  const duplicate =
+                    showIssues && duplicates.some((i) => i.field === field && i.index === index);
+                  const blank = showIssues && blanks.some((i) => i.field === field && i.index === index);
+                  const on = preset.defaultId === chip.id;
+                  const name = chipName(field, chip);
+                  return (
+                    // Empat kolom; di bawah 640px nama + hapus sebaris lalu nilai + saklar;
+                    // di bawah 420px nilai dan saklar masing-masing satu baris penuh
+                    // (kotak nilai di samping saklar tinggal ±5rem, "150.000" terpotong).
+                    <li
+                      key={chip.id}
+                      className="grid grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_auto_auto] items-start gap-3 border-t border-dashed border-border py-4 first:border-t-0 first:pt-0 @max-[641px]/settings:grid-cols-[minmax(0,1fr)_auto_auto]"
+                    >
+                      <div className="@max-[641px]/settings:col-span-2 @max-[641px]/settings:row-start-1">
+                        <Field
                           label={t('quoteRates.chipLabel')}
-                          value={chip.label}
-                          maxLength={QUOTE_LIMITS.label}
-                          placeholder={t(copy.placeholder)}
                           error={duplicate ? t('quoteRates.duplicate') : undefined}
-                          onChange={(e) => patchChip(field, index, { label: e.target.value })}
-                        />
-                        <Input
+                        >
+                          <TextInput
+                            value={chip.label}
+                            maxLength={QUOTE_LIMITS.label}
+                            placeholder={t(copy.placeholder)}
+                            onChange={(e) => patchChip(field, index, { label: e.target.value })}
+                          />
+                        </Field>
+                      </div>
+                      <div className="@max-[641px]/settings:col-start-1 @max-[641px]/settings:row-start-2 @max-[421px]/settings:col-span-full">
+                        <Field
                           label={isPct(field) ? t('quoteRates.valuePct') : t('quoteRates.valueRp')}
-                          inputMode={isPct(field) ? 'decimal' : 'numeric'}
-                          className={styles.num}
-                          value={chip.value}
-                          placeholder={copy.sample}
                           error={blank ? t('quoteRates.valueMissing') : undefined}
-                          onChange={(e) =>
-                            patchChip(field, index, {
-                              value: isPct(field) ? fmtPctInput(e.target.value) : fmtRpInput(e.target.value),
-                            })
-                          }
-                          // Di atas 100% dipotong saat kolom ditinggalkan, bukan diam-diam saat disimpan.
-                          onBlur={(e) =>
-                            isPct(field) &&
-                            parsePctInput(e.target.value) > 100 &&
-                            patchChip(field, index, { value: '100' })
-                          }
-                        />
-                        <div className={[styles.bare, styles.autoCell].join(' ')}>
-                          <LedSwitch
-                            on={on}
-                            label={t('quoteRates.auto')}
-                            onLabel={t('quoteRates.yes')}
-                            offLabel={t('quoteRates.no')}
-                            ariaLabel={interpolate(t('quoteRates.autoAria'), { name })}
-                            onToggle={() =>
+                        >
+                          <TextInput
+                            capitalize="none"
+                            inputMode={isPct(field) ? 'decimal' : 'numeric'}
+                            className="font-mono tabular-nums placeholder:font-sans"
+                            value={chip.value}
+                            placeholder={copy.sample}
+                            onChange={(e) =>
+                              patchChip(field, index, {
+                                value: isPct(field) ? fmtPctInput(e.target.value) : fmtRpInput(e.target.value),
+                              })
+                            }
+                            // Di atas 100% dipotong saat kolom ditinggalkan, bukan diam-diam saat disimpan.
+                            onBlur={(e) =>
+                              isPct(field) &&
+                              parsePctInput(e.target.value) > 100 &&
+                              patchChip(field, index, { value: '100' })
+                            }
+                          />
+                        </Field>
+                      </div>
+                      <div
+                        className={cn(
+                          COLUMN,
+                          '@max-[641px]/settings:col-[2/-1] @max-[641px]/settings:row-start-2',
+                          '@max-[421px]/settings:col-span-full @max-[421px]/settings:row-start-3 @max-[421px]/settings:flex @max-[421px]/settings:items-center @max-[421px]/settings:justify-between @max-[421px]/settings:gap-3',
+                        )}
+                      >
+                        <span className={COLUMN_HEAD}>{t('quoteRates.auto')}</span>
+                        <span className={CONTROL_ROW}>
+                          <Switch
+                            checked={on}
+                            aria-label={interpolate(t('quoteRates.autoAria'), { name })}
+                            onCheckedChange={() =>
                               patchPreset(field, (p) => ({ ...p, defaultId: on ? null : chip.id }))
                             }
                           />
-                        </div>
-                        <div className={[styles.bare, styles.removeCell].join(' ')}>
-                          <button
-                            type="button"
-                            className={styles.remove}
-                            aria-label={interpolate(t('quoteRates.removeChip'), { name })}
-                            title={t('common.delete')}
-                            onClick={() =>
-                              patchPreset(field, (p) => ({
-                                chips: p.chips.filter((_, i) => i !== index),
-                                defaultId: on ? null : p.defaultId,
-                              }))
-                            }
-                          >
-                            <Icon name="trash" aria-hidden />
-                          </button>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-              <Button
-                variant="secondary"
-                iconLeft={<Icon name="plus" aria-hidden />}
-                disabled={preset.chips.length >= QUOTE_LIMITS.chips}
-                onClick={() =>
-                  patchPreset(field, (p) => ({
-                    ...p,
-                    chips: [...p.chips, { id: newId(), label: '', value: '' }],
-                  }))
-                }
-              >
-                {interpolate(t('quoteRates.addChip'), { field: title })}
-              </Button>
-            </CardBody>
-          </Card>
+                        </span>
+                      </div>
+                      <div
+                        className={cn(
+                          COLUMN,
+                          '@max-[641px]/settings:col-start-3 @max-[641px]/settings:row-start-1',
+                        )}
+                      >
+                        <span aria-hidden className={COLUMN_HEAD}>
+                          &nbsp;
+                        </span>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="hover:border-destructive/45 hover:bg-destructive-soft hover:text-destructive"
+                          aria-label={interpolate(t('quoteRates.removeChip'), { name })}
+                          title={t('common.delete')}
+                          onClick={() =>
+                            patchPreset(field, (p) => ({
+                              chips: p.chips.filter((_, i) => i !== index),
+                              defaultId: on ? null : p.defaultId,
+                            }))
+                          }
+                        >
+                          <Trash2 aria-hidden />
+                        </Button>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={preset.chips.length >= QUOTE_LIMITS.chips}
+              onClick={() =>
+                patchPreset(field, (p) => ({
+                  ...p,
+                  chips: [...p.chips, { id: newId(), label: '', value: '' }],
+                }))
+              }
+            >
+              <Plus aria-hidden />
+              {interpolate(t('quoteRates.addChip'), { field: title })}
+            </Button>
+          </SettingsCard>
         );
       })}
 
-      <div className={styles.bar} data-dirty={dirty}>
-        <span className={styles.barState}>
-          <span className={styles.barLed} aria-hidden />
+      {/* Diam di akhir tab saat tak ada perubahan; begitu draf berubah ia menempel
+          di bawah layar sebagai bar aksi. `data-save-bar` adalah kait aturan
+          scroll-padding <html> di app.css: fokus dari Tab tak boleh mendarat di
+          baliknya (WCAG 2.4.11). Di ponsel ia duduk di atas menu bawah, terikat
+          kehadiran menu (<=720px), bukan lebar wadah: media query yang sah. */}
+      <div
+        data-save-bar={dirty ? 'dirty' : undefined}
+        className={cn(
+          'flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl bg-card px-4 py-3 text-card-foreground shadow-panel ring-1 ring-border/60',
+          dirty &&
+            // Di bawah topbar (--z-sticky) saat tergulir ke atas, bukan menimpanya.
+            'sticky bottom-3 z-[calc(var(--z-sticky)-1)] shadow-raised ring-2 ring-primary/40 phone:bottom-[calc(var(--mobile-nav-height)+var(--space-2)+env(safe-area-inset-bottom))]',
+        )}
+      >
+        <span
+          role="status"
+          className={cn(
+            'mr-auto inline-flex items-center gap-2 text-sm font-medium',
+            dirty ? 'text-warning-foreground' : 'text-muted-foreground',
+          )}
+        >
+          <span
+            aria-hidden
+            className={cn('size-2 shrink-0 rounded-full', dirty ? 'bg-warning-foreground' : 'bg-success-foreground')}
+          />
           {dirty ? t('quoteRates.unsaved') : t('quoteRates.upToDate')}
         </span>
-        <Link to="/calculator" className={styles.barLink}>
-          {t('quoteRates.openCalculator')}
-        </Link>
+        <Button asChild variant="link" className="px-2 text-muted-foreground underline hover:text-foreground">
+          <Link to="/calculator">{t('quoteRates.openCalculator')}</Link>
+        </Button>
         {dirty && (
           <Button
+            type="button"
             variant="ghost"
             onClick={() => {
               setDraft(toDraft(current));
@@ -319,7 +364,7 @@ function QuoteRatesEditor({ current }: { current: QuoteRates }) {
             {t('quoteRates.discard')}
           </Button>
         )}
-        <Button onClick={() => void save()} loading={busy} disabled={!dirty}>
+        <Button onClick={() => void save()} disabled={busy || !dirty} aria-busy={busy || undefined}>
           {t('quoteRates.save')}
         </Button>
       </div>

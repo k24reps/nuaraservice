@@ -12,7 +12,7 @@ import {
   Wallet as WalletIcon,
   type LucideIcon,
 } from 'lucide-react';
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { ConfirmDialog } from '@/components/dens/confirm-dialog';
 import { useCollection } from '@/hooks/useCollection';
 import { roleAllows } from '@/config/plans';
 import { useT } from '@/i18n';
@@ -32,7 +32,6 @@ import { SystemSettings } from './SystemSettings';
 import { SettingsTabs } from './SettingsTabs';
 import { QuoteRatesTab } from './QuoteRatesTab';
 import { ReceiptTab } from './ReceiptTab';
-import styles from './SettingsPage.module.css';
 
 type Tab =
   | 'usaha'
@@ -104,7 +103,7 @@ export function SettingsPage() {
   );
 
   return (
-    <div className={styles.wrap}>
+    <div data-nu className="@container/settings flex flex-col gap-4 bg-transparent">
       <SettingsTabs tabs={visibleTabs} value={tab} onChange={setTab} label={t('settingsPage.sectionsAria')} />
 
       {tab === 'usaha' && <BusinessSettings isOwner={isOwner} />}

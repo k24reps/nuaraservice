@@ -146,8 +146,8 @@ audit dengan `PW_CHROMIUM=/opt/pw-browsers/chromium`. Folder `scripts/shots/` di
 buat dulu bila belum ada.
 
 ```bash
-BASE_URL=http://localhost:5173 node scripts/audit-mobile.mjs   # 5 lebar ponsel x 13 halaman
-BASE_URL=http://localhost:5173 node scripts/audit-zoom.mjs     # 11 lebar desktop x 13 halaman
+BASE_URL=http://localhost:5173 node scripts/audit-mobile.mjs   # 5 lebar ponsel x 14 halaman
+BASE_URL=http://localhost:5173 node scripts/audit-zoom.mjs     # 11 lebar desktop x 14 halaman
 node scripts/audit-tokens.mjs                                  # gerbang token FixMaster
 BASE_URL=http://localhost:5173 node scripts/audit-contrast.mjs  # kontras DOM: /demo, wizard, /dev/komponen, /dev/layar
 ```

@@ -10,8 +10,7 @@ export interface SettingsTabItem<T extends string> {
  * Deret tab Pengaturan (L-55). Dibungkus beberapa baris, tidak digeser ke
  * samping: sembilan tab tak akan muat sebaris di 320px, dan strip geser
  * menyembunyikan tab terakhir di balik gestur yang tak terlihat. Tinggi 44px
- * di semua perangkat, sama dengan tab FixMaster, supaya isi tab yang belum
- * dipindah (L-66, L-67) tidak bergeser.
+ * di semua perangkat.
  */
 export function SettingsTabs<T extends string>({
   tabs,
@@ -25,7 +24,7 @@ export function SettingsTabs<T extends string>({
   label: string;
 }) {
   return (
-    <div data-nu className="flex flex-wrap items-center gap-2 bg-transparent" role="group" aria-label={label}>
+    <div className="flex flex-wrap items-center gap-2" role="group" aria-label={label}>
       {tabs.map(({ id, label: text, icon: TabIcon }) => (
         <button
           key={id}

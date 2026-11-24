@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import pageTsx from './SettingsPage.tsx?raw';
-import pageCss from './SettingsPage.module.css?raw';
 import tabsTsx from './SettingsTabs.tsx?raw';
 import uiTsx from './settingsUi.tsx?raw';
 import businessTsx from './BusinessSettings.tsx?raw';
@@ -11,36 +10,25 @@ import outletTsx from './OutletSettings.tsx?raw';
 import navTsx from './NavigationSettings.tsx?raw';
 import systemTsx from './SystemSettings.tsx?raw';
 import displayTsx from './DisplayCard.tsx?raw';
+import receiptTsx from './ReceiptTab.tsx?raw';
+import quoteTsx from './QuoteRatesTab.tsx?raw';
 import datasetsTs from './exportDatasets.ts?raw';
 import selectTsx from '@/components/dens/select.tsx?raw';
 import appCss from '@/styles/app.css?raw';
 
-const migrated = [tabsTsx, uiTsx, businessTsx, opsTsx, teamTsx, walletTsx, outletTsx, navTsx, systemTsx, displayTsx];
+const migrated = [pageTsx, tabsTsx, uiTsx, businessTsx, opsTsx, teamTsx, walletTsx, outletTsx, navTsx, systemTsx, displayTsx, receiptTsx, quoteTsx];
+// Dok pratinjau Nota dan bar simpan Tarif terikat kehadiran menu bawah (media query `phone:`); dicek terpisah.
+const containerOnly = migrated.filter((src) => src !== receiptTsx && src !== quoteTsx);
 
 /**
  * Pengaturan dipindah per tab (K-22): L-55 kerangka + Usaha + Operasional,
- * L-66 Tim/Wallet/Outlet/Navigasi/Sistem, L-67 Nota & Struk + Tarif. Selama itu
- * halaman masih merender tab FixMaster (Nota, Tarif) inline.
+ * L-66 Tim/Wallet/Outlet/Navigasi/Sistem, L-67 Nota & Struk + Tarif. Sesudah
+ * L-67 tak ada CSS Module tersisa dan folder utuh dipindai Tailwind.
  */
-describe('Pengaturan (L-55, L-66)', () => {
-  it('hanya berkas tab yang sudah dipindah yang dipindai Tailwind', () => {
-    for (const f of [
-      'settingsUi',
-      'SettingsTabs',
-      'BusinessSettings',
-      'OperationsSettings',
-      'TeamSettings',
-      'WalletSettings',
-      'OutletSettings',
-      'NavigationSettings',
-      'SystemSettings',
-      'DisplayCard',
-    ]) {
-      expect(appCss).toContain(`@source "../features/settings/${f}.tsx";`);
-    }
-    // SettingsPage.tsx masih memuat tab FixMaster: tidak boleh dipindai utuh.
-    expect(appCss).not.toContain('@source "../features/settings";');
-    expect(appCss).not.toContain('@source "../features/settings/SettingsPage.tsx";');
+describe('Pengaturan (L-55, L-66, L-67)', () => {
+  it('folder utuh dipindai Tailwind dan tak ada CSS Module tersisa', () => {
+    expect(appCss).toContain('@source "../features/settings";');
+    expect(Object.keys(import.meta.glob('./*.module.css'))).toEqual([]);
     for (const src of migrated) {
       expect(src).not.toContain('styles.');
       expect(src).not.toMatch(/from '@\/components\/ui'/);
@@ -48,25 +36,15 @@ describe('Pengaturan (L-55, L-66)', () => {
     }
   });
 
-  it('data-nu per bagian, bukan di akar halaman (tab FixMaster masih inline)', () => {
-    expect(pageTsx).not.toMatch(/\bdata-nu\b/);
-    expect(pageTsx).toContain('<div className={styles.wrap}>');
-    expect(uiTsx).toContain('<div data-nu className="@container/settings flex flex-col gap-4 bg-transparent">');
-    expect(tabsTsx).toContain('<div data-nu className="flex flex-wrap items-center gap-2 bg-transparent"');
+  it('data-nu dan wadah settings di akar halaman, bukan per bagian', () => {
+    expect(pageTsx).toContain('<div data-nu className="@container/settings flex flex-col gap-4 bg-transparent">');
+    expect(pageTsx).toContain("from '@/components/dens/confirm-dialog'");
+    for (const src of [tabsTsx, uiTsx, businessTsx, opsTsx, receiptTsx, quoteTsx]) expect(src).not.toMatch(/<[a-zA-Z][^<>]*\sdata-nu\b/);
+    expect(uiTsx).toContain('<div className="flex flex-col gap-4">{children}</div>');
     expect(businessTsx).toContain('<SettingsSection>');
     expect(opsTsx).toContain('<SettingsSection>');
-  });
-
-  it('sisa CSS Module = persis kelas yang masih dipakai tab FixMaster', () => {
-    const defined = new Set([...pageCss.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/\.([a-zA-Z][\w-]*)/g)].map((m) => m[1]));
-    const used = new Set([...pageTsx.matchAll(/styles\.(\w+)/g)].map((m) => m[1]));
-    expect([...defined].filter((c) => !used.has(c)).sort()).toEqual([]);
-    for (const gone of ['tabs', 'tabActive', 'logoRow', 'rentRow', 'waTextarea', 'warrantyDefaults', 'targetGrid']) {
-      expect(defined.has(gone), gone).toBe(false);
-    }
-    // Sesudah L-66 tinggal pembungkus halaman; tab Nota dan Tarif punya CSS Module sendiri.
-    expect([...defined]).toEqual(['wrap']);
-    expect(Object.keys(import.meta.glob('./DisplayCard.module.css'))).toEqual([]);
+    expect(receiptTsx).toContain('<SettingsSection>');
+    expect(quoteTsx).toContain('<SettingsSection>');
   });
 
   it('deret tab: tombol aria-pressed setinggi tab lama (44px) supaya isi tab lama tak bergeser', () => {
@@ -77,7 +55,7 @@ describe('Pengaturan (L-55, L-66)', () => {
 
   it('ambang kartu membaca wadah settings, bukan layar', () => {
     // Varian selalu menempel ke nama kelas; `phone: phone.trim()` (data profil) bukan varian.
-    for (const src of migrated) expect(src).not.toMatch(/[\s'"`](drawer|narrow|phone|compact):[a-z[@]/);
+    for (const src of containerOnly) expect(src).not.toMatch(/[\s'"`](drawer|narrow|phone|compact):[a-z[@]/);
     expect(businessTsx).toContain('grid max-w-[960px] grid-cols-2 items-start gap-4 @max-[609px]/settings:grid-cols-1');
     expect(opsTsx).toContain('grid grid-cols-2 gap-3 @max-[489px]/settings:grid-cols-1');
     // Kaki simpan: tombol berbagi lebar penuh di wadah sempit.
@@ -160,5 +138,72 @@ describe('Pengaturan L-66: Tim, Wallet, Outlet, Navigasi, Sistem', () => {
     expect(displayTsx).toContain('@min-[900px]/display:grid-cols-2');
     expect(displayTsx).toContain('aria-disabled={zoom === 1 || undefined}');
     expect(displayTsx).not.toMatch(/(?<!-)\bdisabled=\{/);
+  });
+});
+
+describe('Pengaturan L-67: Nota & Struk, Tarif', () => {
+  it('kelas Tailwind ditulis utuh: tak ada awalan varian yang dirangkai dari konstanta', () => {
+    // Pemindai Tailwind membaca teks sumber; `${NARROW}:grid` tak pernah menjadi kelas.
+    for (const src of [receiptTsx, quoteTsx]) expect(src).not.toMatch(/\$\{\w+\}:[a-z[-]/);
+  });
+
+  it('Nota: dua kolom hanya di wadah >= 720px; di bawahnya pratinjau menjadi dok menempel di atas menu bawah', () => {
+    expect(receiptTsx).toContain('@min-[720px]/settings:grid-cols-[minmax(340px,1fr)_minmax(360px,470px)]');
+    expect(receiptTsx).toContain('@max-[720px]/settings:sticky @max-[720px]/settings:bottom-(--dock-bottom)');
+    // Jarak dok terikat kehadiran menu bawah, bukan lebar wadah.
+    expect(receiptTsx).toContain('phone:[--dock-bottom:calc(var(--mobile-nav-height)+var(--space-2)+env(safe-area-inset-bottom))]');
+    // Tertutup: tak terlihat tapi tetap ter-layout (iframe mengukur tinggi isinya, meja kerja mengukur lebar untuk zoom).
+    expect(receiptTsx).toContain('@max-[720px]/settings:invisible @max-[720px]/settings:max-h-0');
+    expect(receiptTsx).not.toMatch(/@max-\[720px\]\/settings:hidden[^']*overflow-hidden/);
+    // Urutan ponsel: kertas, apa yang dicetak, isi teks, S&K.
+    expect(receiptTsx).toContain('@max-[720px]/settings:order-1');
+    expect(receiptTsx).toContain('@max-[720px]/settings:order-2');
+    expect(receiptTsx).toContain('@max-[720px]/settings:order-3');
+    // Esc menutup panel dan mengembalikan fokus ke tombol dok.
+    expect(receiptTsx).toContain("e.key !== 'Escape' || !open");
+    expect(receiptTsx).toContain('peek.current?.focus()');
+  });
+
+  it('Nota: lebar kertas = RadioGroup dens; lima saklar cetak + saklar hitam-putih = Switch berlabel', () => {
+    expect(receiptTsx).toContain('<RadioGroup');
+    expect(receiptTsx).toContain('<RadioGroupItem value={String(w)}');
+    expect(receiptTsx.match(/<Switch\b/g)).toHaveLength(2);
+    expect(receiptTsx).toContain('aria-labelledby={`${s.key}-label`}');
+    expect(receiptTsx).toContain('aria-describedby={`${s.key}-hint`}');
+    expect(receiptTsx).toContain('aria-labelledby={bwId}');
+    // Urutan penyaring penting: abu-abu dulu, lalu ambang 50%.
+    expect(receiptTsx).toContain('[filter:grayscale(1)_contrast(1000)]');
+  });
+
+  it('Nota: tombol simpan mati selama menyimpan; angka S&K dan isian uang tak dikapitalkan otomatis', () => {
+    expect(receiptTsx.match(/disabled=\{busy \|\| !dirty\} aria-busy=\{busy \|\| undefined\}/g)).toHaveLength(2);
+    expect(receiptTsx.match(/capitalize="none"/g)).toHaveLength(3);
+    expect(receiptTsx).toContain('font-mono tabular-nums');
+    // Status "belum tersimpan" tetap diumumkan lewat wadah yang selalu ada.
+    expect(receiptTsx).toContain('<span role="status" className="sr-only">');
+  });
+
+  it('Tarif: empat kolom baris template di wadah lapang, bertumpuk di <= 640px dan <= 420px', () => {
+    expect(quoteTsx).toContain('grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_auto_auto]');
+    expect(quoteTsx).toContain('@max-[641px]/settings:grid-cols-[minmax(0,1fr)_auto_auto]');
+    expect(quoteTsx).toContain('@max-[421px]/settings:col-span-full');
+    expect(quoteTsx).toContain('@max-[421px]/settings:row-start-3');
+  });
+
+  it('Tarif: saklar otomatis = Switch dengan nama chip di aria-label; hapus chip 44px di layar sentuh', () => {
+    expect(quoteTsx).toContain('<Switch');
+    expect(quoteTsx).toContain("aria-label={interpolate(t('quoteRates.autoAria'), { name })}");
+    expect(quoteTsx).toContain("aria-label={interpolate(t('quoteRates.removeChip'), { name })}");
+    expect(quoteTsx).toContain('size="icon"');
+    expect(quoteTsx).toContain('pointer-coarse:h-11');
+  });
+
+  it('Tarif: bar simpan menempel hanya saat ada perubahan; fokus Tab tak mendarat di baliknya', () => {
+    expect(quoteTsx).toContain("data-save-bar={dirty ? 'dirty' : undefined}");
+    expect(quoteTsx).toContain('phone:bottom-[calc(var(--mobile-nav-height)+var(--space-2)+env(safe-area-inset-bottom))]');
+    expect(appCss).toContain("html:has([data-save-bar='dirty'])");
+    expect(quoteTsx).toContain('<Button onClick={() => void save()} disabled={busy || !dirty} aria-busy={busy || undefined}>');
+    // Peringatan tinggalkan halaman selama draf berubah.
+    expect(quoteTsx).toContain("window.addEventListener('beforeunload', warn)");
   });
 });

@@ -469,6 +469,28 @@ for (const theme of ['light']) {
         }
       },
     ]),
+    // L-67: Nota & Struk dengan teks diketik (catatan "belum tersimpan", hitam-putih
+    // menyala, S&K tak sah) dan Tarif dengan draf berubah (bar simpan menempel) plus
+    // galat tampil (nilai kosong).
+    ['Pengaturan-Nota', async () => {
+      await page.getByRole('link', { name: /^Pengaturan/ }).first().click();
+      await page.waitForTimeout(700);
+      await page.locator('main [role="group"] button', { hasText: /^Nota & Struk$/ }).first().click();
+      await page.waitForTimeout(400);
+      await page.locator('#receipt-header').fill('Buka setiap hari 09.00 sampai 20.00');
+      await page.getByRole('switch', { name: /1-bit/i }).click();
+      await page.locator('main input[inputmode="numeric"]').first().fill('');
+      await page.locator('main button', { hasText: /Simpan/ }).last().click();
+    }],
+    ['Pengaturan-Tarif', async () => {
+      await page.getByRole('link', { name: /^Pengaturan/ }).first().click();
+      await page.waitForTimeout(700);
+      await page.locator('main [role="group"] button', { hasText: /^Tarif$/ }).first().click();
+      await page.waitForTimeout(400);
+      await page.locator('main button', { hasText: /^Tambah template/ }).first().click();
+      await page.locator('main button', { hasText: /^Simpan template$/ }).click();
+      await page.waitForTimeout(300);
+    }],
     // Kartu Tampilan (Pengaturan › Sistem) dan chip pembesaran Topbar di ketiga
     // rona LED: nominal 100%, aksen 110% + Padat, jingga 90%. Tab Sistem tidak
     // terbuka oleh menu Pengaturan di atas, jadi kartu ini perlu langkah sendiri.
