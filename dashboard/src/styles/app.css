@@ -177,8 +177,7 @@
 /* Kelas Tailwind hanya dibuat dari folder ini. Kata seperti "hidden" atau
    "grid" di kode FixMaster tidak boleh melahirkan utilitas yang mengalahkan
    kelas global lama. Tambahkan folder halaman saat halamannya dipindah. */
-@source "../components/dens";
-@source "../components/layout";
+@source "../components";
 @source "../app";
 @source "../features/auth";
 @source "../features/onboarding";

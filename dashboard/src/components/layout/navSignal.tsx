@@ -26,7 +26,7 @@ export function NavCount({ signal, className }: { signal: NavSignal | undefined;
   return (
     <span
       className={cn(
-        'inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full px-1.5 font-mono text-[11px] font-semibold tabular-nums',
+        'inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full px-1.5 font-mono text-xs font-semibold tabular-nums',
         TONE_CLASS[signal.tone],
         className,
       )}

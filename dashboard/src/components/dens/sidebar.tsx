@@ -45,7 +45,7 @@ function SidebarSection({
   return (
     <div data-slot="sidebar-section" className={cn("flex w-full flex-col gap-0.5", className)} {...props}>
       {label && !collapsed && (
-        <div className="px-3 pb-1.5 font-mono text-[10.5px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+        <div className="px-3 pb-1.5 font-mono text-xs font-medium uppercase tracking-[0.08em] text-muted-foreground">
           {label}
         </div>
       )}
@@ -110,7 +110,7 @@ function SidebarCount({ className, tone = "muted", ...props }: React.ComponentPr
     <span
       data-slot="sidebar-count"
       className={cn(
-        "inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold tabular-nums",
+        "inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-xs font-semibold tabular-nums",
         tone === "muted" && "text-muted-foreground",
         tone === "highlight" && "bg-highlight text-highlight-foreground",
         className
@@ -254,7 +254,7 @@ function SidebarMeter({
       className={cn("flex w-14 flex-col items-center gap-2 rounded-[22px] bg-sidebar px-2 py-3 ring-1 ring-sidebar-border", className)}
       {...props}
     >
-      <span className="font-mono text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">{label}</span>
+      <span className="font-mono text-xs font-medium uppercase tracking-[0.08em] text-muted-foreground">{label}</span>
       {total != null && <span className="font-mono text-[13px] font-semibold tabular-nums">{total}</span>}
       <div className="flex w-full flex-col items-center gap-[3px]">
         {levels.map((v, i) => (

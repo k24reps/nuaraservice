@@ -13,6 +13,35 @@ Catatan keputusan desain penting + bug nyata yang ditemukan saat verifikasi.
 
 ## Keputusan desain
 
+### Bersih-bersih FixMaster: komponen (L-68, 24 Nov 2026)
+Inventaris sebelum menghapus: dari 17 CSS Module di `components/`, hanya lima yang dirender (`Term`,
+`ErrorBoundary`, `NotFoundPage`, `ThumbDock`, `DisplayControls`); `LoadState` (14 halaman) masih memakai
+`Button`, `EmptyState`, dan `Icon` FixMaster. Sisanya tak punya pemakai di luar dirinya. Langkah ini
+dipecah dari token dan CSS global (L-69, K-26) karena `tokens.css` dan `global.css` membentuk kerangka
+semua halaman.
+- **Dihapus**: 13 komponen `components/ui` (Button ... EmptyState), `Icon` (392 baris Phosphor), `Mascot`,
+  `PlaceholderPage`, tes-tes mereka, dan semua `.module.css`. `components/ui` tinggal `EmptyValue`,
+  `loadPending`, `catalogView`, `LoadState`, `Term`, dan barrel `index.ts` yang menyusut.
+  `cleanup.test.ts` mengunci daftar berkas itu supaya komponen bernama sama dengan dens tak kembali.
+- **Ditulis ulang**: `LoadState` (EmptyState dan Button dens), `Term` (area ketuk 45px lewat `::after`
+  `pointer-coarse:after:-inset-y-3.5`, dulu 33px), `ErrorBoundary` dan `NotFoundPage` (kartu dens polos,
+  K-27), `ThumbDock` (varian `phone:`, bayangan eksplisit), `ZoomGauge` (lima pilihan dalam satu rel,
+  bukan penggaris bertakik ber-LED) dan `DensitySwitch` (dua kartu pilihan tanpa LED dan glif).
+- **K-01**: teks kerangka 10-11px jadi `text-xs` (12px) di sidebar, topbar, lencana menu, dan menu
+  bawah; di 320px item menu bawah 57px dan label "Pelanggan" 12px tidak terpotong. Probe `audit-zoom`
+  kini nol temuan teks kecil.
+- **Chunk**: `react-router` jadi `router-vendor` lewat `manualChunks`; peringatan 600 kB hilang tanpa
+  menaikkan `chunkSizeWarningLimit`.
+- **Bug**: kartu galat dan 404 meluber 14px di 320px karena padding berlapis dan tombol `nowrap`
+  (ditemukan di harness, bukan di aplikasi sungguhan). Pelajaran umum: kartu pemusatan penuh layar
+  memakai padding luar 16px + kartu 24px, dan tombol di dalamnya boleh membungkus.
+- **Bug**: `shadow-raised` (bayangan panel) terlalu tipis untuk tombol melayang di atas isi halaman;
+  dok memakai bayangan eksplisit.
+- **Pelajaran tooling**: foto per piksel yang menyertakan kerangka ikut berubah oleh K-01. Foto
+  elemen `main` dengan sidebar, topbar, dan menu bawah disembunyikan (`visibility:hidden`, tata letak
+  tetap) memisahkan perubahan kerangka dari perubahan isi. Jam Absensi menghasilkan sekitar 100-2000
+  piksel selisih per foto; letaknya (kotak 132x44 di jam) menegaskan itu bukan regresi.
+
 ### Halaman lacak pindah ke dunia "Nota Servis Rangkap" (L-56, 24 Nov 2026)
 `TrackingPage.tsx` (publik, `/t/<kode>` dan `/track`) ditulis ulang tanpa CSS Module (602 baris CSS
 dihapus); logika pencarian, batas laju, status, riwayat, garansi, S&K, dan kontak disalin apa adanya.

@@ -11,7 +11,6 @@ import {
   type Density,
 } from '@/stores/zoom';
 import { usePointerFine, zoomPercent, zoomTone } from './zoomDisplay';
-import styles from './DisplayControls.module.css';
 
 /**
  * Kontrol dua kenop tampilan (lihat stores/zoom.ts). Dipakai di Pengaturan ›
@@ -36,10 +35,14 @@ function radioStep(key: string, index: number, last: number): number | null {
   }
 }
 
+/** Titik dan teks rona: hijau di 100%, navy saat diperbesar, jingga saat teks jatuh di bawah lantai 12px. */
+const TONE_DOT = { nominal: 'bg-success-foreground', up: 'bg-primary', below: 'bg-highlight' } as const;
+const TONE_TEXT = { nominal: 'text-success-foreground', up: 'text-primary', below: 'text-warning-foreground' } as const;
+
 /**
- * Gauge pembesaran: skala bertakik 90·100·110·125·150 dengan detent STANDAR di
- * 100 dan zona jingga di bawahnya (lantai teks). Readout mono besar di atasnya
- * selalu menyebut keadaan, bukan hanya angka.
+ * Pembesaran: lima pilihan 90·100·110·125·150 dalam satu rel. Readout besar di
+ * atasnya selalu menyebut keadaan (standar, diperbesar, atau di bawah lantai
+ * teks), bukan hanya angka.
  */
 export function ZoomGauge() {
   const t = useT();
@@ -64,18 +67,18 @@ export function ZoomGauge() {
   };
 
   return (
-    <div className={styles.gauge} data-tone={tone}>
-      <div className={styles.readoutRow}>
-        <span className={styles.readout}>
-          <span className={styles.led} aria-hidden />
+    <div data-tone={tone} className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <span className="inline-flex items-center gap-2.5 font-mono text-3xl leading-none font-bold tabular-nums">
+          <span aria-hidden className={cn('size-2.5 shrink-0 rounded-full', TONE_DOT[tone])} />
           {zoomPercent(zoom)}
         </span>
-        <span className={styles.toneLabel}>{toneLabel}</span>
+        <span className={cn('text-sm font-semibold', TONE_TEXT[tone])}>{toneLabel}</span>
       </div>
       <div
         role="radiogroup"
         aria-label={t('display.zoom.title')}
-        className={styles.scale}
+        className="grid grid-cols-[repeat(5,minmax(44px,1fr))] gap-1 rounded-full bg-muted p-1"
         onKeyDown={onKeyDown}
       >
         {ZOOM_LEVELS.map((level, i) => {
@@ -89,19 +92,13 @@ export function ZoomGauge() {
               type="button"
               role="radio"
               aria-checked={checked}
-              aria-label={
-                level === 1 ? `100% · ${t('display.zoom.standard')}` : zoomPercent(level)
-              }
+              aria-label={level === 1 ? `100% · ${t('display.zoom.standard')}` : zoomPercent(level)}
               tabIndex={checked ? 0 : -1}
-              className={styles.tick}
-              data-detent={level === 1 || undefined}
               data-below={isBelowTextFloor(level) || undefined}
+              className="grid min-h-11 place-items-center rounded-full font-mono text-sm tabular-nums text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring aria-checked:bg-card aria-checked:font-bold aria-checked:text-foreground aria-checked:shadow-sm data-[below]:text-warning-foreground"
               onClick={() => setZoom(level)}
             >
-              <span className={styles.tickMark} aria-hidden />
-              <span className={styles.tickLabel} aria-hidden>
-                {Math.round(level * 100)}
-              </span>
+              <span aria-hidden>{Math.round(level * 100)}</span>
             </button>
           );
         })}
@@ -110,7 +107,7 @@ export function ZoomGauge() {
   );
 }
 
-/** Pilihan kerapatan: dua sel bertanda LED. Padat terkunci di layar sentuh. */
+/** Pilihan kerapatan: dua kartu pilihan. Padat terkunci di layar sentuh. */
 export function DensitySwitch() {
   const t = useT();
   const density = useZoomStore((s) => s.density);
@@ -133,7 +130,8 @@ export function DensitySwitch() {
     <div
       role="radiogroup"
       aria-label={t('display.density.title')}
-      className={styles.density}
+      // Menumpuk sendiri saat kartu sempit, tanpa breakpoint.
+      className="grid grid-cols-[repeat(auto-fit,minmax(min(190px,100%),1fr))] gap-2"
       onKeyDown={onKeyDown}
     >
       {DENSITIES.map((d, i) => {
@@ -150,24 +148,14 @@ export function DensitySwitch() {
             aria-checked={checked}
             aria-disabled={!enabled || undefined}
             tabIndex={checked ? 0 : -1}
-            className={styles.densityCell}
+            className="grid min-h-11 gap-1 rounded-xl px-4 py-3 text-left ring-1 ring-border outline-none transition-colors hover:bg-accent/40 focus-visible:ring-2 focus-visible:ring-ring aria-checked:bg-soft/40 aria-checked:ring-2 aria-checked:ring-primary/50 aria-disabled:cursor-not-allowed aria-disabled:opacity-55 aria-disabled:hover:bg-transparent"
             onClick={() => enabled && setDensity(d)}
           >
-            <span className={styles.densityName}>
-              <span className={styles.densityLed} aria-hidden />
+            <span className="text-sm font-semibold">
               {t(d === 'lapang' ? 'display.density.lapang' : 'display.density.padat')}
             </span>
-            <span className={styles.densityHint}>
-              {t(
-                d === 'lapang'
-                  ? 'display.density.lapangHint'
-                  : 'display.density.padatHint',
-              )}
-            </span>
-            <span className={styles.densityGlyph} data-density={d} aria-hidden>
-              <span />
-              <span />
-              <span />
+            <span className="text-sm leading-normal text-muted-foreground">
+              {t(d === 'lapang' ? 'display.density.lapangHint' : 'display.density.padatHint')}
             </span>
           </button>
         );
@@ -255,7 +243,7 @@ export function ZoomAnnouncer() {
   const t = useT();
   const zoom = useZoomStore((s) => s.zoom);
   return (
-    <span className="fm-visually-hidden" aria-live="polite">
+    <span className="sr-only" aria-live="polite">
       {`${t('display.zoom.title')} ${zoomPercent(zoom)}`}
     </span>
   );

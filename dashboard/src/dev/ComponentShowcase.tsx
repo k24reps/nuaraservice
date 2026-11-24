@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { MemoryRouter } from 'react-router-dom';
 import {
   MessageCircleIcon,
   PlusIcon,
@@ -7,6 +8,11 @@ import {
   Settings2Icon,
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/dens/alert';
+import { ErrorFallback } from '@/components/ErrorBoundary';
+import { NotFoundPage } from '@/components/NotFoundPage';
+import { DensitySwitch, ZoomGauge, ZoomStepper } from '@/components/layout/DisplayControls';
+import { LoadState } from '@/components/ui/LoadState';
+import { Term } from '@/components/ui/Term';
 import { Badge, StatusDot } from '@/components/dens/badge';
 import { Button } from '@/components/dens/button';
 import {
@@ -427,6 +433,23 @@ export function ComponentShowcase() {
               <Skeleton className="h-24" />
               <SkeletonText lines={3} />
             </div>
+          </Section>
+
+          <Section title="Komponen kerangka (L-68)">
+            <MemoryRouter>
+              <div className="grid gap-6">
+                <LoadState queries={[{ loading: true, error: null, refetch: () => undefined }]} />
+                <LoadState queries={[{ loading: false, error: new Error('contoh'), refetch: () => undefined }]} />
+                <p className="text-sm">
+                  Istilah di dalam kalimat: <Term id="arus-kas-bersih">Arus Kas Bersih</Term> bulan ini.
+                </p>
+                <ZoomGauge />
+                <DensitySwitch />
+                <ZoomStepper />
+                <ErrorFallback error={new Error('Contoh galat render')} onRetry={() => undefined} />
+                <NotFoundPage />
+              </div>
+            </MemoryRouter>
           </Section>
 
           <Section title="Lapisan (dialog, panel, laci, menu)">

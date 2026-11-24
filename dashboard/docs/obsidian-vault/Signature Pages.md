@@ -386,6 +386,8 @@ Dua route publik standalone (`/privacy`, `/terms`, di luar `AuthGate`) agar bisa
 
 ## Fallback Error — Fault Panel
 
+**Nuara (L-68, 24 Nov 2026).** `ErrorBoundary` dan `NotFoundPage` kini kartu dens polos (ikon lucide, tombol dens; baut, LED, dan kode FAULT dibuang, K-27); teks tidak berubah. Foto: bagian "Komponen kerangka" di `/dev/komponen`. Uraian di bawah adalah tampilan FixMaster.
+
 `ErrorBoundary` (root + route) juga di-redesign dari icon-card generik jadi **panel diagnostik fault** sefamili bench: pelat bersekrup, header **`FAULT` stamp** ber-LED danger berdenyut + **kode fault** (`FX-SYS-500` root / `FX-MOD-500` route), aksi pulih (Coba Lagi / Muat Ulang). Lihat [[Decisions & Bug Fixes]].
 
 ---

@@ -153,7 +153,7 @@ export function Sidebar({
                 <strong className="truncate text-[15px] font-semibold leading-tight tracking-[-0.01em]">
                   Nuara Service
                 </strong>
-                <small className="font-mono text-[10.5px] font-medium uppercase leading-5 tracking-[0.14em] text-muted-foreground">
+                <small className="font-mono text-xs font-medium uppercase leading-5 tracking-[0.14em] text-muted-foreground">
                   Dashboard
                 </small>
               </span>
@@ -358,7 +358,7 @@ function BranchSelector({
             <Store />
             <span className="flex-1 truncate">{o.name}</span>
             {o.isPrimary && (
-              <span className="rounded-full bg-secondary px-2 text-[11px] font-medium text-secondary-foreground">
+              <span className="rounded-full bg-secondary px-2 text-xs font-medium text-secondary-foreground">
                 {t('sidebar.primary')}
               </span>
             )}

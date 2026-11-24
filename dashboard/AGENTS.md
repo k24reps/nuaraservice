@@ -58,7 +58,7 @@ tetap relevan, tetapi bagian merek, harga, dan infrastruktur FixMaster tidak ber
 - **UI baru dan halaman yang dipindah (Fase B)**: komponen dens-ui di `src/components/dens/`
   (dens-ui v0.2.0, MIT, model shadcn, lihat README di folder itu) di atas Tailwind v4.
   `cn()` dari `@/lib/utils`. Satu halaman dipindah utuh, lalu CSS Module lamanya dihapus.
-  Halaman yang belum dipindah tetap memakai CSS Modules.
+  Sejak L-68 tak ada CSS Module tersisa di `src/`.
 - **Tiga syarat halaman yang dipindah** (tanpa ini kelas Tailwind tidak terbentuk atau gaya
   lama merembes): (1) elemen akarnya diberi atribut `data-nu`; (2) foldernya ditambah ke daftar
   `@source` di `src/styles/app.css`, atau berkasnya saja bila folder itu masih memuat halaman
@@ -102,8 +102,8 @@ tetap relevan, tetapi bagian merek, harga, dan infrastruktur FixMaster tidak ber
   FixMaster lama yang masih menyapa "Anda" termasuk daftar selisih, bukan untuk diubah sambil lalu.
 - **Data**: baca via `useCollection('<koleksi>')`, mutasi via `repository` (`src/data/`).
 - **Logika domain**: murni dan testable di `src/lib/business/`, dipanggil dari UI.
-- **Ikon**: halaman lama lewat komponen `Icon` (`src/components/ui/Icon.tsx`, Phosphor).
-  Komponen dens-ui dan halaman yang dipindah memakai `lucide-react`.
+- **Ikon**: `lucide-react` di semua UI (komponen `Icon` Phosphor dihapus di L-68). Satu-satunya
+  Phosphor yang tersisa: logo WhatsApp (`components/dens/whatsapp-icon.tsx`).
 - **Hanya tema terang** (DBD P9.5, P14.1). Varian `dark:` di komponen dens-ui tidak pernah aktif.
 - **Font**: Figtree untuk teks, JetBrains Mono (`font-mono tabular-nums`) untuk nomor tiket,
   Rupiah, dan ID.

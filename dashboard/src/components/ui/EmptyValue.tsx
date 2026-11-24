@@ -13,7 +13,7 @@ export function EmptyValue() {
   return (
     <>
       <span aria-hidden="true">{EMPTY_VALUE}</span>
-      <span className="fm-visually-hidden">{t('common.emptyValue')}</span>
+      <span className="sr-only">{t('common.emptyValue')}</span>
     </>
   );
 }

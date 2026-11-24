@@ -65,7 +65,7 @@ function SyncBadge() {
       data-status={status}
       title={t(SYNC_TITLE[status])}
       className={cn(
-        'inline-flex h-8 items-center gap-1.5 rounded-full px-3 font-mono text-[11px] font-semibold tracking-[0.08em]',
+        'inline-flex h-8 items-center gap-1.5 rounded-full px-3 font-mono text-xs font-semibold tracking-[0.08em]',
         SYNC_TONE[status],
       )}
     >

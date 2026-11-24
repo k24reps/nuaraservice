@@ -205,7 +205,7 @@ export function MobileBottomNav() {
             >
               <BottomIcon active={active}>
                 <ItemIcon strokeWidth={active ? 2.1 : 1.75} />
-                <NavCount signal={signals[item.to]} className="absolute -right-2 -top-1.5 h-[18px] min-w-[18px] px-1 text-[10px]" />
+                <NavCount signal={signals[item.to]} className="absolute -right-2.5 -top-2 h-5 min-w-5 px-1" />
               </BottomIcon>
               <span className="max-w-full truncate">{mobileLabelFor(item)}</span>
             </Link>
@@ -231,7 +231,7 @@ export function MobileBottomNav() {
 
 function bottomItemClass(active: boolean) {
   return cn(
-    'flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-0.5 text-[11px] font-medium leading-none text-muted-foreground outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-ring',
+    'flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-0.5 text-xs font-medium leading-none text-muted-foreground outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-ring',
     active && 'font-semibold text-foreground',
   );
 }

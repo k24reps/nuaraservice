@@ -25,8 +25,10 @@ export default defineConfig({
         manualChunks(id: string) {
           if (!id.includes('node_modules')) return undefined;
           if (id.includes('@supabase')) return 'supabase-vendor';
+          // react-router dipisah: react-vendor sendirian 601,8 kB melewati
+          // batas peringatan 600 kB (utang L-58); keduanya tetap di-cache terpisah.
+          if (id.includes('/react-router')) return 'router-vendor';
           if (
-            id.includes('/react-router') ||
             id.includes('/react-dom/') ||
             id.includes('/react/') ||
             id.includes('/scheduler/')

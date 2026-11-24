@@ -1,6 +1,6 @@
-import { Icon } from './Icon';
-import { Button } from './Button';
-import { EmptyState } from './EmptyState';
+import { LoaderCircle, RotateCw, TriangleAlert } from 'lucide-react';
+import { Button } from '@/components/dens/button';
+import { EmptyState } from '@/components/dens/empty-state';
 import { useT } from '@/i18n';
 import type { LoadQuery } from './loadPending';
 
@@ -16,7 +16,7 @@ export function LoadState({ queries }: { queries: LoadQuery[] }) {
     return (
       <div role="status" aria-live="polite">
         <EmptyState
-          icon={<Icon name="circle-notch" className="spin" aria-hidden />}
+          icon={<LoaderCircle className="motion-safe:animate-spin" aria-hidden />}
           title={t('common.loading')}
         />
       </div>
@@ -26,16 +26,12 @@ export function LoadState({ queries }: { queries: LoadQuery[] }) {
   return (
     <div role="alert">
       <EmptyState
-        icon={<Icon name="triangle-exclamation" aria-hidden />}
+        icon={<TriangleAlert aria-hidden />}
         title={t('common.loadFailed')}
         description={t('common.loadFailedDescription')}
         action={
-          <Button
-            variant="secondary"
-            size="sm"
-            iconLeft={<Icon name="repeat" aria-hidden />}
-            onClick={() => failed.forEach((q) => void q.refetch())}
-          >
+          <Button variant="secondary" size="sm" onClick={() => failed.forEach((q) => void q.refetch())}>
+            <RotateCw aria-hidden />
             {t('common.retry')}
           </Button>
         }

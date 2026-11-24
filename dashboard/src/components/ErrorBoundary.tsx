@@ -1,7 +1,8 @@
 import { Component, type ReactNode, type ErrorInfo } from 'react';
-import { Icon } from '@/components/ui';
+import { ArrowLeft, RotateCw, TriangleAlert } from 'lucide-react';
+import { Button } from '@/components/dens/button';
+import { cn } from '@/lib/utils';
 import { reportError } from '@/lib/report';
-import styles from './ErrorBoundary.module.css';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -80,50 +81,47 @@ interface ErrorFallbackProps {
  * "Hey developer".
  */
 export function ErrorFallback({ error, root, onRetry }: ErrorFallbackProps) {
-  const faultCode = root ? 'FX-SYS-500' : 'FX-MOD-500';
   return (
-    <div className={[styles.wrap, root ? styles.rootWrap : ''].join(' ')} role="alert">
-      <div className={styles.panel}>
-        <span className={[styles.screw, styles.screwTL].join(' ')} aria-hidden />
-        <span className={[styles.screw, styles.screwTR].join(' ')} aria-hidden />
-        <span className={[styles.screw, styles.screwBL].join(' ')} aria-hidden />
-        <span className={[styles.screw, styles.screwBR].join(' ')} aria-hidden />
-
-        <div className={styles.faultHead}>
-          <span className={styles.faultStamp}>
-            <span className={styles.led} /> FAULT
-          </span>
-          <span className={styles.faultCode}>{faultCode}</span>
-        </div>
-
-        <span className={styles.icon}>
-          <Icon name="triangle-exclamation" aria-hidden />
+    <div
+      data-nu
+      role="alert"
+      className={cn('flex items-center justify-center p-4', root ? 'min-h-dvh' : 'min-h-[60dvh] bg-transparent')}
+    >
+      <div className="w-full max-w-md rounded-2xl bg-card p-6 text-center text-card-foreground shadow-panel ring-1 ring-border/60">
+        <span className="mx-auto mb-4 grid size-12 place-items-center rounded-2xl bg-destructive-soft text-destructive">
+          <TriangleAlert className="size-6" aria-hidden />
         </span>
-        <h1 className={styles.title}>Terjadi kesalahan</h1>
-        <p className={styles.desc}>
+        <h1 className="text-xl font-semibold">Terjadi kesalahan</h1>
+        <p className="mt-2 text-sm leading-normal text-muted-foreground">
           {root
             ? 'Aplikasi mengalami gangguan tak terduga. Muat ulang untuk melanjutkan.'
             : 'Halaman ini gagal dimuat. Coba lagi, atau kembali ke dashboard.'}
         </p>
 
-        {import.meta.env.DEV && <pre className={styles.detail}>{error.message}</pre>}
+        {import.meta.env.DEV && (
+          <pre className="mt-4 max-h-40 overflow-auto rounded-lg bg-surface p-3 text-left font-mono text-xs whitespace-pre-wrap [overflow-wrap:anywhere]">
+            {error.message}
+          </pre>
+        )}
 
-        <div className={styles.actions}>
+        <div className="mt-6 flex flex-wrap justify-center gap-2">
           {root ? (
-            <button
-              className={styles.btnPrimary}
-              onClick={() => window.location.reload()}
-            >
-              <Icon name="repeat" aria-hidden /> Muat Ulang Aplikasi
-            </button>
+            <Button className="h-auto min-h-10 py-2 whitespace-normal" onClick={() => window.location.reload()}>
+              <RotateCw aria-hidden />
+              Muat Ulang Aplikasi
+            </Button>
           ) : (
             <>
-              <button className={styles.btnPrimary} onClick={onRetry}>
-                <Icon name="repeat" aria-hidden /> Coba Lagi
-              </button>
-              <a className={styles.btnGhost} href="/">
-                <Icon name="arrow-left" aria-hidden /> Ke Dashboard
-              </a>
+              <Button className="h-auto min-h-10 py-2 whitespace-normal" onClick={onRetry}>
+                <RotateCw aria-hidden />
+                Coba Lagi
+              </Button>
+              <Button asChild variant="outline" className="h-auto min-h-10 py-2 whitespace-normal">
+                <a href="/">
+                  <ArrowLeft aria-hidden />
+                  Ke Dashboard
+                </a>
+              </Button>
             </>
           )}
         </div>
