@@ -162,6 +162,18 @@
   }
 }
 
+/* Halaman lacak (L-56): meja navy sampai ke tepi dokumen (karet gulir, area di
+   luar halaman), bilah gulir amber di atas navy, dan kotak centang bawaan
+   berwarna karbon. Yang menggulir adalah dokumen, jadi aturannya di <html>
+   dengan kait data-nota-page di akar halaman. */
+@layer utilities {
+  html:has([data-nota-page]) {
+    background: var(--nu-counter);
+    scrollbar-color: var(--nu-amber) var(--nu-counter);
+    accent-color: var(--nu-carbon);
+  }
+}
+
 /* Kelas Tailwind hanya dibuat dari folder ini. Kata seperti "hidden" atau
    "grid" di kode FixMaster tidak boleh melahirkan utilitas yang mengalahkan
    kelas global lama. Tambahkan folder halaman saat halamannya dipindah. */
@@ -187,3 +199,4 @@
 /* Pengaturan dipindah per tab (L-55, L-66, L-67): selama folder ini masih memuat
    tab FixMaster, hanya berkas tab yang sudah dipindah yang dipindai. */
 @source "../features/settings";
+@source "../features/tracking";

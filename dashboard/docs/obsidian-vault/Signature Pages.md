@@ -1454,6 +1454,22 @@ kepala skrip) menulis `saldo-dark.png`, `saldo-light.png`, `saldo-mobile.png`,
 
 ---
 
+## Halaman Lacak — Nota Servis Rangkap (L-56, 24 Nov 2026)
+
+Halaman publik S-07 (`features/tracking/TrackingPage.tsx`, rute `/t/<kode>` dan `/track?org=&no=`),
+bukan bagian dashboard: meja konter navy, satu kolom maksimal 560px, huruf Archivo variabel.
+Dari atas: tautan kecil "Lacak nomor lain" di meja; lembar **nota** putih miring tipis dengan lubang
+sobekan (kepala: logo atau kunci pas, nama toko lebar, alamat, janji; baris "Nota Servis" dengan nomor
+tiket oranye; isian Perangkat dan Jenis berwarna karbon; **satu cap bulat merah** berisi tahap dan
+waktu, di sampingnya kalimat langkah berikut; Catatan Toko bila diisi), disambung garis sobek ke **lembar
+pelanggan amber** (Garansi: Jasa dan tiap sparepart dengan garis titik-titik); **rangkap teal** "Alur
+servis" (kotak centang cetak, terbaru di atas, terbaru berisi); **kartu kontak** putih bergaris atas
+amber (tombol amber "Chat WhatsApp", nomor sebagai teks yang bisa disalin, alamat, "Syarat &
+Ketentuan" tertutup). Rangkap amber dan teal mengintip di bawah nota seperti buku nota konter.
+Keadaan lain memakai kartu putih yang sama: pencarian (garis isian + tombol navy), memuat, tidak
+ditemukan, gagal dimuat (+ Coba lagi), dan batas laju. Foto: `/dev/lacak?no=FM-0007` (1440 dan 390px)
+dibuat lewat skrip ad-hoc; belum ada skrip `shoot-*.mjs` untuknya dan gambarnya tidak di-embed di vault.
+
 ## Sign Up / Login — Terminal Akses Bench
 
 Halaman auth (`AuthPage`, cloud-only, sebelum workspace boot) — login / daftar / reset. Dulu kartu glass polos di tengah; kini **split-panel "terminal akses bench"** senada identitas produk:

@@ -32,7 +32,7 @@ describe('nextStepFor', () => {
     for (const s of ['diterima', 'diagnosa', 'pengerjaan', 'tunggu']) {
       const step = nextStepFor(s, false);
       expect(step.tone).toBe('wait');
-      expect(text(s, false)).toMatch(/tidak ada yang perlu Anda lakukan/i);
+      expect(text(s, false)).toMatch(/tidak ada yang perlu kamu lakukan/i);
     }
   });
 

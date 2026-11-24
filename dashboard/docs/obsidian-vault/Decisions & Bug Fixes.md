@@ -13,6 +13,37 @@ Catatan keputusan desain penting + bug nyata yang ditemukan saat verifikasi.
 
 ## Keputusan desain
 
+### Halaman lacak pindah ke dunia "Nota Servis Rangkap" (L-56, 24 Nov 2026)
+`TrackingPage.tsx` (publik, `/t/<kode>` dan `/track`) ditulis ulang tanpa CSS Module (602 baris CSS
+dihapus); logika pencarian, batas laju, status, riwayat, garansi, S&K, dan kontak disalin apa adanya.
+Bersih-bersih FixMaster yang semula ikut L-56 dipecah ke L-68 (K-25).
+- **Konsep: salinan nota milik pelanggan, sudah diisi dan dicap.** Meja navy datar; lembar putih miring
+  -0,5 derajat dengan lubang sobekan, kepala nota, nomor tiket numerator oranye, isian karbon biru;
+  satu cap bulat merah berisi tahap sekarang dan "Diperbarui <kapan>" (mendarat sekali, hanya `scale`,
+  diam bila `prefers-reduced-motion`); lembar pelanggan amber = garansi; rangkap teal = alur servis dengan
+  kotak centang cetak; kartu kontak putih bergaris atas amber. Kontrak arahnya ada di surface brief
+  `.impeccable/surfaces/dashboard-src-features-tracking-trackingpage-tsx.md` (dunia sudah ditetapkan
+  Pemilik, jadi tanpa pengundian arah; code-led karena tak ada alat gambar).
+- **Archivo variabel dari `@fontsource-variable/archivo/wdth.css`** (keputusan Pemilik): sumbu lebar 62-125
+  lewat `font-variation-settings:'wdth'_N`, dimuat hanya oleh chunk halaman lacak, tanpa permintaan ke
+  pihak ketiga. Token dunia nota dan utilitas `nota-holes` dan `nota-stamp` di `nuara-theme.css`; gradien
+  dan bayangan butuh warna mentah, jadi tidak memakai `--nu-*` di kelas komponen.
+- **Pelajaran: `@theme inline` tak menjamin variabel `--color-*` ada di `:root`.** Gradien lubang sobekan dan
+  cincin cap memakai `--nu-*` lewat `@utility` di CSS tema, bukan `var(--color-x)` di kelas.
+- **Detektor impeccable menandai garis atas amber pada elemen bersudut bulat** (`border-t-4` di kartu,
+  `border-t-2` di lembar pelanggan). Garis kini elemen terpisah (`before:` dipotong `overflow-hidden`,
+  dan `<span>` bergaris putus), bukan border elemen bersudut bulat.
+- **Tinjauan akhir** (di utas yang sama, harness tanpa agen peninjau) menghasilkan tiga perbaikan: label
+  "Lembar pelanggan" di atas judul "Garansi" dibuang (label di atas judul = kicker; tinggal ikon gunting),
+  teks cap 11px jadi 13px, dan janji "langsung dari sini" jadi "di sini" karena halaman memuat sekali dan
+  tak realtime (AFD F-04.5 menyebut realtime; belum diimplementasikan di halaman ini).
+- **Harness `/dev/lacak`** (`src/dev/TrackingPreview.tsx`): `/track` tak ada di MemoryRouter `/demo`.
+  Memasang InMemoryAdapter + data contoh, merender TrackingPage di MemoryRouter sendiri; `gagal=1` memasang
+  adapter yang selalu gagal membaca (kartu gagal muncul setelah tiga kali ulang, sekitar 7 detik),
+  `terburuk=1` memanjangkan nama toko, alamat, perangkat, jenis, catatan, dan catatan riwayat.
+- **Sapaan "kamu"** (keputusan Pemilik): delapan kunci `tracking.*` ditulis ulang; kalimat S&K (`terms.*`,
+  dipakai bersama nota cetak) tetap "Anda" (G-07).
+
 ### Pengaturan: Nota & Struk dan Tarif pindah ke dens-ui, Pengaturan utuh (L-67, 24 Nov 2026)
 Langkah terakhir pemindahan Pengaturan (K-22). Folder `features/settings` kini utuh di `@source`
 dan tak punya CSS Module lagi (`ReceiptTab`, `QuoteRatesTab`, `SettingsPage`: sekitar 1.070 baris

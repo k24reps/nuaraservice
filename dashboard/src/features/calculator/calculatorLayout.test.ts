@@ -18,8 +18,8 @@ describe('Kalkulator Biaya', () => {
   it('scroll-padding <html> pindah ke app.css, dikaitkan data-calc-page', () => {
     // Kedua aturan (bawaan dan <=720px) memakai kait yang sama dengan halaman.
     expect(appCss.match(/html:has\(\[data-calc-page\]\) \{/g)).toHaveLength(2);
-    // Kait selalu atribut data-*, tak pernah nama kelas (Tarif, L-67, memakai data-save-bar).
-    expect(appCss).not.toMatch(/html:has\((?!\[data-(calc-page|save-bar)\b)/);
+    // Kait selalu atribut data-*, tak pernah nama kelas (Tarif, L-67: data-save-bar; Lacak, L-56: data-nota-page).
+    expect(appCss).not.toMatch(/html:has\((?!\[data-(calc-page|save-bar|nota-page)\b)/);
     expect(appCss).toContain('scroll-padding-bottom: calc(var(--space-3) + 6.5rem);');
     expect(appCss).toContain('scroll-padding-bottom: calc(var(--mobile-nav-height) + var(--space-2) + env(safe-area-inset-bottom) + 6.5rem);');
   });

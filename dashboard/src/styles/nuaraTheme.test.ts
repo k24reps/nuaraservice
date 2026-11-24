@@ -99,3 +99,49 @@ describe('tema Nuara (nuara-theme.css)', () => {
     expect(css.toLowerCase()).not.toMatch(/#008c8d|#00797a|#ff8a00/);
   });
 });
+
+/*
+ * Dunia "Nota Servis Rangkap" (halaman lacak, L-56): token DESIGN.md di blok
+ * :root kedua. Pasangan di bawah adalah yang dipakai TrackingPage.
+ */
+describe('dunia nota (halaman lacak)', () => {
+  const nota: Record<string, string> = {};
+  for (const m of css.matchAll(/--nu-([a-z-]+):\s*(#[0-9a-fA-F]{6})\s*;/g)) nota[m[1]] = m[2];
+
+  const TEXT_NOTA: [fg: string, bg: string][] = [
+    ['ink', 'paper'],
+    ['ink-soft', 'paper'],
+    ['ink', 'amber'],
+    ['ink', 'amber-hover'],
+    ['ink', 'teal'],
+    ['carbon', 'paper'],
+    ['stamp', 'paper'],
+    ['paper', 'ink'],
+    ['on-counter', 'counter'],
+    ['on-counter-soft', 'counter'],
+  ];
+  // Teks besar (nomor numerator 1,6rem tebal) cukup 3:1; garis, kotak centang, dan cincin fokus juga.
+  const NON_TEXT_NOTA: [fg: string, bg: string][] = [
+    ['numerator', 'paper'],
+    ['carbon', 'teal'],
+    ['carbon', 'paper'],
+    ['amber', 'counter'],
+  ];
+
+  it('memakai token DESIGN.md apa adanya', () => {
+    expect(nota.counter.toLowerCase()).toBe('#062036');
+    expect(nota.amber.toLowerCase()).toBe('#faa403');
+    expect(nota.teal.toLowerCase()).toBe('#73cabf');
+    expect(nota.carbon.toLowerCase()).toBe('#2536a0');
+    expect(nota.numerator.toLowerCase()).toBe('#fc5b02');
+    expect(nota.stamp.toLowerCase()).toBe('#c43f00');
+  });
+
+  it.each(TEXT_NOTA)('teks %s di atas %s >= 4.5:1', (fg, bg) => {
+    expect(ratio(nota[fg], nota[bg])).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it.each(NON_TEXT_NOTA)('teks besar/garis/fokus %s di atas %s >= 3:1', (fg, bg) => {
+    expect(ratio(nota[fg], nota[bg])).toBeGreaterThanOrEqual(3);
+  });
+});

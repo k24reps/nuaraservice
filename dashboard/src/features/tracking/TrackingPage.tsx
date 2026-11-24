@@ -1,4 +1,22 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, type ReactNode } from 'react';
+import '@fontsource-variable/archivo/wdth.css';
+import {
+  Check,
+  CircleCheck,
+  CircleQuestionMark,
+  Clock,
+  Info,
+  LoaderCircle,
+  MapPin,
+  RotateCw,
+  Scissors,
+  Search,
+  ShieldCheck,
+  TriangleAlert,
+  Wrench,
+  ChevronDown,
+  type LucideIcon,
+} from 'lucide-react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { repository, isSupabaseConfigured } from '@/data';
@@ -8,7 +26,7 @@ import {
   TrackRateLimitedError,
   type TrackServiceResult,
 } from '@/data/supabase-client';
-import { STATUS_LABELS, STATUS_TONE, historyKind, partWarranties } from '@/lib/business/services';
+import { STATUS_LABELS, historyKind, partWarranties } from '@/lib/business/services';
 import type { ServiceStatus } from '@/data/types';
 import { nextStepFor, normalizeTrackCode, relativeSince } from '@/lib/business/tracking';
 import { waLink, interpolate } from '@/lib/business/notify';
@@ -16,9 +34,9 @@ import { termsClauses, termsOf, termsSentenceText } from '@/lib/business/service
 import { useT } from '@/i18n';
 import { slidingWindowAllow } from '@/lib/rate-limit';
 import { fmtDate, localDateOf, localTimeStr } from '@/lib/time';
-import { Icon } from '@/components/ui';
+import { WhatsAppIcon } from '@/components/dens/whatsapp-icon';
+import { cn } from '@/lib/utils';
 import { useSessionStore } from '@/stores/session';
-import styles from './TrackingPage.module.css';
 
 /** Normalized tracking result shared by both the cloud-RPC and local paths. */
 interface TrackResult {
@@ -80,6 +98,63 @@ function fromCloud(r: TrackServiceResult | null): TrackResult {
   };
 }
 
+// Kartu kertas di meja: garis atas amber (kartu nama), tinta navy.
+const KARTU =
+  'relative overflow-hidden rounded-md bg-paper p-5 pt-6 text-ink shadow-[0_2px_3px_rgb(0_0_0/0.18),0_18px_40px_-12px_rgb(0_0_0/0.5)] before:absolute before:inset-x-0 before:top-0 before:h-1 before:bg-amber';
+// Label cetak: huruf sempit kapital kecil.
+const LABEL =
+  'block text-[0.78rem] font-extrabold tracking-[0.05em] text-ink-soft uppercase [font-variation-settings:"wdth"_75]';
+const HINT = 'text-sm leading-normal text-ink-soft';
+
+/** Baris garansi: label, garis titik-titik, nilai: seperti isian di lembar pelanggan. */
+function WarrantyRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-baseline gap-2 py-1.5">
+      <dt className="min-w-0 [overflow-wrap:anywhere]">{label}</dt>
+      <span aria-hidden className="mb-1 min-w-4 flex-1 border-b-2 border-dotted border-ink/50" />
+      <dd className="shrink-0 font-extrabold tabular-nums">{value}</dd>
+    </div>
+  );
+}
+
+function RetryButton({ onClick, label }: { onClick: () => void; label: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-lg bg-ink px-4 font-extrabold text-paper outline-none hover:bg-primary-hover focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-carbon"
+    >
+      <RotateCw className="size-4" aria-hidden />
+      {label}
+    </button>
+  );
+}
+
+/** Kartu pesan di meja: gagal muat, batas laju, tidak ditemukan, memuat. */
+function Notice({
+  icon: Icon,
+  children,
+  action,
+  role,
+  spin,
+}: {
+  icon: LucideIcon;
+  children: ReactNode;
+  action?: ReactNode;
+  role?: 'alert' | 'status';
+  spin?: boolean;
+}) {
+  return (
+    <div role={role} className={cn(KARTU, 'flex gap-3')}>
+      <Icon className={cn('mt-0.5 size-6 shrink-0 text-stamp', spin && 'motion-safe:animate-spin')} aria-hidden />
+      <div className="min-w-0 flex-1 space-y-1.5 leading-snug">
+        {children}
+        {action}
+      </div>
+    </div>
+  );
+}
+
 /**
  * Public, no-login service tracking page, in two modes:
  *
@@ -136,7 +211,7 @@ export function TrackingPage() {
     if (codeMode) {
       const next = normalizeTrackCode(query);
       if (!next) {
-        setThrottleMsg('Kode lacak terdiri dari 10 huruf dan angka, seperti di akhir alamat pada nota.');
+        setThrottleMsg(t('tracking.codeInvalid'));
         return;
       }
       setSearchOpen(false);
@@ -233,9 +308,6 @@ export function TrackingPage() {
     ? relativeSince(publicHistory[publicHistory.length - 1].at, t)
     : null;
   const nextStep = service ? nextStepFor(service.status, service.pickedUp) : null;
-  const statusTone = service
-    ? (STATUS_TONE[service.status as keyof typeof STATUS_TONE] ?? 'neutral')
-    : 'neutral';
   // Status dari server bisa saja nilai yang belum dikenal klien; tampilkan apa adanya.
   const statusText = (s: string) =>
     s in STATUS_LABELS ? t(`statusLabel.${s as ServiceStatus}`) : s;
@@ -253,37 +325,47 @@ export function TrackingPage() {
     : 'Halo ' + orgName + ', saya ingin menanyakan servis saya.';
   const contactLink = orgPhone ? waLink(orgPhone, contactMessage) : '';
 
-  return (
-    <div className={styles.page}>
-      <div className={styles.container}>
-        <header className={styles.header}>
-          <span className={styles.logoMark}>
-            {orgLogoUrl ? (
-              <img src={orgLogoUrl} alt="" className={styles.logoImg} />
-            ) : (
-              <Icon name="screwdriver-wrench" aria-hidden />
-            )}
-          </span>
-          <div className={styles.headerText}>
-            <h1 className={styles.title}>{orgName}</h1>
-            <p className={styles.subtitle}>{t('tracking.subtitle')}</p>
-          </div>
-        </header>
+  // Tinta dan kertas: satu rumus bayangan untuk semua benda kertas di meja navy.
+  const hasWarranty = !!service && (warrantyDecided || !!service.warrantyServiceUntil || !!service.warrantyPartsUntil);
+  const loading = isFetching && !data && !loadFailed;
 
+  return (
+    <div
+      data-nu
+      data-nota-page
+      className="@container/nota min-h-dvh overflow-x-clip bg-counter font-print text-on-counter selection:bg-amber selection:text-ink"
+    >
+      {/* Filter tinta kasar untuk cap, sama dengan landing page. */}
+      <svg aria-hidden="true" focusable="false" className="absolute size-0">
+        <filter id="nota-ink-rough">
+          <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="4" />
+          <feDisplacementMap in="SourceGraphic" scale="1.6" />
+        </filter>
+      </svg>
+
+      <main className="mx-auto flex w-full max-w-[560px] flex-col gap-6 px-4 pt-6 pb-10 @min-[420px]/nota:px-5 @min-[420px]/nota:pt-10">
         {service && !searchOpen ? (
-          <button className={styles.searchToggle} onClick={() => setSearchOpen(true)}>
-            <Icon name="magnifying-glass" aria-hidden />{' '}
+          <button
+            type="button"
+            onClick={() => setSearchOpen(true)}
+            className="-mb-2 inline-flex min-h-11 items-center gap-2 self-start rounded-md px-1 text-sm font-semibold text-on-counter-soft underline underline-offset-4 outline-none hover:text-on-counter focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-amber"
+          >
+            <Search className="size-4" aria-hidden />
             {codeMode ? t('tracking.searchAnotherCode') : t('tracking.searchAnother')}
           </button>
+        ) : loading && codeMode ? (
+          <Notice icon={LoaderCircle} spin role="status">
+            <p className="font-bold">{t('common.loading')}</p>
+          </Notice>
         ) : (
-          <section className={styles.searchPanel}>
-            <label className={styles.searchLabel} htmlFor="tracking-number">
+          <section aria-label={codeMode ? t('tracking.codeLabel') : t('tracking.numberLabel')} className={KARTU}>
+            <label className={LABEL} htmlFor="tracking-number">
               {codeMode ? t('tracking.codeLabel') : t('tracking.numberLabel')}
             </label>
-            <div className={styles.searchBox}>
+            <div className="mt-1 flex items-end gap-3">
               <input
                 id="tracking-number"
-                className={styles.input}
+                className="h-11 min-w-0 flex-1 rounded-none border-0 border-b-2 border-ink bg-transparent px-0 text-lg font-bold text-carbon outline-none placeholder:font-normal placeholder:text-ink-soft focus-visible:border-carbon focus-visible:outline-3 focus-visible:outline-offset-4 focus-visible:outline-carbon"
                 placeholder={codeMode ? t('tracking.codePh') : t('tracking.numberPh')}
                 autoComplete="off"
                 autoCapitalize="characters"
@@ -292,47 +374,44 @@ export function TrackingPage() {
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && runSearch()}
               />
-              <button className={styles.searchBtn} onClick={runSearch} disabled={isFetching}>
-                {isFetching ? <Icon name="circle-notch" className="spin" aria-hidden /> : <><Icon name="magnifying-glass" aria-hidden /> {t('tracking.track')}</>}
+              <button
+                type="button"
+                onClick={runSearch}
+                disabled={isFetching}
+                className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-lg bg-ink px-5 font-extrabold text-paper outline-none hover:bg-primary-hover focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-carbon disabled:opacity-60"
+              >
+                {isFetching ? (
+                  <LoaderCircle className="size-5 motion-safe:animate-spin" aria-hidden />
+                ) : (
+                  <Search className="size-5" aria-hidden />
+                )}
+                {t('tracking.track')}
               </button>
             </div>
-            <p className={styles.searchHint}>
+            <p className="mt-3 text-sm leading-normal text-ink-soft">
               {codeMode ? t('tracking.codeHint') : t('tracking.searchHint')}
             </p>
           </section>
         )}
 
         {throttleMsg && (
-          <div className={[styles.notFound, styles.fault].join(' ')}>
-            <Icon name="triangle-exclamation" aria-hidden />
-            <p>{throttleMsg}</p>
-          </div>
+          <Notice icon={TriangleAlert} role="alert">
+            <p className="font-bold">{throttleMsg}</p>
+          </Notice>
         )}
 
         {rateLimited && (
-          <div className={[styles.notFound, styles.fault].join(' ')} role="alert">
-            <Icon name="clock" aria-hidden />
-            <p>Terlalu banyak permintaan lacak dari jaringan ini.</p>
-            <p className={styles.notFoundHint}>
-              Tunggu sekitar satu menit, lalu coba lagi. Kode yang Anda buka tidak salah.
-            </p>
-            <button type="button" className={styles.retryBtn} onClick={() => refetch()}>
-              <Icon name="arrows-rotate" aria-hidden /> Coba lagi
-            </button>
-          </div>
+          <Notice icon={Clock} role="alert" action={<RetryButton onClick={() => refetch()} label={t('common.retry')} />}>
+            <p className="font-bold">{t('tracking.rateLimited')}</p>
+            <p className={HINT}>{t('tracking.rateLimitedHint')}</p>
+          </Notice>
         )}
 
         {loadFailed && !rateLimited && (
-          <div className={[styles.notFound, styles.fault].join(' ')} role="alert">
-            <Icon name="triangle-exclamation" aria-hidden />
-            <p>{t('tracking.loadFailed')}</p>
-            <p className={styles.notFoundHint}>
-              {t('tracking.loadFailedHint')}
-            </p>
-            <button type="button" className={styles.retryBtn} onClick={() => refetch()}>
-              <Icon name="arrows-rotate" aria-hidden /> {t('common.retry')}
-            </button>
-          </div>
+          <Notice icon={TriangleAlert} role="alert" action={<RetryButton onClick={() => refetch()} label={t('common.retry')} />}>
+            <p className="font-bold">{t('tracking.loadFailed')}</p>
+            <p className={HINT}>{t('tracking.loadFailedHint')}</p>
+          </Notice>
         )}
 
         {/* RPC mengembalikan nol baris baik untuk nomor salah ketik maupun kode
@@ -341,196 +420,285 @@ export function TrackingPage() {
             ketik) dan menyebut kedua kemungkinan itu apa adanya. Kode lacak
             sudah menunjuk tokonya sendiri, jadi yang tersisa hanya salah salin. */}
         {notFound && (
-          <div className={[styles.notFound, styles.fault].join(' ')}>
-            <Icon name="circle-question" aria-hidden />
-            <p>
+          <Notice icon={CircleQuestionMark}>
+            <p className="font-bold">
               {notFoundBefore}
-              <strong className={styles.notFoundNo}>{searched}</strong>
+              <strong className="font-black text-stamp [overflow-wrap:anywhere]">{searched}</strong>
               {notFoundAfter}
             </p>
-            <p className={styles.notFoundHint}>
-              {codeMode ? t('tracking.notFoundHintCode') : t('tracking.notFoundHint')}
-            </p>
-          </div>
+            <p className={HINT}>{codeMode ? t('tracking.notFoundHintCode') : t('tracking.notFoundHint')}</p>
+          </Notice>
         )}
 
         {service && (
-          <div className={styles.result}>
-            <div className={styles.resultHead}>
-              <span className={styles.resultNo}>{service.serviceNo}</span>
-              <h2>{service.device}</h2>
-              <p className={styles.deviceMeta}>{service.category}</p>
-            </div>
-
-            {/* Instrument well — satu-satunya di halaman ini. Yang dibaca sekilas
-                oleh pelanggan memang inilah: status, kebaruannya, dan apa yang
-                harus dia lakukan. Kotak pencarian tidak pernah jadi pembacaan
-                instrumen, jadi ia turun ke perlakuan input biasa. */}
-            <div className={styles.statusWell}>
-              <p className={styles.wellLabel}>{t('tracking.statusLabel')}</p>
-              <p className={styles.statusReadout}>
-                <span className={styles.led} data-tone={statusTone} aria-hidden />
-                {statusLabel}
-              </p>
-              {lastUpdate && (
-                <p className={styles.lastUpdate}>
-                  {interpolate(t('tracking.updated'), { when: lastUpdate })}
-                </p>
-              )}
-              {nextStep && (
-                <p className={styles.nextStep} data-tone={nextStep.tone}>
-                  <Icon
-                    name={
-                      nextStep.tone === 'wait'
-                        ? 'clock'
-                        : nextStep.tone === 'done'
-                          ? 'circle-check'
-                          : 'circle-info'
-                    }
-                    aria-hidden
-                  />
-                  <span>{t(nextStep.textKey)}</span>
-                </p>
-              )}
-            </div>
-
-            <ul className={styles.timeline}>
-              {[...publicHistory].reverse().map((h, i) => (
-                <li key={i} className={[styles.timelineItem, i === 0 ? styles.current : ''].join(' ')}>
-                  <span className={styles.dot} data-tone={STATUS_TONE[h.status as keyof typeof STATUS_TONE]} />
-                  <div>
-                    <strong>
-                      {(() => {
-                        const k = historyKind(h as { status: ServiceStatus | 'edit'; note: string });
-                        return k === 'pickup'
-                          ? t('services.pickedUp')
-                          : k === 'unpickup'
-                            ? t('tracking.unpickup')
-                            : k === 'edit'
-                              ? t('tracking.edited')
-                              : statusText(k);
-                      })()}
-                    </strong>
-                    <small>
-                      <span className={styles.stamp}>{stepStamp(h.at)}</span>
-                      {h.note ? ' · ' + h.note : ''}
-                    </small>
-                  </div>
-                </li>
-              ))}
-            </ul>
-
-            {(warrantyDecided || service.warrantyServiceUntil || service.warrantyPartsUntil) && (
-              <div className={styles.warranty}>
-                <span className={styles.blockLabel}>
-                  <Icon name="shield-halved" aria-hidden /> {t('tracking.warranty')}
-                </span>
-                <div className={styles.warrantyRows}>
-                  {(service.warrantyServiceUntil || warrantyDecided) && (
-                    <div className={styles.warrantyRow}>
-                      <span>{t('tracking.labor')}</span>
-                      <strong>
-                        {service.warrantyServiceUntil
-                          ? interpolate(t('tracking.until'), { date: fmtDate(service.warrantyServiceUntil.slice(0, 10)) })
-                          : t('serviceDetail.noWarranty')}
-                      </strong>
-                    </div>
-                  )}
-                  {service.partWarranties.length > 0
-                    ? service.partWarranties.map((p, i) => (
-                        <div key={`${p.name}-${i}`} className={styles.warrantyRow}>
-                          <span>{p.name}</span>
-                          <strong>
-                            {p.until
-                              ? interpolate(t('tracking.until'), { date: fmtDate(p.until.slice(0, 10)) })
-                              : t('serviceDetail.noWarranty')}
-                          </strong>
-                        </div>
-                      ))
-                    : service.warrantyPartsUntil && (
-                        <div className={styles.warrantyRow}>
-                          <span>{t('tracking.parts')}</span>
-                          <strong>
-                            {interpolate(t('tracking.until'), { date: fmtDate(service.warrantyPartsUntil.slice(0, 10)) })}
-                          </strong>
-                        </div>
-                      )}
-                </div>
-              </div>
-            )}
-
-            {(orgPhone || orgAddress) && (
-              <div className={styles.contact}>
-                <span className={styles.blockLabel}>
-                  <Icon name="store" aria-hidden /> {t('tracking.contact')}
-                </span>
-                {orgPhone && (
-                  <a
-                    className={styles.contactRow}
-                    href={contactLink}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    <Icon name="whatsapp" aria-hidden /> {orgPhone}
-                  </a>
+          <>
+            {/* Nota: lembar atas putih, rangkap teal dan amber mengintip di
+                bawahnya seperti buku nota konter. */}
+            <div className="relative isolate">
+              <span aria-hidden className="absolute inset-[10px_-4px_-10px_6px] -z-10 rotate-[2.2deg] rounded-[3px] bg-teal" />
+              <span aria-hidden className="absolute inset-[4px_4px_-5px_-3px] -z-10 -rotate-[1.4deg] rounded-[3px] bg-amber" />
+              <article
+                aria-labelledby="nota-title"
+                className={cn(
+                  'relative -rotate-[0.5deg] rounded-[3px] bg-paper px-[18px] pt-[30px] text-ink shadow-[0_2px_3px_rgb(0_0_0/0.18),0_18px_40px_-12px_rgb(0_0_0/0.5)] @min-[420px]/nota:px-8',
+                  hasWarranty ? 'pb-0' : 'pb-6',
                 )}
-                {orgAddress && (
-                  <p className={styles.contactRow}>
-                    <Icon name="map-pin" aria-hidden /> {orgAddress}
-                  </p>
-                )}
-              </div>
-            )}
+              >
+                <span aria-hidden className="nota-holes absolute inset-x-3.5 top-[7px] h-[7px] opacity-85" />
 
-            {/* Ditulis pemilik toko sendiri — jam buka, syarat garansi, aturan
-                pengambilan. Inilah yang membuat halaman ini terbaca sebagai
-                dokumen toko itu, bukan cetakan seragam. */}
-            {orgNote && (
-              <div className={styles.shopNote}>
-                <span className={styles.blockLabel}>
-                  <Icon name="note" aria-hidden /> {t('tracking.shopNote')}
-                </span>
-                <p className={styles.shopNoteBody}>{orgNote}</p>
-              </div>
-            )}
-
-            {/* Tertutup bawaan: yang dicari pelanggan di halaman ini adalah status.
-                Kalimat persetujuan di nota menunjuk ke sini lewat QR. */}
-            {terms && (
-              <details className={styles.terms}>
-                <summary className={styles.termsHead}>
-                  <span className={styles.termsLabel}>
-                    <Icon name="scale-balanced" aria-hidden /> {t('terms.title')}
+                <header className="grid grid-cols-[auto_1fr] gap-x-3.5 gap-y-1 border-b-2 border-ink pb-3.5">
+                  <span className="grid size-14 place-items-center overflow-hidden rounded-md bg-ink text-paper">
+                    {orgLogoUrl ? (
+                      <img src={orgLogoUrl} alt="" className="size-full object-cover" />
+                    ) : (
+                      <Wrench className="size-6" aria-hidden />
+                    )}
                   </span>
-                  <Icon name="chevron-down" className={styles.termsCaret} aria-hidden />
-                </summary>
-                <p className={styles.termsLead}>
-                  {interpolate(t('terms.version'), { date: fmtDate(terms.version) })}
-                </p>
-                <ol className={styles.termsList}>
-                  {termsClauses(terms).map((c) => (
-                    <li key={c.title}>
-                      <span>
-                        <strong>{t(c.title)}.</strong>{' '}
-                        {c.body.map((b) => termsSentenceText(b, t)).join(' ')}
+                  <div className="min-w-0">
+                    <h1 className="text-[1.2rem] leading-tight font-black tracking-[0.01em] [font-variation-settings:'wdth'_118] [overflow-wrap:anywhere]">
+                      {orgName}
+                    </h1>
+                    {orgAddress && (
+                      <p className="mt-0.5 text-[0.8rem] leading-snug text-ink-soft [overflow-wrap:anywhere]">{orgAddress}</p>
+                    )}
+                    <p className="mt-1 text-[0.95rem] leading-snug font-bold text-balance">{t('tracking.subtitle')}</p>
+                  </div>
+                </header>
+
+                <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-b border-rule py-3.5">
+                  <h2
+                    id="nota-title"
+                    className="text-[1.05rem] font-black tracking-[0.03em] uppercase [font-variation-settings:'wdth'_70]"
+                  >
+                    {t('tracking.notaTitle')}
+                  </h2>
+                  <p className="text-[1.6rem] leading-none font-extrabold text-numerator tabular-nums [font-variation-settings:'wdth'_62] [overflow-wrap:anywhere]">
+                    {service.serviceNo}
+                  </p>
+                </div>
+
+                <dl className="grid gap-x-6 @min-[420px]/nota:grid-cols-[1.4fr_1fr]">
+                  <div className="border-b border-rule py-3">
+                    <dt className={LABEL}>{t('tracking.deviceLabel')}</dt>
+                    <dd className="mt-0.5 text-[1.15rem] leading-snug font-bold text-carbon [overflow-wrap:anywhere]">
+                      {service.device}
+                    </dd>
+                  </div>
+                  <div className="border-b border-rule py-3">
+                    <dt className={LABEL}>{t('tracking.categoryLabel')}</dt>
+                    <dd className="mt-0.5 text-[1.15rem] leading-snug font-bold text-carbon [overflow-wrap:anywhere]">
+                      {service.category}
+                    </dd>
+                  </div>
+                </dl>
+
+                {/* Cap bulat: satu-satunya di halaman, isinya tahap sekarang dan
+                    kapan diperbarui. Yang dibaca pelanggan sekilas memang ini. */}
+                <div className="flex flex-col items-start gap-4 py-5 @min-[420px]/nota:flex-row @min-[420px]/nota:items-center @min-[420px]/nota:gap-6">
+                  <p className="nota-stamp inline-flex min-h-[5.75rem] w-[10.5rem] shrink-0 -rotate-8 flex-col items-center justify-center gap-0.5 rounded-full border-[3px] border-current px-5 py-3 text-center text-[1.15rem] leading-[1.05] font-black tracking-[0.05em] text-stamp uppercase [filter:url(#nota-ink-rough)] [font-variation-settings:'wdth'_62] motion-safe:animate-nota-stamp @min-[420px]/nota:min-h-[6.6rem] @min-[420px]/nota:w-49 @min-[420px]/nota:text-[1.3rem]">
+                    <span className="sr-only">{t('tracking.statusLabel')}: </span>
+                    <span>{statusLabel}</span>
+                    {lastUpdate && (
+                      <span className="block text-[0.72em] tracking-[0.07em] text-balance">
+                        {interpolate(t('tracking.updated'), { when: lastUpdate })}
                       </span>
-                    </li>
-                  ))}
-                  {terms.extra && (
-                    <li>
-                      <span className={styles.termsExtra}>
-                        <strong>{t('terms.extra.title')}.</strong> {terms.extra}
-                      </span>
-                    </li>
+                    )}
+                  </p>
+                  {nextStep && (
+                    <p className="flex min-w-0 gap-2.5 text-[0.95rem] leading-snug">
+                      {nextStep.tone === 'wait' ? (
+                        <Clock className="mt-0.5 size-5 shrink-0 text-carbon" aria-hidden />
+                      ) : nextStep.tone === 'done' ? (
+                        <CircleCheck className="mt-0.5 size-5 shrink-0 text-carbon" aria-hidden />
+                      ) : (
+                        <Info className="mt-0.5 size-5 shrink-0 text-carbon" aria-hidden />
+                      )}
+                      <span>{t(nextStep.textKey)}</span>
+                    </p>
                   )}
-                </ol>
-              </details>
+                </div>
+
+                {/* Ditulis pemilik toko sendiri: jam buka, syarat garansi, aturan
+                    pengambilan. Inilah yang membuat halaman ini terbaca sebagai
+                    dokumen toko itu, bukan cetakan seragam. */}
+                {orgNote && (
+                  <section className="border-t border-rule py-4">
+                    <h2 className={LABEL}>{t('tracking.shopNote')}</h2>
+                    <p className="mt-1 text-[0.95rem] leading-normal whitespace-pre-line [overflow-wrap:anywhere]">{orgNote}</p>
+                  </section>
+                )}
+
+                {hasWarranty && (
+                  <section
+                    aria-labelledby="stub-title"
+                    className="relative mt-2 -mx-[18px] rounded-b-[3px] bg-amber px-[18px] pt-[26px] pb-[22px] text-ink @min-[420px]/nota:-mx-8 @min-[420px]/nota:px-8"
+                  >
+                    {/* Garis sobek di tepi atas lembar pelanggan. */}
+                    <span aria-hidden className="absolute inset-x-0 top-0 h-0 border-t-2 border-dashed border-ink" />
+                    <span aria-hidden className="absolute -top-[13px] left-3.5 grid place-items-center bg-paper px-2">
+                      <Scissors className="size-[18px]" />
+                    </span>
+                    <h2
+                      id="stub-title"
+                      className="mb-2 inline-flex items-center gap-2 text-[1.15rem] font-black tracking-[0.03em] uppercase [font-variation-settings:'wdth'_75]"
+                    >
+                      <ShieldCheck className="size-5" aria-hidden />
+                      {t('tracking.warranty')}
+                    </h2>
+                    <dl>
+                      {(service.warrantyServiceUntil || warrantyDecided) && (
+                        <WarrantyRow
+                          label={t('tracking.labor')}
+                          value={
+                            service.warrantyServiceUntil
+                              ? interpolate(t('tracking.until'), { date: fmtDate(service.warrantyServiceUntil.slice(0, 10)) })
+                              : t('serviceDetail.noWarranty')
+                          }
+                        />
+                      )}
+                      {service.partWarranties.length > 0
+                        ? service.partWarranties.map((p, i) => (
+                            <WarrantyRow
+                              key={`${p.name}-${i}`}
+                              label={p.name}
+                              value={
+                                p.until
+                                  ? interpolate(t('tracking.until'), { date: fmtDate(p.until.slice(0, 10)) })
+                                  : t('serviceDetail.noWarranty')
+                              }
+                            />
+                          ))
+                        : service.warrantyPartsUntil && (
+                            <WarrantyRow
+                              label={t('tracking.parts')}
+                              value={interpolate(t('tracking.until'), { date: fmtDate(service.warrantyPartsUntil.slice(0, 10)) })}
+                            />
+                          )}
+                    </dl>
+                  </section>
+                )}
+              </article>
+            </div>
+
+            {/* Rangkap teal: alur servis. Kotak centang cetak, terbaru di atas. */}
+            <section
+              aria-labelledby="flow-title"
+              className="-rotate-[0.4deg] rounded-[3px] bg-teal px-[18px] pt-[26px] pb-7 text-ink shadow-[0_2px_3px_rgb(0_0_0/0.18),0_18px_40px_-16px_rgb(0_0_0/0.45)] @min-[420px]/nota:px-8"
+            >
+              <h2
+                id="flow-title"
+                className="text-[clamp(1.5rem,1.1rem+2vw,2rem)] leading-none font-black [font-variation-settings:'wdth'_80]"
+              >
+                {t('tracking.flowTitle')}
+              </h2>
+              <ol className="mt-5">
+                {[...publicHistory].reverse().map((h, i) => (
+                  <li
+                    key={i}
+                    aria-current={i === 0 ? 'step' : undefined}
+                    className="relative grid grid-cols-[1.375rem_1fr] gap-x-3 pb-5 before:absolute before:top-7 before:bottom-1 before:left-[0.625rem] before:w-0.5 before:bg-ink/30 last:pb-0 last:before:hidden"
+                  >
+                    <span
+                      aria-hidden
+                      className={cn(
+                        'mt-0.5 grid size-[22px] place-items-center rounded-[2px] border-2 border-carbon',
+                        i === 0 ? 'bg-carbon text-paper' : 'text-carbon',
+                      )}
+                    >
+                      <Check className="size-4" strokeWidth={3} />
+                    </span>
+                    <div className="min-w-0">
+                      <strong className={cn('block text-[1.05rem] leading-tight', i === 0 ? 'font-black' : 'font-bold')}>
+                        {(() => {
+                          const k = historyKind(h as { status: ServiceStatus | 'edit'; note: string });
+                          return k === 'pickup'
+                            ? t('services.pickedUp')
+                            : k === 'unpickup'
+                              ? t('tracking.unpickup')
+                              : k === 'edit'
+                                ? t('tracking.edited')
+                                : statusText(k);
+                        })()}
+                      </strong>
+                      <small className="mt-0.5 block text-sm leading-snug text-ink/80 [overflow-wrap:anywhere]">
+                        <span className="tabular-nums">{stepStamp(h.at)}</span>
+                        {h.note ? ' · ' + h.note : ''}
+                      </small>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </section>
+
+            {(orgPhone || orgAddress || terms) && (
+              <section aria-labelledby="contact-title" className={KARTU}>
+                {(orgPhone || orgAddress) && (
+                  <>
+                    <h2
+                      id="contact-title"
+                      className="text-[1.1rem] font-black tracking-[0.04em] uppercase [font-variation-settings:'wdth'_70]"
+                    >
+                      {t('tracking.contact')}
+                    </h2>
+                    {orgPhone && (
+                      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+                        <a
+                          href={contactLink}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex min-h-12 items-center gap-2 rounded-lg bg-amber px-4 font-extrabold text-ink outline-none hover:bg-amber-hover focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-carbon"
+                        >
+                          <WhatsAppIcon className="size-5" />
+                          {t('tracking.chatWa')}
+                        </a>
+                        <span className="font-bold tabular-nums select-all">{orgPhone}</span>
+                      </div>
+                    )}
+                    {orgAddress && (
+                      <p className="mt-3 flex gap-2 text-[0.95rem] leading-snug">
+                        <MapPin className="mt-0.5 size-4 shrink-0 text-ink-soft" aria-hidden />
+                        <span className="[overflow-wrap:anywhere]">{orgAddress}</span>
+                      </p>
+                    )}
+                  </>
+                )}
+
+                {/* Tertutup bawaan: yang dicari pelanggan di halaman ini adalah status.
+                    Kalimat persetujuan di nota menunjuk ke sini lewat QR. */}
+                {terms && (
+                  <details className={cn('group', (orgPhone || orgAddress) && 'mt-4 border-t border-dashed border-ink-soft/50 pt-1')}>
+                    <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-sm font-bold outline-none focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-carbon [&::-webkit-details-marker]:hidden">
+                      <span>{t('terms.title')}</span>
+                      <ChevronDown className="size-5 shrink-0 transition-transform group-open:rotate-180" aria-hidden />
+                    </summary>
+                    <p className="mt-1 text-sm leading-normal text-ink-soft">
+                      {interpolate(t('terms.version'), { date: fmtDate(terms.version) })}
+                    </p>
+                    <ol className="mt-3 grid list-decimal gap-2 pl-5 text-sm leading-normal marker:font-bold">
+                      {termsClauses(terms).map((c) => (
+                        <li key={c.title}>
+                          <strong>{t(c.title)}.</strong> {c.body.map((b) => termsSentenceText(b, t)).join(' ')}
+                        </li>
+                      ))}
+                      {terms.extra && (
+                        <li>
+                          <span className="[overflow-wrap:anywhere]">
+                            <strong>{t('terms.extra.title')}.</strong> {terms.extra}
+                          </span>
+                        </li>
+                      )}
+                    </ol>
+                  </details>
+                )}
+              </section>
             )}
-          </div>
+          </>
         )}
 
-        <footer className={styles.footer}>{t('tracking.poweredBy')}</footer>
-      </div>
+        <footer className="pt-2 text-center text-sm font-black tracking-[0.18em] text-on-counter-soft uppercase [font-variation-settings:'wdth'_118]">
+          {t('tracking.poweredBy')}
+        </footer>
+      </main>
     </div>
   );
 }

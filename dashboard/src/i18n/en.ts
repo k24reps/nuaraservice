@@ -1994,7 +1994,7 @@ export const en: Dictionary = {
   'tracking.throttled': 'Too many searches. Try again in {seconds} seconds.',
   'tracking.noOrg': 'This link is incomplete. Use the tracking link your shop sent you.',
   'tracking.pickedUpStatus': 'Picked Up',
-  'tracking.subtitle': 'Follow the repair progress of your device as it happens.',
+  'tracking.subtitle': 'Follow the repair of your device here.',
   'tracking.searchAnother': 'Track another service number',
   'tracking.numberLabel': 'Service number',
   'tracking.numberPh': 'Example: FM-0001',
@@ -2032,5 +2032,13 @@ export const en: Dictionary = {
   'tracking.hoursAgo': '{n} h ago',
   'tracking.yesterday': 'yesterday',
   'tracking.daysAgo': '{n} days ago',
+  'tracking.notaTitle': 'Service Receipt',
+  'tracking.deviceLabel': 'Device',
+  'tracking.categoryLabel': 'Type',
+  'tracking.flowTitle': 'Service timeline',
+  'tracking.chatWa': 'Chat on WhatsApp',
+  'tracking.rateLimited': 'Too many tracking requests from this network.',
+  'tracking.rateLimitedHint': "Wait about a minute, then try again. The code isn't wrong.",
+  'tracking.codeInvalid': 'A tracking code is 10 letters and digits, like the end of the address on the receipt.',
 
 };

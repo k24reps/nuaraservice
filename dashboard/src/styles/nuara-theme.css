@@ -196,3 +196,69 @@
 @keyframes dens-slide-out-right {
   to { transform: translateX(100%); }
 }
+
+/* ==========================================================================
+   Dunia "Nota Servis Rangkap" untuk halaman lacak pelanggan (S-07, L-56).
+   Token DESIGN.md apa adanya (DBD bagian 2): meja navy, kertas putih, tinta
+   navy, rangkap amber dan teal, karbon biru, numerator oranye, merah cap.
+   Hanya halaman lacak yang memakainya; dashboard tetap di token di atas.
+   ========================================================================== */
+:root {
+  --nu-counter: #062036;
+  --nu-paper: #ffffff;
+  --nu-ink: #062036;
+  --nu-ink-soft: #5b6776;
+  --nu-carbon: #2536a0;
+  --nu-numerator: #fc5b02;
+  --nu-stamp: #c43f00;
+  --nu-amber: #faa403;
+  --nu-amber-hover: #ffb42d;
+  --nu-teal: #73cabf;
+  --nu-rule: #c9d6e3;
+  --nu-on-counter: #ffffff;
+  --nu-on-counter-soft: #c5d0db;
+  --nu-font-print: "Archivo Variable", "Archivo", "Arial Narrow", ui-sans-serif, sans-serif;
+}
+
+@theme inline {
+  --font-print: var(--nu-font-print);
+  --color-counter: var(--nu-counter);
+  --color-paper: var(--nu-paper);
+  --color-ink: var(--nu-ink);
+  --color-ink-soft: var(--nu-ink-soft);
+  --color-carbon: var(--nu-carbon);
+  --color-numerator: var(--nu-numerator);
+  --color-stamp: var(--nu-stamp);
+  --color-amber: var(--nu-amber);
+  --color-amber-hover: var(--nu-amber-hover);
+  --color-teal: var(--nu-teal);
+  --color-rule: var(--nu-rule);
+  --color-on-counter: var(--nu-on-counter);
+  --color-on-counter-soft: var(--nu-on-counter-soft);
+}
+
+/* Cap mendarat sekali: hanya `scale` yang bergerak, jadi cap tetap terlihat
+   sejak awal dan miringnya (`rotate`) tak ikut berubah. */
+@theme {
+  --animate-nota-stamp: nota-stamp 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+  @keyframes nota-stamp {
+    from {
+      scale: 1.1;
+    }
+    to {
+      scale: 1;
+    }
+  }
+}
+
+/* Lubang sobekan buku nota di tepi atas lembar, dan cincin ganda cap bulat
+   (halaman lacak). Gradien dan bayangan butuh warna mentah, jadi ditulis di
+   sini, bukan di kelas komponen. */
+@utility nota-holes {
+  background: radial-gradient(circle, var(--nu-counter) 2.4px, transparent 2.9px) 0 50% / 13px 7px repeat-x;
+}
+@utility nota-stamp {
+  box-shadow:
+    inset 0 0 0 3px var(--nu-paper),
+    inset 0 0 0 4.5px currentColor;
+}

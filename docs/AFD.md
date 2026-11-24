@@ -141,6 +141,13 @@ flowchart TD
 - Koneksi putus -> halaman terakhir tetap tampil + "Koneksi terputus. Muat ulang untuk melihat status terbaru."
 - Sesi habis -> Tidak berlaku (tanpa login).
 
+**Teks layar S-07** (menyapa "kamu"; kunci i18n `tracking.*`, diperbarui 2026-11-24 di L-56):
+- Janji di kepala nota: "Pantau perbaikan perangkatmu di sini."
+- Lembar nota: judul "Nota Servis"; isian "Perangkat" dan "Jenis"; satu cap bulat berisi tahap sekarang dan "Diperbarui <kapan>"; satu kalimat langkah berikut per tahap, mis. "Unit sedang ditangani teknisi. Tidak ada yang perlu kamu lakukan. Buka halaman ini lagi nanti untuk perkembangan terbaru." dan "Menunggu persetujuanmu atas estimasi biaya. Hubungi toko untuk melanjutkan atau membatalkan pengerjaan."
+- Lembar pelanggan: "Garansi" dengan baris Jasa dan Sparepart ("s/d <tanggal>" atau "Tanpa garansi"). Rangkap teal: "Alur servis". Kartu: "Kontak Toko" dengan tombol "Chat WhatsApp", "Catatan Toko", dan "Syarat & Ketentuan" (tertutup).
+- Gagal: "Status servis belum bisa dimuat." + "Biasanya karena koneksi internet sedang lemah. Nomor yang kamu masukkan tidak berubah, cukup coba lagi." + tombol "Coba lagi". Batas laju: "Terlalu banyak permintaan lacak dari jaringan ini." + "Tunggu sekitar satu menit, lalu coba lagi. Kodenya tidak salah." Tidak ditemukan: "Nomor <x> tidak ditemukan." / "Kode <x> tidak ditemukan." + petunjuk mencocokkan dengan nota (teks ini yang berlaku sekarang; kalimat "Link ini tidak ditemukan atau sudah tidak aktif..." di atas belum dipakai, masuk Daftar Selisih).
+- Teks Syarat & Ketentuan memakai kunci `terms.*` yang sama dengan nota cetak dan masih menyapa "Anda" (G-07).
+
 ### F-05 Kabar status ke WA
 **Layar:** S-06, S-04
 **Pemicu:** Admin/Pemilik menekan tombol "Kirim link tracking" (Diterima), "Kabari siap diambil" (Selesai), atau "Minta ulasan" (Diambil); Teknisi tidak melihat tombol ini.

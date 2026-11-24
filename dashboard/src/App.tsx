@@ -39,16 +39,26 @@ const AuthPreview = import.meta.env.DEV
   ? lazyChunk(() => import('./dev/AuthPreview').then((m) => ({ default: m.AuthPreview })))
   : null;
 
+// Pratinjau halaman lacak publik dengan data contoh (L-56); juga hanya di dev.
+const TrackingPreview = import.meta.env.DEV
+  ? lazyChunk(() => import('./dev/TrackingPreview').then((m) => ({ default: m.TrackingPreview })))
+  : null;
+
 export function App() {
   const path = typeof window !== 'undefined' ? window.location.pathname : '';
   const sandbox = DevSandbox !== null && path === '/demo';
   const showcase = ComponentShowcase !== null && path === '/dev/komponen';
   const authPreview = AuthPreview !== null && path === '/dev/layar';
+  const trackingPreview = TrackingPreview !== null && path === '/dev/lacak';
 
   return (
     <ErrorBoundary root>
       <QueryClientProvider client={queryClient}>
-        {authPreview && AuthPreview ? (
+        {trackingPreview && TrackingPreview ? (
+          <Suspense fallback={null}>
+            <TrackingPreview />
+          </Suspense>
+        ) : authPreview && AuthPreview ? (
           <Suspense fallback={null}>
             <AuthPreview />
           </Suspense>

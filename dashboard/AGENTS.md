@@ -133,12 +133,14 @@ npm run test:integration  # RLS/RPC ke staging (butuh .env.test.local)
 > `tsc -b` hanya mencakup `src`. Periksa berkas tes baru dengan tsconfig sementara:
 > `extends` app, `include: ["tests","src"]`, `types: ["node","vite/client"]`.
 
-Untuk perubahan UI: foto render asli via Playwright, jangan menebak. Di **dev server** ada tiga
+Untuk perubahan UI: foto render asli via Playwright, jangan menebak. Di **dev server** ada empat
 harness (tidak ada di build produksi): `/demo` = aplikasi berisi data contoh
 (`src/dev/DevSandbox.tsx`, dipakai skrip `scripts/shoot-*.mjs` dan probe di bawah),
-`/dev/komponen` = katalog komponen dens-ui (`src/dev/ComponentShowcase.tsx`), dan
+`/dev/komponen` = katalog komponen dens-ui (`src/dev/ComponentShowcase.tsx`),
 `/dev/layar?layar=masuk|daftar|lupa|pin|reset|reset-form|wizard` = layar sebelum aplikasi
-(`src/dev/AuthPreview.tsx`), yang di mode lokal tidak pernah tampil.
+(`src/dev/AuthPreview.tsx`), yang di mode lokal tidak pernah tampil, dan
+`/dev/lacak?no=FM-0001..FM-0008[&kode=X][&gagal=1][&terburuk=1]` = halaman lacak publik dengan
+data contoh (`src/dev/TrackingPreview.tsx`; `/track` tak terjangkau dari `/demo`).
 Di emulasi ponsel, ukur DOM **sebelum** `screenshot({ fullPage: true })`: sesudahnya media
 `pointer: coarse` hilang sampai navigasi berikutnya dan target sentuh terbaca 40px.
 Di container cloud, versi browser bawaan `@playwright/test` tidak terpasang: jalankan skrip

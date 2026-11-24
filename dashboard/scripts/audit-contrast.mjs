@@ -162,6 +162,12 @@ const routes = [
   ['/dev/layar?layar=daftar', 'layar-daftar'],
   ['/dev/layar?layar=pin', 'layar-pin'],
   ['/dev/layar?layar=reset-form', 'layar-password-baru'],
+  // Halaman lacak (L-56): dunia nota berwarna (kertas putih, rangkap teal dan
+  // amber, cap merah, nomor oranye), tiket selesai bergaransi, tiket tanpa
+  // garansi, dan kartu "tidak ditemukan".
+  ['/dev/lacak?no=FM-0007', 'lacak-selesai'],
+  ['/dev/lacak?no=FM-0004', 'lacak-konfirmasi'],
+  ['/dev/lacak?no=ZZ-9999', 'lacak-tidak-ditemukan'],
 ];
 
 let total = 0;
