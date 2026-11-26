@@ -16,7 +16,7 @@ Teknisi. Pelanggan tidak punya akun; mereka hanya membuka link lacak per tiket.
 
 Kode di folder ini adalah **salinan sekali-jalan dari FixMaster** (`k24reps/fixmaster`,
 commit `0175e8d`, 21 Nov 2026). Tidak ada sinkronisasi otomatis dari FixMaster. Perbaikan
-di sana boleh disalin manual bila cocok, tetapi folder ini berkembang sendiri.
+di sana boleh disalin manual bila cocok, tetapi folder ini berkembang sendiri. Perubahan FixMaster sesudah salinan yang belum ada di sini dicatat di IPD, bagian "Selisih FixMaster setelah salinan" (`U-xx`), dan tidak disalin tanpa keputusan Pemilik.
 
 Yang sengaja dibuang saat menyalin (bagian SaaS FixMaster): landing page, harga dan saldo
 unit, panel operator vendor, demo publik dan gerbang lead, halaman legal, hapus akun
