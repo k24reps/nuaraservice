@@ -1,9 +1,12 @@
 # PRD (Product Requirements Document) - Nuara Dashboard
 
-> Versi: 0.2 | Diperbarui: 2026-11-04 | Status: Draft
+> Versi: 0.3 | Diperbarui: 2026-11-26 | Status: Draft
 
 > [!note] Sejak 2026-11-21 (wawancara P13)
 > Dasar kode Nuara Dashboard adalah salinan FixMaster (TRD 1). Dokumen ini tetap acuan fitur dan istilah. Perilaku aplikasi yang berbeda dari PRD dicatat di IPD bagian "Daftar Selisih" dan diputuskan Pemilik per butir; sampai diputuskan, aplikasi berperilaku seperti FixMaster.
+
+> [!note] Keputusan selisih 2026-11-26 (P18)
+> 36 selisih antara PRD dan perilaku FixMaster sudah diputuskan Pemilik (IPD, Daftar Selisih; log wawancara P18). Kriteria yang berubah ditandai (P18.n); kriteria tanpa tanda tetap seperti semula. Langkah kerjanya ada di IPD Fase C (L-70 s.d. L-82).
 
 ## 1. Ringkasan
 Nuara Dashboard adalah aplikasi web internal Nuara Service (workshop servis laptop/PC, HP, dan elektronik rumah tangga di belakang kampus UNJANI Cimahi) yang menggantikan FixMaster. Dipakai Pemilik, Admin konter, dan Teknisi untuk mencatat tiket servis, estimasi, pembayaran, stok sparepart, absensi, dan laporan. Pelanggan tidak punya akun; mereka menerima link tracking pribadi berbrand Nuara lewat WhatsApp. Urutan nilai: (1) tracking berbrand Nuara, (2) semua urusan workshop di satu tempat, (3) angka usaha yang jelas, (4) tidak ada biaya langganan bulanan.
@@ -29,16 +32,16 @@ Rilis = semua fitur P0 dan P1 selesai; Nuara pindah dari FixMaster setelah itu (
 |---|---|---|
 | Pemilik | Pemilik workshop; semua izin, satu-satunya yang mengelola akun staf, Pengaturan, laporan bulanan, modal/profit | Melihat kondisi usaha dan mengendalikan uang |
 | Admin | Admin konter: menerima unit, kasir, stok, kas harian | Buat tiket cepat, catat bayar, kabari pelanggan |
-| Teknisi | Mengerjakan servis; melihat semua tiket (tanpa nomor WA pelanggan), mengubah hanya tiket yang ditugaskan kepadanya | Antrean kerja jelas, update tahap dari HP |
+| Teknisi | Mengerjakan servis; melihat semua tiket (tanpa nomor WA pelanggan), mengubah hanya tiket yang ditugaskan kepadanya. Menu: Beranda, Tiket, Absensi, Tugas (hanya tugas miliknya) (P18.20, P18.24) | Antrean kerja jelas, update tahap dari HP |
 | Publik | Pelanggan atau siapa pun tanpa login | Membuka halaman tracking lewat link pribadi |
 
-Jumlah akun: 4-6 (termasuk Pemilik). Akun dibuat Pemilik; tidak ada pendaftaran mandiri.
+Jumlah akun: 4-6 (termasuk Pemilik). Staf diundang Pemilik lewat email lalu mendaftar sendiri lewat undangan itu dan masuk dengan email dan password (P18.6).
 
 **Istilah domain** (ditulis sama persis di UI, kode, dan database):
 | Istilah | Arti | Nama di kode/tabel |
 |---|---|---|
 | Tiket servis | Satu perangkat yang diterima untuk diservis | `tickets` |
-| Nomor tiket | NS-00001, urut terus tanpa reset | `tickets.number` |
+| Nomor tiket | NS-0001, urut terus tanpa reset (empat digit; digit bertambah bila lewat 9.999) (P18.13) | `tickets.number` |
 | Tiket Express | Tiket pelanggan yang menunggu di tempat; persetujuan lisan, langsung Pengerjaan | `tickets.is_express` |
 | Pelanggan | Pemilik perangkat; satu nomor WA = satu pelanggan | `customers` |
 | Tahap | Posisi tiket di alur servis (BSD bagian 4) | `tickets.stage` |
@@ -57,7 +60,7 @@ Jumlah akun: 4-6 (termasuk Pemilik). Akun dibuat Pemilik; tidak ada pendaftaran 
 | Sparepart | Barang stok (termasuk aksesoris yang dijual) | `parts` |
 | Mutasi stok | Barang masuk, dipakai, dikembalikan, dijual, dikoreksi | `stock_movements` |
 | Beli dadakan | Part dibeli khusus untuk satu tiket, tidak masuk stok | `ticket_extra_costs` |
-| Penjualan langsung | Jual barang tanpa tiket, nota JL-00001 | `sales` |
+| Penjualan langsung | Jual barang tanpa tiket, nota JL-0001 (P18.36) | `sales` |
 | Absensi | Jam masuk/pulang staf | `attendances` |
 | Pengaturan | Template dan nilai bawaan milik Pemilik | `settings` |
 | Staf (akun) | Akun login Pemilik, Admin, atau Teknisi; dinonaktifkan, tidak dihapus | `profiles` |
@@ -92,20 +95,20 @@ Prioritas: P0 = wajib rilis, P1 = sebaiknya ada, P2 = jika sempat. Karena rilis 
 ### Kriteria Penerimaan
 **F-01 Terima unit + buat tiket**
 - F-01.1 Admin/Pemilik membuat tiket dengan kolom wajib: nama pelanggan, nomor WA, jenis perangkat (Laptop/PC, HP, Elektronik rumah tangga), merek + tipe, minimal satu keluhan (pilihan template atau keluhan lain). Teknisi tidak bisa membuat tiket.
-- F-01.2 Kolom tambahan: kelengkapan (centang dari template), kondisi fisik, password/pola kunci, uang muka (DP + akun kas), centang Express. Tidak ada kolom alamat pelanggan, foto, IMEI, atau perkiraan selesai.
+- F-01.2 Kolom tambahan: kelengkapan (centang dari template), kondisi fisik, password/pola kunci, uang muka (DP + akun kas), pemilih jenis tiket Biasa atau Express (P18.15), IMEI atau nomor seri (P18.14). Tidak ada kolom alamat pelanggan, foto, atau perkiraan selesai.
 - F-01.3 Nomor WA diterima sebagai 08xx (10-13 digit), 628xx (11-14 digit), atau +628xx; spasi, titik, tanda hubung, dan kurung diabaikan. Disimpan seragam sebagai 628 diikuti 8-11 digit. Format lain ditolak dengan pesan di bawah kolom (teks di AFD F-01).
 - F-01.4 Nomor WA yang sudah terdaftar menawarkan pemakaian data pelanggan lama (teks di AFD F-01); admin bisa memakai atau memperbarui nama. Satu nomor WA = satu pelanggan.
-- F-01.5 Nomor tiket dibuat otomatis NS-00001, NS-00002, dst. tanpa reset dan tanpa lompatan; setiap tiket mendapat kode tracking acak 10 karakter.
+- F-01.5 Nomor tiket dibuat otomatis NS-0001, NS-0002, dst. (empat digit; digit bertambah bila lewat 9.999, P18.13) tanpa reset dan tanpa lompatan; setiap tiket mendapat kode tracking acak 10 karakter.
 - F-01.6 DP dicatat sebagai pembayaran pertama (BSD `payments`) ke akun kas yang dipilih.
-- F-01.7 Tiket Express: admin mengisi estimasi saat buat tiket; persetujuan lisan tercatat otomatis; tiket langsung ke tahap Pengerjaan setelah Diterima.
+- F-01.7 Tiket Express: admin mengisi estimasi saat buat tiket; persetujuan lisan tercatat otomatis; tiket langsung ke tahap Pengerjaan setelah Diterima. Express dipilih lewat pemilih jenis tiket, bukan kotak centang (P18.15).
 - F-01.8 Setelah tersimpan, halaman detail tiket terbuka dengan tombol kirim link tracking (F-05).
-- F-01.9 Admin & Pemilik bisa mengubah data tiket, termasuk nama dan nomor WA pelanggan (aturan nomor sama dengan F-01.3; nomor yang sudah dipakai pelanggan lain ditolak); tiket tidak bisa dihapus, hanya Dibatalkan (F-02.6).
+- F-01.9 Admin & Pemilik bisa mengubah data tiket, termasuk nama dan nomor WA pelanggan (aturan nomor sama dengan F-01.3; nomor yang sudah dipakai pelanggan lain ditolak); tiket yang sudah memegang uang, sparepart, atau klaim garansi tidak bisa dihapus, hanya Dibatalkan (F-02.6); tiket bersih boleh dihapus permanen oleh Pemilik dan tercatat di Log Aktivitas (P18.17).
 - F-01.10 Daftar keluhan bawaan diambil dari nota landing page (index.html) per jenis perangkat.
 - F-01.11 Kasus gagal: koneksi putus saat simpan -> pesan koneksi dengan tombol Coba lagi (teks di AFD F-01); isian tidak hilang; tidak terbentuk tiket ganda saat Coba lagi.
 - F-01.12 Isian form buat tiket tidak hilang saat sesi habis: draf tersimpan sementara di browser (kecuali password/pola unit) dan dipulihkan setelah masuk kembali; draf dihapus setelah tiket tersimpan.
 
 **F-02 Tahap + tugaskan teknisi**
-- F-02.1 Tahap: Diterima -> Diagnosa (boleh dilewati) -> Konfirmasi biaya -> Tunggu part (boleh dilewati) -> Pengerjaan -> Selesai -> Diambil. Dibatalkan bisa dari tahap Diterima sampai Selesai, lalu dilanjutkan ke Dikembalikan (F-02.10). Transisi lengkap di BSD bagian 4.
+- F-02.1 Tahap: Diterima -> Diagnosa (boleh dilewati) -> Konfirmasi biaya -> Tunggu part (boleh dilewati) -> Pengerjaan -> Selesai -> Diambil. Dibatalkan bisa dari tahap Diterima sampai Selesai, lalu dilanjutkan ke Dikembalikan (F-02.10). Transisi lengkap di BSD bagian 4. Di aplikasi, Lunas adalah status sendiri (dari pelunasan) dan Diambil adalah penanda terpisah, bukan tahap; Dikembalikan adalah nama penanda untuk tiket Dibatalkan yang unitnya sudah diserahkan (P18.4).
 - F-02.2 Admin & Pemilik menugaskan atau memindah teknisi kapan saja sebelum Diambil.
 - F-02.3 Teknisi melihat semua tiket, tetapi tombol ubah hanya tampil di tiket yang ditugaskan kepadanya; server menolak perubahan tiket orang lain.
 - F-02.4 Admin & Pemilik bisa memundurkan tahap satu langkah (ke tahap sebelumnya di riwayat) dari Diagnosa, Konfirmasi biaya, Tunggu part, Pengerjaan, atau Selesai; tercatat nama + waktu. Diambil, Dibatalkan, dan Dikembalikan bersifat final: tidak bisa dimundurkan dan meminta konfirmasi sebelum ditekan.
@@ -114,30 +117,30 @@ Prioritas: P0 = wajib rilis, P1 = sebaiknya ada, P2 = jika sempat. Karena rilis 
 - F-02.7 Saat Selesai, garansi jasa dan garansi sparepart (jumlah hari) wajib terisi; nilai awal dari Pengaturan, boleh 0 ("Tanpa garansi").
 - F-02.8 Setelah tahap berubah: notifikasi status (teks di AFD F-02); untuk Selesai dan Diambil, Admin/Pemilik melihat tombol kirim WA (F-05).
 - F-02.9 Kasus gagal: perubahan tahap yang tidak diizinkan (melompat, tiket orang lain, syarat belum terpenuhi) ditolak dengan pesan yang menyebut syaratnya.
-- F-02.10 Tiket Dibatalkan menjadi Dikembalikan saat unit diserahkan kembali ke pelanggan, oleh Admin/Pemilik. Syarat: sisa tagihan = 0 (biaya cek lunas dan tanpa kelebihan bayar), atau Pemilik mengizinkan penyerahan saat kurang bayar (F-07.5). Sparepart yang belum dikembalikan ke stok tetap dihitung sebagai biaya (F-12.2).
+- F-02.10 Tiket Dibatalkan menjadi Dikembalikan saat unit diserahkan kembali ke pelanggan, oleh Admin/Pemilik. Tombolnya "Tandai dikembalikan" dan tiket tampil di kartu Beranda "Dibatalkan, belum dikembalikan" yang terpisah dari tiket selesai; tidak ada penguncian khusus bagi tiket Dibatalkan (P18.4). Sparepart yang belum dikembalikan ke stok tetap dihitung sebagai biaya (F-12.2).
 
 **F-03 Estimasi + persetujuan**
 - F-03.1 Teknisi yang ditugaskan (atau Admin/Pemilik) mengisi hasil diagnosa, estimasi biaya (satu angka total, Rupiah), dan perkiraan lama pengerjaan; tiket masuk tahap Konfirmasi biaya. Estimasi yang sudah Disetujui tidak bisa diubah; selisih biaya diselesaikan lewat biaya final (F-03.5).
 - F-03.2 Admin/Pemilik/Teknisi yang ditugaskan menandai persetujuan "Disetujui" atau "Ditolak" berdasarkan balasan pelanggan di WA; tercatat siapa dan kapan. Keputusan bisa diubah selama tiket masih di Konfirmasi biaya.
 - F-03.3 Tahap Pengerjaan terkunci sampai estimasi Disetujui, kecuali tiket Express.
-- F-03.4 Estimasi Ditolak tidak membatalkan tiket otomatis: tiket tetap di Konfirmasi biaya sampai Admin/Pemilik membatalkannya (F-02.6; alasan terisi otomatis, biaya cek diisi, boleh Rp0; teks di AFD F-03). Jika yang menandai Ditolak adalah Teknisi, semua Admin dan Pemilik mendapat notifikasi untuk membatalkan; jika Admin/Pemilik, dialog Batalkan langsung terbuka.
+- F-03.4 Estimasi Ditolak tidak membatalkan tiket otomatis: tiket tetap di Konfirmasi biaya sampai Admin/Pemilik membatalkannya (F-02.6; alasan terisi otomatis, biaya cek diisi, boleh Rp0; teks di AFD F-03). Estimasi Ditolak tampil di kartu "perlu tindakan" di Beranda Admin dan Pemilik, tanpa layar Notifikasi (P18.22); jika yang menandai Ditolak adalah Admin/Pemilik, dialog Batalkan langsung terbuka.
 - F-03.5 Biaya final diisi saat Selesai, nilai awal = estimasi, bisa diubah; kenaikan dari estimasi cukup dicatat tanpa persetujuan ulang.
 - F-03.6 Tiket ditandai "Perlu ditindaklanjuti" di daftar tiket dan beranda jika sudah > 2 hari di Konfirmasi biaya tanpa keputusan, atau estimasinya Ditolak tetapi tiket belum dibatalkan.
 - F-03.7 Kasus gagal: menekan Pengerjaan sebelum estimasi disetujui ditolak dengan pesan yang menyebut syaratnya (teks di AFD F-03).
 
 **F-04 Halaman tracking pelanggan**
 - F-04.1 Alamat: https://lacak.nuaraservice.my.id/<kode 10 karakter acak>; tanpa login.
-- F-04.2 Tampil: nomor tiket, perangkat, tahap saat ini, riwayat tahap + waktu, nama pelanggan disamarkan, nama depan teknisi, kelengkapan dititipkan, garansi jasa dan garansi sparepart, tombol chat WA dan rute Google Maps workshop, serta teks pemberitahuan privasi (jika diisi Pemilik). Samaran nama: 2 huruf pertama kata pertama + "***", lalu inisial kata terakhir + titik bila nama lebih dari satu kata (mis. "Citra Lestari" -> "Ci*** L."). Garansi sebelum Diambil tampil sebagai jumlah hari sejak unit diambil (0 = "Tanpa garansi"); setelah Diambil tampil tanggal berakhir.
+- F-04.2 Tampil: nomor tiket, perangkat, tahap saat ini, riwayat tahap + waktu, kelengkapan dititipkan, garansi jasa dan garansi sparepart, tombol chat WA dan rute Google Maps workshop, serta teks pemberitahuan privasi (jika diisi Pemilik). Nama pelanggan dan nama teknisi tidak ditampilkan (P18.8). Garansi dihitung dari hari tiket menjadi Selesai dan tampil sebagai tanggal berakhir (0 = "Tanpa garansi") (P18.11).
 - F-04.3 Tidak tampil: nomor WA, password/pola, kondisi fisik, catatan, diagnosa, estimasi, biaya, pembayaran.
-- F-04.4 Tiket yang belum Diambil atau Dibatalkan: link selalu aktif. Setelah Diambil: aktif sampai 30 hari setelah garansi terpanjang berakhir (garansi 0 = 30 hari setelah Diambil). Tiket Dibatalkan atau Dikembalikan: aktif sampai 30 hari setelah Dibatalkan.
-- F-04.5 Tahap di halaman yang sedang terbuka berubah sendiri dalam <= 5 detik setelah diubah staf (realtime).
+- F-04.4 Tiket yang belum Diambil atau Dibatalkan: link selalu aktif. Setelah Diambil: aktif sampai 30 hari setelah garansi terpanjang berakhir (garansi 0 = 30 hari setelah Diambil). Tiket Dibatalkan atau Dikembalikan: aktif sampai 30 hari setelah Dibatalkan. Garansi dihitung dari hari Selesai, dan bila garansi sudah habis sebelum Diambil, 30 hari dihitung dari Diambil (P18.11).
+- F-04.5 Dibatalkan (P18.12): halaman lacak tidak berubah sendiri; pelanggan memuat ulang halaman untuk melihat tahap terbaru.
 - F-04.6 Halaman termuat < 2 detik di koneksi 4G.
 - F-04.7 Kasus gagal: kode salah atau link kedaluwarsa menampilkan pesan link tidak aktif + tombol chat WA Nuara (teks di AFD F-04).
 - F-04.8 Tiket Dibatalkan atau Dikembalikan: riwayat menampilkan tahap Dibatalkan dan Dikembalikan; alasan batal dan biaya cek tidak tampil.
 
 **F-05 Kabar status ke WA**
 - F-05.1 Admin/Pemilik menekan tombol yang membuka WhatsApp (wa.me) ke nomor pelanggan dengan pesan terisi dari template, lalu menekan kirim di WhatsApp workshop. Tanpa API berbayar. Teknisi tidak melihat nomor WA pelanggan.
-- F-05.2 Pesan tersedia untuk: Diterima (berisi nomor tiket + link tracking), Selesai (siap diambil), Diambil (permintaan ulasan + link ulasan Google). Berlaku juga untuk tiket Express.
+- F-05.2 Pesan tersedia untuk: Diterima (berisi nomor tiket + link tracking), Selesai (siap diambil), Diambil (permintaan ulasan + link ulasan Google). Berlaku juga untuk tiket Express. Template bawaan untuk konfirmasi biaya, tunggu part, pengingat ambil, dan batal tetap tersedia (P18.9).
 - F-05.3 Pesan ulasan hanya ditawarkan jika link ulasan Google sudah diisi Pemilik.
 - F-05.4 Saat tombol ditekan, tercatat jenis pesan, nama staf, dan waktu; tiket yang pesan "Diterima"-nya belum tercatat diberi penanda "Link belum dikirim".
 - F-05.5 Template awal disusun AI dan disetujui Pemilik sebelum dipakai; tanpa harga, jam buka, atau durasi garansi karangan.
@@ -151,21 +154,21 @@ Prioritas: P0 = wajib rilis, P1 = sebaiknya ada, P2 = jika sempat. Karena rilis 
 - F-06.5 Kasus gagal: printer tidak merespons -> tanda terima tetap bisa dicetak ulang kapan saja; link tetap bisa dikirim lewat WA.
 
 **F-07 Catat pembayaran**
-- F-07.1 Admin/Pemilik mencatat pembayaran; satu pembayaran bisa dipecah ke beberapa akun kas (split). Jenisnya mengikuti tahap tiket: sebelum Selesai = DP; mulai Selesai, dan pada tiket Dibatalkan atau Dikembalikan = pelunasan.
+- F-07.1 Admin/Pemilik mencatat pembayaran; satu pembayaran bisa dipecah ke beberapa akun kas (split). Jenisnya mengikuti tahap tiket: sebelum Selesai = DP; mulai Selesai, dan pada tiket Dibatalkan atau Dikembalikan = pelunasan. Di aplikasi (P18.2): DP berupa satu angka di tiket yang masuk ke satu akun kas, dan pelunasan lewat status Lunas dengan pembagian ke beberapa akun kas; tidak ada tabel pembayaran per transaksi.
 - F-07.2 Diskon diisi Admin/Pemilik mulai tahap Selesai (saat biaya final ada), bebas tanpa alasan, tidak boleh melebihi biaya final.
 - F-07.3 Tagihan: mulai Selesai = biaya final - diskon; tiket Dibatalkan atau Dikembalikan = biaya cek; sebelum Selesai belum ditetapkan. Dibayar = DP + pelunasan - pengembalian (tanpa yang dibatalkan). Sisa = tagihan - dibayar (positif = kurang bayar, negatif = kelebihan bayar). Lunas jika tagihan sudah ditetapkan dan sisa = 0.
 - F-07.4 DP sebelum Selesai tidak dibatasi patokan tagihan (tagihan belum ditetapkan). Setelah tagihan ditetapkan, pembayaran yang melebihi sisa ditolak (teks di AFD F-07).
-- F-07.5 Tahap Diambil (dan Dikembalikan) terkunci selama sisa tidak nol. Kurang bayar: Admin menekan "Minta izin Pemilik"; Pemilik mengizinkan dengan alasan, lalu tahap bisa ditekan. Kelebihan bayar: wajib dikembalikan lewat F-07.7, tanpa izin pengecualian.
-- F-07.6 Pembayaran salah dibatalkan dengan alasan (tetap terlihat, saldo kembali), lalu dicatat ulang; tidak bisa diedit atau dihapus.
-- F-07.7 Kelebihan bayar (dibayar > tagihan, mis. biaya final lebih kecil dari DP, atau DP lebih besar dari biaya cek) dikembalikan lewat tombol "Kembalikan kelebihan": nominal maksimal sebesar kelebihan, dari akun kas yang dipilih, dicatat sebagai uang keluar (jenis `refund`); ditolak jika saldo akun kurang (F-11.2).
-- F-07.8 Nota pelunasan bisa dicetak (58/80 mm) atau ringkasannya dikirim lewat WA (wa.me). Isi: logo, nama, alamat, WA workshop, nomor tiket, tanggal, nama pelanggan, perangkat, biaya final, diskon, rincian pembayaran (tanggal, akun kas, nominal), total dibayar, sisa, garansi jasa dan sparepart (hari).
+- F-07.5 Tahap Diambil terkunci selama sisa tidak nol (tiket Dikembalikan tidak dikunci, P18.4). Kurang bayar: Admin menekan "Minta izin Pemilik"; Pemilik mengizinkan dengan alasan, lalu tahap bisa ditekan. Kelebihan bayar: wajib dikembalikan lewat F-07.7, tanpa izin pengecualian.
+- F-07.6 Pembayaran salah dibatalkan dengan alasan (tetap terlihat, saldo kembali), lalu dicatat ulang; tidak bisa diedit atau dihapus. Di aplikasi (P18.2), koreksi pemasukan dilakukan lewat halaman Keuangan, bukan pembatalan per pembayaran.
+- F-07.7 Kelebihan bayar (dibayar > tagihan, mis. biaya final lebih kecil dari DP, atau DP lebih besar dari biaya cek) dikembalikan lewat tombol "Kembalikan kelebihan": nominal maksimal sebesar kelebihan, dari akun kas yang dipilih, dicatat sebagai uang keluar (jenis `refund`); ditolak jika saldo akun kurang (F-11.2). Di aplikasi (P18.2), kelebihan DP dikembalikan otomatis saat Selesai, tanpa tombol terpisah.
+- F-07.8 Nota pelunasan bisa dicetak (58/80 mm) atau ringkasannya dikirim lewat WA (wa.me). Isi: logo, nama, alamat, WA workshop, nomor tiket, tanggal, nama pelanggan, perangkat, biaya final, diskon, total dibayar, sisa, garansi jasa dan sparepart. Rincian pembayaran per tanggal dan akun kas tidak dicetak (P18.10).
 - F-07.9 Kasus gagal: total split tidak sama dengan nominal ditolak dengan pesan yang menyebut kedua angka (teks di AFD F-07).
 
 **F-08 Kelola akun staf**
-- F-08.1 Hanya Pemilik: tambah akun (nama, username, peran, jadwal kerja, password awal), ubah peran, ubah jadwal. Username 3-30 karakter (huruf kecil, angka, titik, garis bawah); password minimal 8 karakter. Aplikasi tidak menyimpan email atau nomor WA staf.
+- F-08.1 Hanya Pemilik: undang staf lewat email (nama, email, peran), ubah peran, ubah jadwal kerja. Staf mendaftar sendiri lewat undangan dan masuk dengan email dan password; password minimal 8 karakter (P18.6).
 - F-08.2 Jadwal kerja: jam masuk dan pulang per hari (Senin-Minggu); hari tanpa jam = libur.
-- F-08.3 Nonaktifkan: staf tidak bisa masuk, dan permintaan berikutnya dari sesi yang sedang aktif ditolak (status aktif dicek di setiap permintaan); nama tetap tampil di data lama. Tidak ada hapus akun.
-- F-08.4 Reset password: Pemilik membuat password sementara; staf wajib menggantinya saat login berikutnya.
+- F-08.3 Nonaktifkan: staf tidak bisa masuk, dan permintaan berikutnya dari sesi yang sedang aktif ditolak (status aktif dicek di setiap permintaan); nama tetap tampil di data lama. Akun yang sudah nonaktif boleh dihapus permanen oleh Pemilik; data lama tetap (P18.33).
+- F-08.4 Reset password lewat tautan pemulihan ke email staf, bukan password sementara dari Pemilik (P18.6).
 - F-08.5 Kasus gagal: username yang sudah dipakai ditolak dengan pesan di bawah kolom (teks di AFD F-08).
 - F-08.6 Pemilik bisa mengaktifkan kembali akun yang dinonaktifkan (username tetap milik akun itu).
 - F-08.7 Pemilik tidak bisa menonaktifkan atau mengubah peran akunnya sendiri; selalu ada minimal satu Pemilik aktif.
@@ -176,7 +179,7 @@ Prioritas: P0 = wajib rilis, P1 = sebaiknya ada, P2 = jika sempat. Karena rilis 
 - F-09.3 Teknisi yang ditugaskan, Admin, Pemilik mencatat sparepart dipakai di tiket; stok berkurang. Sparepart tidak menambah tagihan, hanya menjadi modal tiket.
 - F-09.4 Stok tidak boleh minus (pesan menyebut sisa stok, teks di AFD F-09). Part yang dibeli khusus untuk satu tiket dicatat sebagai beli dadakan (nama, harga, akun kas sumber) tanpa masuk stok.
 - F-09.5 Sparepart yang batal dipasang bisa dikembalikan ke stok selama tiket belum Diambil atau Dikembalikan.
-- F-09.6 Koreksi stok oleh Admin/Pemilik wajib alasan; semua mutasi tercatat di riwayat barang.
+- F-09.6 Koreksi stok oleh Admin/Pemilik wajib alasan dan tercatat di Log Aktivitas (pencarian mencocokkan nama barang); layar riwayat mutasi per barang tidak dibuat (P18.25).
 - F-09.7 Barang di bawah stok minimum ditandai "stok menipis".
 - F-09.8 Modal dan profit per tiket hanya terlihat Pemilik. Harga modal barang di daftar stok (S-12, S-13) terlihat Pemilik dan Admin, karena Admin mengisi harga beli saat barang masuk.
 - F-09.9 Sparepart bisa ditambahkan ke tiket langsung dari daftar tiket (S-04) dan dari daftar tiket Teknisi di beranda (S-03) lewat dialog cepat, tanpa membuka detail tiket; aturan F-09.3 dan F-09.4 tetap berlaku.
@@ -193,14 +196,14 @@ Prioritas: P0 = wajib rilis, P1 = sebaiknya ada, P2 = jika sempat. Karena rilis 
 **F-11 Catat pengeluaran**
 - F-11.1 Admin/Pemilik mencatat pengeluaran: tanggal, nominal, akun kas sumber, keterangan.
 - F-11.2 Uang keluar apa pun (pengeluaran, barang masuk, beli dadakan, pengembalian kelebihan bayar, pindah saldo, koreksi saldo negatif) ditolak jika melebihi saldo akun sumber (teks di AFD F-11).
-- F-11.3 Saldo awal tiap akun kas diisi Pemilik di Pengaturan dan hanya bisa diubah selama akun itu belum punya mutasi kas; saldo = saldo awal + mutasi kas yang tidak dibatalkan.
+- F-11.3 Akun kas lahir bersaldo nol; saldo awal dicatat sebagai pemasukan "Modal" di Buku Kas dan salah ketik dikoreksi lewat "Hitung saldo" (P18.34). Saldo = jumlah mutasi kas yang tidak dibatalkan.
 - F-11.4 Pindah saldo antar akun kas oleh Admin/Pemilik.
 - F-11.5 Koreksi: pengeluaran/pindah saldo dibatalkan dengan alasan lalu dicatat ulang.
 - F-11.6 Halaman Kas menampilkan mutasi per hari per akun kas untuk Admin/Pemilik.
 - F-11.7 Koreksi saldo oleh Pemilik: penyesuaian plus atau minus pada satu akun kas dengan alasan wajib (mis. hasil hitung kas fisik), tercatat sebagai mutasi `adjustment` dan di riwayat perubahan; tidak boleh membuat saldo minus.
 
 **F-12 Laporan keuangan bulanan**
-- F-12.1 Hanya Pemilik. Per bulan (WIB): omzet, biaya barang, pengeluaran, profit. Omzet = biaya final - diskon tiket yang Diambil + biaya cek tiket yang Dibatalkan + total penjualan langsung. Biaya barang = modal sparepart terpakai di tiket (yang tidak dikembalikan ke stok) + beli dadakan + modal barang terjual langsung. Profit = omzet - biaya barang - pengeluaran. Pembayaran, DP, dan pengembalian tidak memengaruhi omzet (omzet mengikuti tagihan, bukan kas).
+- F-12.1 Hanya Pemilik. Per bulan (WIB): omzet, biaya barang, pengeluaran, profit. Omzet = biaya final - diskon tiket yang Diambil + biaya cek tiket yang Dibatalkan + total penjualan langsung. Biaya barang = modal sparepart terpakai di tiket (yang tidak dikembalikan ke stok) + beli dadakan + modal barang terjual langsung. Profit = omzet - biaya barang - pengeluaran. Di aplikasi, laba akhir juga dipotong beban langsung dan overhead, dan overhead bulan berjalan yang belum tercatat ditaksir dari rata-rata tiga bulan terakhir dan diberi tanda taksiran (P18.28). Pembayaran, DP, dan pengembalian tidak memengaruhi omzet (omzet mengikuti tagihan, bukan kas).
 - F-12.2 Dasar bulan: tiket Diambil di bulan unit Diambil (omzet dan biaya barang); tiket Dibatalkan atau Dikembalikan di bulan Dibatalkan (biaya cek, biaya barang yang tidak dikembalikan, beli dadakan); penjualan langsung di bulan penjualan. Penjualan, beli dadakan, dan pembayaran yang dibatalkan tidak dihitung.
 - F-12.3 Jumlah tiket per status (masuk, selesai, diambil, dibatalkan, dikembalikan; masing-masing menurut tanggal masuk tahap itu), jumlah tiket masuk per jenis perangkat, kinerja per teknisi (tiket diambil + nilai servis).
 - F-12.4 Setiap angka dibandingkan dengan bulan sebelumnya (selisih Rupiah/jumlah dan persen).
@@ -214,7 +217,7 @@ Prioritas: P0 = wajib rilis, P1 = sebaiknya ada, P2 = jika sempat. Karena rilis 
 
 **F-14 Data pelanggan + riwayat**
 - F-14.1 Admin/Pemilik mencari pelanggan dari nama atau nomor WA; halaman pelanggan berisi nama, WA, dan riwayat semua tiket.
-- F-14.2 Pemilik bisa menyamarkan pelanggan atas permintaan (UU PDP): nama dan WA diganti "Pelanggan dihapus"; tiket dan angka tetap.
+- F-14.2 Dibatalkan (P18.29): fitur Samarkan tidak dibuat. Pemilik menghapus pelanggan dari daftar Pelanggan, sedangkan nama dan nomor WA yang sudah disalin ke tiket lama tetap tampil.
 
 **F-15 Klaim garansi**
 - F-15.1 Tombol "Klaim garansi" di tiket lama (Diambil) membuat tiket baru (nomor NS- berikutnya) yang terhubung ke tiket lama; pilih garansi jasa atau sparepart; biaya awal Rp0.
@@ -222,27 +225,30 @@ Prioritas: P0 = wajib rilis, P1 = sebaiknya ada, P2 = jika sempat. Karena rilis 
 - F-15.3 Tiket klaim dibuat dengan estimasi Rp0 yang langsung Disetujui (tidak terkunci di Konfirmasi biaya); biaya final tetap bisa diisi lebih dari Rp0 saat Selesai.
 
 **F-16 Pengaturan template**
-- F-16.1 Hanya Pemilik: daftar keluhan per jenis perangkat, daftar kelengkapan, teks pesan WA (Diterima, Selesai, Diambil), S&K dan teks pemberitahuan privasi, link ulasan Google, ukuran printer (58/80 mm), akun kas + saldo awal, garansi awal (jasa, sparepart), titik lokasi workshop ("pakai lokasi saya sekarang"), toleransi terlambat (menit).
+- F-16.1 Hanya Pemilik: daftar keluhan per jenis perangkat, daftar kelengkapan, teks pesan WA (Diterima, Selesai, Diambil), S&K dan teks pemberitahuan privasi, link ulasan Google, ukuran printer (58/80 mm), akun kas + saldo awal, garansi awal (jasa, sparepart), titik lokasi workshop ("pakai lokasi saya sekarang"), toleransi terlambat (menit). Daftar keluhan per jenis perangkat berisi 16 keluhan awal dari nota landing page (P18.35), dan batas pengambilan unit di S&K 60 hari (dikonfirmasi P18.38).
 - F-16.2 Sebelum layar ini ada, semua nilai diisi lewat data awal (BSD bagian 7).
 - F-16.3 Kasus gagal: link ulasan yang bukan URL https ditolak dengan pesan di bawah kolom (teks di AFD F-16).
 
 **F-17 Jual barang langsung**
-- F-17.1 Admin/Pemilik memilih barang + jumlah, diskon (boleh), bayar (split boleh), lalu cetak atau kirim nota bernomor JL-00001 (urut, terpisah dari NS-). Nama dan WA pembeli opsional; jika WA diisi, nama wajib (nomor WA memakai aturan F-01.3). Isi nota: logo, nama, alamat, WA workshop, nomor JL, tanggal, nama pembeli (jika ada), daftar barang (nama, jumlah, harga satuan, subtotal), diskon, total, rincian pembayaran (akun kas, nominal).
+- F-17.1 Admin/Pemilik memilih barang + jumlah, diskon (boleh), bayar (split boleh), lalu cetak atau kirim nota bernomor JL-0001 (empat digit, urut, terpisah dari NS-; P18.36). Nama dan WA pembeli opsional; jika WA diisi, nama wajib (nomor WA memakai aturan F-01.3). Isi nota: logo, nama, alamat, WA workshop, nomor JL, tanggal, nama pembeli (jika ada), daftar barang (nama, jumlah, harga satuan, subtotal), diskon, total, rincian pembayaran (akun kas, nominal).
 - F-17.2 Jumlah melebihi stok ditolak dengan sisa stok; stok berkurang saat tersimpan.
 - F-17.3 Penjualan salah dibatalkan dengan alasan; stok dan saldo kembali.
 
 ## 6. Di Luar Scope (jangan dikerjakan)
 - Aplikasi di Play Store/App Store: dashboard tetap web (bisa dipasang sebagai PWA).
-- Penggajian dari absensi: absensi hanya mencatat jam.
+- Penggajian dari absensi: dicabut dari daftar ini; fitur penggajian di Keuangan tetap ada (P18.19).
 - Booking/antre online pelanggan: pelanggan tetap lewat WA atau datang langsung.
-- Ekspor ke Excel/CSV.
+- Ekspor ke Excel/CSV untuk Admin: ekspor CSV tetap ada hanya untuk Pemilik, di Pengaturan dan Laporan (P18.19, P18.23).
 - Pembayaran online (payment gateway): pembayaran di workshop, dicatat staf.
 - Multi-cabang/multi-bisnis: satu workshop.
 - Kirim WA otomatis lewat API, push notification, kirim email, upload foto/file.
 - Impor data dari FixMaster.
 - Membuka kembali tiket yang sudah Diambil, Dibatalkan, atau Dikembalikan (final; salah tekan diperbaiki Pemilik lewat bantuan AI dan dicatat di IPD).
-- Pemulihan akun lewat email dan pendaftaran mandiri staf (login hanya username + password; reset oleh Pemilik).
+- Login dengan username tanpa email: tidak dibuat. Login memakai email dan undangan Pemilik, dan pemulihan password lewat email (P18.6).
 - Migrasi ke Supabase self-host di VPS (rencana Pemilik setelah rilis; kode dijaga tetap Postgres standar).
+
+> [!note] Fitur di luar PRD awal yang dipertahankan (P18.19, P18.24)
+> Supplier dan pesanan beli, Tugas internal (Teknisi hanya melihat tugas miliknya), Kalkulator Biaya, Log Aktivitas (Pemilik), penggajian di Keuangan, dan ekspor CSV (Pemilik). Menu Admin dan Pemilik tetap seperti aplikasi sekarang; menu Teknisi: Beranda, Tiket, Absensi, Tugas.
 
 ## 7. Kebutuhan Non-Fungsional
 - Performa: halaman tracking < 2 detik di 4G; halaman dashboard < 3 detik di 4G; buat tiket <= 2 menit.

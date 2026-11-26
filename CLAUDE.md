@@ -23,7 +23,7 @@ Aplikasi web internal yang menggantikan FixMaster: tiket servis, tracking pelang
 Sejak 2026-11-21 (wawancara P13) kodenya adalah salinan FixMaster (Vite + React + Supabase) yang bagian SaaS-nya dibuang. UI dipindah bertahap ke dens-ui dengan warna Nuara. Aturan kode, verifikasi, dan probe UI ada di `dashboard/AGENTS.md`.
 
 ## Dokumen Proyek (sumber kebenaran)
-Baca sebelum bekerja. Jangan menebak jika dokumen tidak menjelaskan; tanyakan lewat pertanyaan pilihan (`AskUserQuestion`) dengan opsi rekomendasi di urutan pertama.
+Baca sebelum bekerja. Jangan menebak jika dokumen tidak menjelaskan; tanyakan lewat pertanyaan pilihan (`AskUserQuestion`) dengan opsi rekomendasi di urutan pertama. Tiap pertanyaan memuat simulasi contoh konkret (kasus konter, nama pelanggan, angka rupiah, urutan layar) yang menunjukkan hasil tiap opsi, karena Pemilik memutuskan dari contoh, bukan dari istilah (permintaan Pemilik 2026-11-26).
 
 | Dokumen | Isi | Baca saat |
 |---|---|---|

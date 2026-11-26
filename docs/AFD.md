@@ -1,9 +1,12 @@
 # AFD (App Flow Document) - Nuara Dashboard
 
-> Versi: 0.2 | Diperbarui: 2026-11-04 | Merujuk: PRD.md (F-xx, peran)
+> Versi: 0.3 | Diperbarui: 2026-11-26 | Merujuk: PRD.md (F-xx, peran)
 
 > [!note] Sejak 2026-11-21 (wawancara P13)
 > Layar S-xx di sini adalah target. Aplikasi sekarang memakai layar dan rute FixMaster (mis. `/services`, `/t/<kode>`); selisihnya dicatat di IPD "Daftar Selisih". Teks pesan baru tetap ditulis di sini lebih dulu.
+
+> [!note] Keputusan selisih 2026-11-26 (P18)
+> Bagian yang berubah mengikuti keputusan Pemilik atas 36 selisih ditandai (P18.n). Teks pesan untuk perilaku baru (persetujuan estimasi, Express, izin serah, absensi terlambat, dan lainnya) ditulis di sini saat langkah Fase C terkait (IPD L-70 s.d. L-82) dikerjakan, sebelum kodenya.
 
 ## 1. Peta Layar
 <!-- Rute dashboard di host app.nuaraservice.my.id; S-07 di host lacak.nuaraservice.my.id. -->
@@ -28,11 +31,11 @@
 | S-17 | Laporan bulanan | `/laporan` | Pemilik | F-12 |
 | S-18 | Staf | `/staf` | Pemilik | F-08 |
 | S-19 | Pengaturan | `/pengaturan` | Pemilik | F-16 |
-| S-20 | Notifikasi | `/notifikasi` | Pemilik, Admin, Teknisi | F-02, F-03, F-07 |
+| S-20 | Notifikasi (tidak dibuat; diganti kartu "perlu tindakan" di Beranda, P18.22) | `/notifikasi` | Pemilik, Admin, Teknisi | F-02, F-03, F-07 |
 | S-21 | Tidak ditemukan / tanpa akses | rute tak dikenal | Publik | - |
 
 ## 2. Navigasi Utama
-Laptop/tablet >= 1024px: sidebar kiri. HP < 1024px: 4 tab bawah (Beranda, Tiket, Absen, Lainnya); "Lainnya" membuka daftar menu sisa. Lonceng notifikasi (S-20) di header semua layar staf. Menu per peran: Pemilik = semua; Admin = Beranda, Tiket, Pelanggan, Stok, Jual, Kas, Absensi; Teknisi = Beranda, Tiket, Absensi.
+Kerangka mengikuti L-47: sidebar di layar lebar, laci di tablet, tab bawah dan menu Lainnya di HP. Lonceng notifikasi tidak ditampilkan (P18.22) dan pemilih cabang disembunyikan (P18.21). Menu per peran (P18.19, P18.20, P18.24): Pemilik dan Admin = menu aplikasi sekarang (Beranda, Servis, Kalkulator Biaya, Kasir & Stok, Pelanggan, Supplier, Keuangan, Tugas, Absensi; Pemilik juga Laporan, Log Aktivitas, Pengaturan); Teknisi = Beranda, Tiket, Absensi, Tugas.
 
 ```mermaid
 flowchart TD
@@ -67,7 +70,7 @@ Teks pesan persis yang tampil di layar hanya ditulis di bagian 3 sampai 5 dokume
 1. Admin mengetik nomor WA di S-05; jika terdaftar, muncul "Nomor ini terdaftar atas nama <nama>. Pakai data ini?" dan nama terisi.
 2. Admin memilih jenis perangkat; daftar keluhan template berganti sesuai jenis. Mengisi merek + tipe, keluhan, kelengkapan, kondisi fisik, password/pola (opsional), DP + akun kas (opsional), teknisi (opsional), centang Express (opsional; jika dicentang, kolom estimasi biaya + lama pengerjaan wajib).
 3. Admin menekan "Simpan tiket"; sistem membuat nomor NS-xxxxx, kode tracking, pembayaran DP, riwayat "Diterima" (Express: lanjut "Pengerjaan").
-4. S-06 terbuka dengan notifikasi "Tiket NS-00012 dibuat." dan tombol "Kirim link tracking" (F-05).
+4. S-06 terbuka dengan notifikasi "Tiket NS-0012 dibuat." dan tombol "Kirim link tracking" (F-05).
 
 **Alur alternatif / gagal:**
 - Input tidak valid -> pesan di bawah kolom: nomor WA "Nomor WA harus nomor seluler Indonesia, misalnya 0812 3456 7890."; keluhan kosong "Pilih minimal satu keluhan atau isi keluhan lain."
@@ -102,7 +105,7 @@ flowchart TD
   T --> X
   P --> X
   S --> X
-  X -- "Sisa 0 atau izin Pemilik" --> R["Dikembalikan"]
+  X -- "Unit diserahkan" --> R["Dikembalikan"]
 ```
 
 **Alur alternatif / gagal:**
@@ -111,7 +114,7 @@ flowchart TD
 - Mundur tahap (Admin/Pemilik, hanya dari Diagnosa sampai Selesai) -> konfirmasi "Kembalikan ke <tahap sebelumnya>?"; tercatat di riwayat.
 - Diambil, Dibatalkan, dan Dikembalikan -> konfirmasi "Tahap ini final dan tidak bisa dimundurkan. Lanjutkan?"
 - Dibatalkan (Admin/Pemilik, dari Diterima sampai Selesai) -> isi alasan + biaya cek (boleh 0); jika dibayar melebihi biaya cek, S-06 menampilkan kelebihan bayar untuk dikembalikan (F-07.7).
-- Dikembalikan (Admin/Pemilik, dari Dibatalkan) -> terkunci selama sisa tidak nol (pesan di F-07).
+- Dikembalikan (Admin/Pemilik, dari Dibatalkan): tombol "Tandai dikembalikan", tidak terkunci oleh sisa tagihan (P18.4).
 - Koneksi putus -> pita "Tidak ada koneksi"; tombol menunggu, lalu Coba lagi.
 - Sesi habis -> ke S-01, lalu kembali ke S-06.
 
@@ -119,9 +122,9 @@ flowchart TD
 **Layar:** S-06, S-04, S-03
 **Pemicu:** Teknisi yang ditugaskan menekan "Isi estimasi".
 **Alur utama:**
-1. Teknisi mengisi hasil diagnosa, estimasi biaya, perkiraan lama pengerjaan; tiket ke Konfirmasi biaya; Admin dan Pemilik mendapat notifikasi estimasi siap (bagian 5).
+1. Teknisi mengisi hasil diagnosa, estimasi biaya, perkiraan lama pengerjaan; tiket ke Konfirmasi biaya; estimasi siap tampil di kartu "perlu tindakan" Beranda Admin dan Pemilik (P18.22).
 2. Admin (atau Teknisi yang ditugaskan) mengabari pelanggan lewat chat WA biasa, lalu menekan "Disetujui" atau "Ditolak" di S-06.
-3. Disetujui -> tombol Pengerjaan/Tunggu part aktif. Ditolak oleh Admin/Pemilik -> dialog Batalkan terbuka (alasan terisi "Estimasi ditolak pelanggan", biaya cek diisi). Ditolak oleh Teknisi -> tiket tetap di Konfirmasi biaya dan semua Admin dan Pemilik mendapat notifikasi untuk membatalkan (bagian 5).
+3. Disetujui -> tombol Pengerjaan/Tunggu part aktif. Ditolak oleh Admin/Pemilik -> dialog Batalkan terbuka (alasan terisi "Estimasi ditolak pelanggan", biaya cek diisi). Ditolak oleh Teknisi -> tiket tetap di Konfirmasi biaya dan tampil di kartu "perlu tindakan" Beranda Admin dan Pemilik untuk dibatalkan (P18.22).
 
 **Alur alternatif / gagal:**
 - Pengerjaan sebelum disetujui -> "Estimasi belum disetujui pelanggan. Tandai persetujuan dulu."
@@ -133,11 +136,11 @@ flowchart TD
 **Layar:** S-07
 **Pemicu:** Pelanggan membuka link dari WA atau memindai QR tanda terima.
 **Alur utama:**
-1. Sistem mencari tiket dari kode; jika aktif, menampilkan isi F-04.2 dalam gaya nota (garansi: jumlah hari sebelum Diambil, tanggal berakhir sesudahnya, garansi 0 tampil "Tanpa garansi"; teks pemberitahuan privasi di bagian bawah jika diisi).
-2. Halaman berlangganan sinyal realtime tiket itu (channel publik); tahap baru muncul tanpa dimuat ulang, pemuatan ulang digabung paling sering sekali per 3 detik.
+1. Sistem mencari tiket dari kode; jika aktif, menampilkan isi F-04.2 dalam gaya nota (tanpa nama pelanggan dan nama teknisi, P18.8; garansi tampil sebagai tanggal berakhir yang dihitung dari Selesai, garansi 0 tampil "Tanpa garansi", P18.11; kelengkapan, tombol Rute, dan teks pemberitahuan privasi di bagian bawah jika diisi).
+2. Halaman tidak berubah sendiri; pelanggan memuat ulang untuk melihat tahap terbaru (P18.12).
 
 **Alur alternatif / gagal:**
-- Kode salah atau link kedaluwarsa -> "Link ini tidak ditemukan atau sudah tidak aktif. Tanyakan status servismu lewat WhatsApp." + tombol chat WA.
+- Kode salah atau link kedaluwarsa (masa aktif di F-04.4; garansi dari Selesai, P18.11) -> "Link ini tidak ditemukan atau sudah tidak aktif. Tanyakan status servismu lewat WhatsApp." + tombol chat WA.
 - Koneksi putus -> halaman terakhir tetap tampil + "Koneksi terputus. Muat ulang untuk melihat status terbaru."
 - Sesi habis -> Tidak berlaku (tanpa login).
 
@@ -184,7 +187,7 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-  A["Tekan Diambil atau Dikembalikan"] --> B{"Sisa tagihan?"}
+  A["Tekan Diambil"] --> B{"Sisa tagihan?"}
   B -- "0" --> C["Tahap berpindah"]
   B -- "Kurang bayar" --> D["Minta izin Pemilik"]
   D --> E{"Pemilik mengizinkan + alasan?"}
@@ -199,8 +202,8 @@ flowchart TD
 - Split tidak sama -> "Jumlah per akun kas (Rp<x>) belum sama dengan nominal (Rp<y>)."
 - Diskon melebihi biaya final -> "Diskon melebihi biaya final Rp<x>."
 - Pembayaran salah -> "Batalkan pembayaran" + alasan; saldo kembali; catat ulang.
-- Diambil atau Dikembalikan saat kurang bayar -> "Sisa tagihan Rp<x>. Catat pembayaran atau minta izin Pemilik."
-- Diambil atau Dikembalikan saat kelebihan bayar -> "Ada kelebihan bayar Rp<x>. Kembalikan dulu."
+- Diambil saat kurang bayar -> "Sisa tagihan Rp<x>. Catat pembayaran atau minta izin Pemilik."
+- Diambil saat kelebihan bayar -> "Ada kelebihan bayar Rp<x>. Kembalikan dulu."
 - Pengembalian lebih besar dari kelebihan -> "Pengembalian melebihi kelebihan bayar Rp<x>."
 - Pengembalian melebihi saldo akun -> "Saldo <akun> tinggal Rp<x>." (pilih akun lain atau pindah saldo dulu).
 - Koneksi putus / sesi habis -> sama dengan F-02.
@@ -209,12 +212,12 @@ flowchart TD
 **Layar:** S-18, S-01, S-02
 **Pemicu:** Pemilik menekan "Tambah staf" atau memilih staf di S-18.
 **Alur utama:**
-1. Pemilik mengisi nama, username, peran, jadwal kerja, password awal; staf login di S-01 dan diarahkan ke S-02 untuk mengganti password.
-2. Pemilik bisa mengubah peran/jadwal, "Reset password" (password sementara), "Nonaktifkan" (konfirmasi; permintaan berikutnya dari sesi staf itu ditolak), atau "Aktifkan kembali".
+1. Pemilik mengundang staf lewat email (nama, email, peran, jadwal kerja); staf membuka undangan, mendaftar, dan masuk di S-01 dengan email dan password (P18.6).
+2. Pemilik bisa mengubah peran/jadwal, "Reset password" (tautan pemulihan ke email staf), "Nonaktifkan" (konfirmasi; permintaan berikutnya dari sesi staf itu ditolak), atau "Aktifkan kembali".
 
 **Alur alternatif / gagal:**
-- Username dipakai -> "Username <x> sudah dipakai."
-- Login salah -> "Username atau password salah."; ke-5 kali dalam 15 menit dari perangkat atau jaringan yang sama -> "Terlalu banyak percobaan. Coba lagi pukul <jam>."
+- Email sudah terdaftar -> pesan bawaan aplikasi (P18.6).
+- Login salah dan pembatasan percobaan -> pesan bawaan aplikasi (P18.6).
 - Pemilik menonaktifkan atau mengubah peran akunnya sendiri -> "Pemilik tidak bisa menonaktifkan atau mengubah peran akunnya sendiri."
 - Akun nonaktif mencoba login -> "Akun ini sudah dinonaktifkan. Hubungi Pemilik."
 - Koneksi putus / sesi habis -> sama dengan F-02.
@@ -290,7 +293,7 @@ flowchart TD
 **Pemicu:** Menu Pelanggan atau nama pelanggan di S-06.
 **Alur utama:**
 1. Cari nama/WA di S-10 -> S-11 menampilkan nama, WA, riwayat tiket.
-2. Pemilik bisa "Samarkan data" (konfirmasi) atas permintaan pelanggan.
+2. Pemilik menghapus pelanggan dari daftar (konfirmasi); nama dan nomor yang sudah disalin ke tiket lama tetap tampil (P18.29). Fitur Samarkan tidak dibuat.
 
 **Alur alternatif / gagal:**
 - Pencarian kosong -> "Tidak ada pelanggan dengan nama atau nomor itu."
@@ -357,7 +360,7 @@ flowchart TD
 | S-17 | "Belum ada data untuk <bulan>." | Kerangka angka | Pita error + Coba lagi | Laporan |
 | S-18 | Tidak berlaku (minimal akun Pemilik) | Kerangka baris | Pita error + Coba lagi | Daftar staf |
 | S-19 | Tidak berlaku (data awal terisi) | Kerangka form | Pesan per kolom | "Pengaturan disimpan." |
-| S-20 | "Belum ada notifikasi." | Kerangka baris | Pita error + Coba lagi | Daftar; dibuka = terbaca |
+| S-20 | (layar tidak dibuat, P18.22) | - | - | - |
 | S-21 | Tidak berlaku | Tidak berlaku | "Halaman tidak ditemukan." / "Halaman ini khusus <peran>." + tombol ke Beranda | Tidak berlaku |
 
 ## 5. Aturan Lintas Layar
@@ -366,12 +369,12 @@ flowchart TD
 - Sesi habis di layar staf: ke S-01 dengan pesan "Sesi berakhir. Masuk lagi untuk melanjutkan.", lalu kembali ke halaman tujuan. Akun yang dinonaktifkan: permintaan berikutnya ditolak dan diarahkan ke S-01 dengan pesan "Akun ini sudah dinonaktifkan. Hubungi Pemilik."
 - Halaman tidak ditemukan (404): S-21 "Halaman tidak ditemukan." + tombol ke Beranda (host lacak.: pesan link tidak aktif F-04.7).
 - Koneksi putus: pita "Tidak ada koneksi" di atas layar staf; isian form tidak hilang; tombol simpan menampilkan Coba lagi.
-- Realtime: S-03, S-04, S-06, S-07 mengambil ulang data saat menerima sinyal; pemuatan ulang digabung (layar staf paling sering sekali per 2 detik, S-07 sekali per 3 detik); layar lain dimuat ulang saat dibuka.
-- Notifikasi di dalam aplikasi (lonceng S-20, tanpa push):
-  - Tiket ditugaskan -> Teknisi tersebut: "Tiket NS-00012 ditugaskan."
-  - Estimasi diisi -> semua Admin + Pemilik: "Estimasi NS-00012 siap dikonfirmasi ke pelanggan."
-  - Estimasi ditolak oleh Teknisi -> semua Admin + Pemilik: "Estimasi NS-00012 ditolak pelanggan. Batalkan tiket dan isi biaya cek."
-  - Tiket Selesai -> semua Admin + Pemilik: "NS-00012 selesai. Kabari pelanggan."
-  - Minta izin serah belum lunas -> Pemilik: "NS-00012 diminta diambil, sisa tagihan Rp<x>." (tiket Dibatalkan: "NS-00012 diminta dikembalikan, sisa biaya cek Rp<x>.")
+- Realtime: S-03, S-04, S-06 mengambil ulang data saat menerima sinyal; pemuatan ulang digabung (layar staf paling sering sekali per 2 detik); S-07 tidak berubah sendiri (P18.12); layar lain dimuat ulang saat dibuka.
+- Kejadian untuk kartu "perlu tindakan" di Beranda (pengganti notifikasi, P18.22; tanpa lonceng dan tanpa push). Teks kartu final ditulis saat IPD L-72 dikerjakan:
+  - Tiket ditugaskan -> Teknisi tersebut: "Tiket NS-0012 ditugaskan."
+  - Estimasi diisi -> semua Admin + Pemilik: "Estimasi NS-0012 siap dikonfirmasi ke pelanggan."
+  - Estimasi ditolak oleh Teknisi -> semua Admin + Pemilik: "Estimasi NS-0012 ditolak pelanggan. Batalkan tiket dan isi biaya cek."
+  - Tiket Selesai -> semua Admin + Pemilik: "NS-0012 selesai. Kabari pelanggan."
+  - Minta izin serah belum lunas -> Pemilik: "NS-0012 diminta diambil, sisa tagihan Rp<x>." (tiket Dibatalkan: "NS-0012 diminta dikembalikan, sisa biaya cek Rp<x>.")
 - Nada teks: dashboard netral tanpa sapaan (tanpa "kamu", "Anda", "-mu"); hanya S-07 yang menyapa "kamu".
 - Pesan WA ke pelanggan (dikirim staf lewat wa.me): Diterima (nomor tiket + link tracking), Selesai (siap diambil), Diambil (permintaan ulasan + link ulasan). Teks dari Pengaturan (F-16).
