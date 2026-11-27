@@ -509,7 +509,13 @@ export async function seedDemoWorkspace(shopName: string = DEMO_SHOP_NAME): Prom
   };
   const seededOrg = await repository.setSingleton('organization', {
     ...org,
-    settings: { ...(org.settings ?? {}), quoteRates },
+    // Kategori sengaja eksplisit: tiket contoh di atas memakai empat nama lama,
+    // sedangkan bawaan toko baru sudah tiga jenis PRD (L-70).
+    settings: {
+      ...(org.settings ?? {}),
+      quoteRates,
+      deviceCategories: ['Laptop', 'HP / Smartphone', 'Printer', 'PC / Komputer'],
+    },
     // Saldo contoh supaya demo memperlihatkan model harga per unit: kuota
     // gratis dikurangi satu unit per tiket yang di-seed. Org lokal biasa
     // tidak punya saldo (tidak ditagih); hanya demo yang diberi angka ini.

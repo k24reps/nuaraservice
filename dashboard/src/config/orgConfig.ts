@@ -9,8 +9,15 @@ import type {
   ReceiptSettings,
   TermsSettings,
 } from '@/data/types';
+import { DEFAULT_DEVICE_CATEGORIES, resolveComplaints } from '@/lib/business/complaints';
 import { sanitizeMobileNavPaths } from '@/lib/business/navigation';
 import { sanitizeQuoteRates } from '@/lib/business/quote';
+import {
+  LATE_TOLERANCE_MAX,
+  cleanPrivacyNotice,
+  readLateTolerance,
+  validateReviewUrl,
+} from '@/lib/business/settingsFields';
 import { resolveServiceColumns, type ServiceColumnId } from '@/lib/business/serviceColumns';
 
 /**
@@ -37,18 +44,10 @@ function readLocalCategories(): string[] {
 }
 
 /**
- * Sensible starter device categories for the "new service" dropdown, used when
- * an org has no configured list yet — a brand-new cloud org (settings '{}',
- * deviceCategories undefined) or a pre-0032 org with no local data. Mirrors the
- * onboarding wizard's initial list. Deterministic, so the fallback is identical
- * on every device.
- */
-export const DEFAULT_DEVICE_CATEGORIES = ['Laptop', 'HP / Smartphone', 'Printer', 'PC / Komputer'];
-
-/**
  * Device categories for the "new service" dropdown. Reads from the org row
  * (cloud-synced, 0032). Falls back to the legacy per-device localStorage list,
- * then to {@link DEFAULT_DEVICE_CATEGORIES} so the form is never empty. An empty
+ * then to DEFAULT_DEVICE_CATEGORIES (`lib/business/complaints.ts`: Laptop/PC, HP,
+ * Elektronik rumah tangga, sama dengan wizard) so the form is never empty. An empty
  * configured list is treated as "unconfigured" (the service form always needs
  * at least one category; onboarding enforces ≥1). The owner can customize in
  * Settings, which persists the chosen list to the cloud.
@@ -235,6 +234,51 @@ export function getComplaintTemplates(): string[] {
 export async function setComplaintTemplates(list: string[]): Promise<void> {
   setStringList('complaints', list);
   await patchSettings({ complaintTemplates: list });
+}
+
+/**
+ * Keluhan untuk satu jenis perangkat: daftar yang disimpan Pemilik, lalu isi awal
+ * (16 keluhan nota landing page), lalu daftar umum di atas. Lihat `resolveComplaints`.
+ */
+export function getComplaintTemplatesFor(category?: string): string[] {
+  return resolveComplaints(category, settings().complaintTemplatesByCategory, getComplaintTemplates());
+}
+export async function setComplaintTemplatesFor(category: string, list: string[]): Promise<void> {
+  const byCategory = { ...(settings().complaintTemplatesByCategory ?? {}), [category]: list };
+  await patchSettings({ complaintTemplatesByCategory: byCategory });
+}
+
+/** Teks pemberitahuan privasi. Kosong sampai Pemilik mengisi; dibaca nota dan halaman lacak. */
+export function getPrivacyNotice(): string {
+  return cleanPrivacyNotice(settings().privacyNotice);
+}
+export async function setPrivacyNotice(text: string): Promise<void> {
+  await patchSettings({ privacyNotice: cleanPrivacyNotice(text) || undefined });
+}
+
+/**
+ * Link ulasan Google. Nilai tersimpan yang bukan https dibaca kosong (jsonb bisa
+ * ditulis tangan), jadi pesan ulasan tak pernah membawa link berbahaya.
+ */
+export function getReviewUrl(): string {
+  const r = validateReviewUrl(settings().reviewUrl ?? '');
+  return r.ok ? r.value : '';
+}
+export async function setReviewUrl(url: string): Promise<void> {
+  const r = validateReviewUrl(url);
+  if (!r.ok) throw new Error('Link ulasan harus berupa alamat https yang utuh');
+  await patchSettings({ reviewUrl: r.value || undefined });
+}
+
+/** Toleransi terlambat absensi (menit). Tanpa isian = 0, artinya tanpa toleransi. */
+export function getLateToleranceMinutes(): number {
+  return readLateTolerance(settings().lateToleranceMinutes);
+}
+export async function setLateToleranceMinutes(minutes: number | null): Promise<void> {
+  if (minutes !== null && !(Number.isInteger(minutes) && minutes >= 0 && minutes <= LATE_TOLERANCE_MAX)) {
+    throw new Error(`Toleransi terlambat harus bilangan bulat 0 sampai ${LATE_TOLERANCE_MAX} menit`);
+  }
+  await patchSettings({ lateToleranceMinutes: minutes ?? undefined });
 }
 
 /** Reusable accessory/kelengkapan templates for the service form. */

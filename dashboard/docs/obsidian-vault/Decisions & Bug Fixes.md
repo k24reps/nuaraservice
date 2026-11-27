@@ -13,6 +13,43 @@ Catatan keputusan desain penting + bug nyata yang ditemukan saat verifikasi.
 
 ## Keputusan desain
 
+### Isian Pengaturan baru (L-70, 26 Nov 2026)
+Empat isian untuk Pemilik, semuanya di baris toko (`organizations.settings`, tanpa migrasi) dan kosong
+sampai diisi, kecuali 16 keluhan awal yang berasal dari nota landing page:
+`privacyNotice` (Nota & Struk, maks 400 karakter), `reviewUrl` (kartu WhatsApp, wajib https),
+`lateToleranceMinutes` (kartu Absensi baru, 0 sampai 120, kosong = 0), dan
+`complaintTemplatesByCategory` (kartu Template Servis, daftar per jenis). Logika murni di
+`lib/business/complaints.ts` dan `settingsFields.ts`; pembaca/penulisnya di `config/orgConfig.ts`.
+
+- **Tiga jenis PRD jadi bawaan** (Laptop/PC, HP, Elektronik rumah tangga): wizard dan cadangan
+  `getCategories()` memakainya, karena 16 keluhan awal terbagi menurut tiga jenis itu (7, 4, 5).
+  Urutan baca keluhan satu jenis: daftar tersimpan (boleh kosong, sengaja tanpa pilihan cepat), lalu
+  isi awal bila namanya salah satu jenis bawaan, lalu daftar umum lama. Menyunting satu jenis
+  menyimpan seluruh daftarnya; jenis lain tak tersentuh.
+- **Link ulasan gagal tertutup**: disimpan hanya bila https utuh (tanpa spasi, tanpa kredensial);
+  nilai tersimpan yang tak lolos (jsonb bisa ditulis tangan) dibaca kosong, jadi pesan ulasan tak
+  pernah membawa `javascript:` atau `http:`. Diperiksa SEBELUM template WA ikut disimpan, jadi
+  tidak ada simpan setengah.
+- **Seed demo memakai empat nama kategori lama secara eksplisit**: tiket contohnya memakai nama itu,
+  dan tanpa ini halaman lain di `/demo` ikut berubah hanya karena bawaan toko baru berganti.
+- **Temuan, tidak diubah di sini**: (1) kebijakan `org_update` di database memakai `is_org_manager`,
+  jadi Admin bisa menulis setelan toko lewat API walau menu Pengaturan hanya untuk Pemilik (berlaku
+  untuk semua setelan sejak FixMaster; ditutup di L-71 bersama penegakan peran); (2) `demoGuard()`
+  memblokir tombol Simpan kartu teks nota di `/demo`, sehingga jalur simpan privasi dibuktikan lewat
+  modul aplikasi, bukan tombol. Formulir tiket belum membaca keluhan per jenis (L-75), nota dan halaman
+  lacak belum menampilkan privasi (L-77, L-78), absensi belum memakai toleransi (L-79), dan pesan
+  ulasan belum ada (L-76).
+- **Verifikasi**: build, lint (0 peringatan), 1332 tes / 98 berkas. Browser (`/demo`, 1440 dan 390): 24
+  pemeriksaan lulus (7/4/5 keluhan awal per jenis, tambah keluhan bertahan antar jenis, http ditolak
+  tanpa menyimpan apa pun, toleransi 125 ditolak, isian terbaca ulang, tanpa luberan, kontrol baru
+  44px di ponsel). `audit-mobile` (14 halaman x 5 lebar) dan `audit-zoom` (14 x 11): nol luberan
+  dokumen, nol overlap, nol pelanggaran lantai 12px; hanya rel `scroll-fade-x` lama di Kasir dan
+  Pelanggan. Foto per piksel terhadap worktree sebelum perubahan, 1440 dan 390: Servis, Kasir, Usaha,
+  Tarif, Tim, Wallet, Outlet, Navigasi, Sistem identik; Dashboard hanya berbeda pada jam ("Diperbarui
+  13.55/13.56/13.58", sama dengan derau dua foto baseline); Operasional dan Nota & Struk berubah sesuai
+  rancangan (lebih tinggi 521 dan 225 px di 1440). Tab Operasional tidak ada di daftar halaman probe,
+  jadi ia diukur sendiri.
+
 ### Bersih-bersih FixMaster: token dan CSS global (L-69, 24 Nov 2026)
 `tokens.css` (433 baris) dan `global.css` (264 baris) dicabut. Penggantinya: `layout-tokens.css` (21
 token tata letak) dan `base.css` (dasar global di layer `base`). Urutan layer kini

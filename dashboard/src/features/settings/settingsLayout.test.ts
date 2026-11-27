@@ -69,8 +69,8 @@ describe('Pengaturan (L-55, L-66, L-67)', () => {
 
   it('tombol simpan mati selama menyimpan; kolom tabel servis memakai Checkbox dens', () => {
     expect(businessTsx.match(/disabled=\{busy \|\|/g)).toHaveLength(3);
-    // Garansi dan templat WhatsApp.
-    expect(opsTsx.match(/disabled=\{saving\} aria-busy=\{saving \|\| undefined\}/g)).toHaveLength(2);
+    // Garansi, Absensi (toleransi terlambat, L-70), dan templat WhatsApp.
+    expect(opsTsx.match(/disabled=\{saving\} aria-busy=\{saving \|\| undefined\}/g)).toHaveLength(3);
     expect(opsTsx).toContain('<Checkbox');
     expect(opsTsx).toContain('has-[[data-state=checked]]:ring-primary/40');
   });
@@ -205,5 +205,21 @@ describe('Pengaturan L-67: Nota & Struk, Tarif', () => {
     expect(quoteTsx).toContain('<Button onClick={() => void save()} disabled={busy || !dirty} aria-busy={busy || undefined}>');
     // Peringatan tinggalkan halaman selama draf berubah.
     expect(quoteTsx).toContain("window.addEventListener('beforeunload', warn)");
+  });
+  it('L-70: isian baru ada di tab yang direncanakan dan divalidasi sebelum menyimpan', () => {
+    // Link ulasan: diperiksa sebelum template ikut disimpan, dan hanya https.
+    expect(opsTsx).toContain('validateReviewUrl(reviewUrl)');
+    expect(opsTsx.indexOf('validateReviewUrl(reviewUrl)')).toBeLessThan(opsTsx.indexOf('setWaTemplateOverrides(next)'));
+    expect(opsTsx).toContain("t('settingsPage.linkUlasanHarusHttps')");
+    // Toleransi terlambat: kartu Absensi memakai pemeriksa yang sama dengan tesnya.
+    expect(opsTsx).toContain('function AttendanceCard()');
+    expect(opsTsx).toContain('parseLateTolerance(value)');
+    // Keluhan per jenis: pemilih jenis memakai SelectBox dens, bukan <select>.
+    expect(opsTsx).toContain("t('settingsPage.keluhanJenis')");
+    expect(opsTsx).toContain('<SelectBox');
+    expect(opsTsx).not.toContain('<select');
+    // Pemberitahuan privasi di kartu teks nota.
+    expect(receiptTsx).toContain('id="receipt-privacy"');
+    expect(receiptTsx).toContain('setPrivacyNotice(next.privacy)');
   });
 });

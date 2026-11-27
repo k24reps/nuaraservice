@@ -13,6 +13,7 @@ import { getSupabase, isSupabaseConfigured } from '@/data/supabase-client';
 import { newId, derivePrefix } from '@/lib/id';
 import { hashPin } from '@/lib/pin';
 import { looksLikeCash } from '@/lib/business/finance';
+import { DEFAULT_DEVICE_CATEGORIES } from '@/lib/business/complaints';
 import type { TranslationKey } from '@/i18n';
 
 export interface WizardWalletDraft {
@@ -58,7 +59,7 @@ export function emptyWizardData(): WizardData {
     phone: '',
     servicePrefix: '',
     wallets: [{ name: 'Tunai', balance: 0 }],
-    categories: ['Laptop', 'HP / Smartphone', 'Printer', 'PC / Komputer'],
+    categories: [...DEFAULT_DEVICE_CATEGORIES],
     employees: [{ name: '', role: 'owner', pin: '' }],
     fixedCosts: [],
     outlets: [{ name: '', address: '' }],

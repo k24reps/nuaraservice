@@ -1,15 +1,18 @@
 import { useEffect, useState } from 'react';
-import { ClipboardList, Columns3, Laptop, LoaderCircle, Plus, ShieldCheck, X } from 'lucide-react';
+import { ClipboardList, Clock, Columns3, Laptop, LoaderCircle, Plus, ShieldCheck, X } from 'lucide-react';
 import { Button } from '@/components/dens/button';
 import { Checkbox } from '@/components/dens/checkbox';
 import { Field } from '@/components/dens/field';
 import { Input } from '@/components/dens/input';
+import { SelectBox } from '@/components/dens/select-box';
 import { TextInput } from '@/components/dens/text-input';
 import { Textarea } from '@/components/dens/textarea';
 import { WhatsAppIcon } from '@/components/dens/whatsapp-icon';
 import {
   getComplaintTemplates,
+  getComplaintTemplatesFor,
   setComplaintTemplates,
+  setComplaintTemplatesFor,
   getAccessoryTemplates,
   setAccessoryTemplates,
   getWarrantyServiceDays,
@@ -19,6 +22,9 @@ import {
   setWarrantyPresets,
   getWaTemplateOverrides,
   setWaTemplateOverrides,
+  getReviewUrl,
+  setReviewUrl,
+  setLateToleranceMinutes,
   getCategories,
   setCategories,
   seedCategoriesFromLocal,
@@ -28,15 +34,17 @@ import {
   DEFAULT_WA_TEMPLATES,
   WA_TEMPLATE_LABELS,
   WA_TEMPLATE_VARS,
+  interpolate,
   type WaTemplateKey,
 } from '@/lib/business/notify';
 import { SERVICE_COLUMNS, resolveServiceColumns, type ServiceColumnId } from '@/lib/business/serviceColumns';
+import { LATE_TOLERANCE_MAX, REVIEW_URL_MAX, parseLateTolerance, validateReviewUrl } from '@/lib/business/settingsFields';
 import { useT } from '@/i18n';
 import { useSessionStore } from '@/stores/session';
 import { toast } from '@/stores/toast';
 import { SETTINGS_GROUP, SETTINGS_LABEL, SaveFoot, SettingsCard, SettingsHint, SettingsSection } from './settingsUi';
 
-/** Tab Operasional (L-55): pilihan cepat form servis, kolom tabel, garansi, templat WhatsApp. */
+/** Tab Operasional (L-55, L-70): pilihan cepat form servis, kolom tabel, garansi, absensi, templat WhatsApp. */
 export function OperationsSettings() {
   return (
     <SettingsSection>
@@ -44,6 +52,7 @@ export function OperationsSettings() {
       <DeviceCategoriesCard />
       <ServiceColumnsCard />
       <WarrantyCard />
+      <AttendanceCard />
       <WhatsAppTemplatesCard />
     </SettingsSection>
   );
@@ -56,19 +65,39 @@ const Spinner = () => <LoaderCircle aria-hidden className="animate-spin motion-r
  * the service form. Stored in orgConfig (localStorage), so we keep local
  * state in sync after each mutation.
  */
+/** Penanda "daftar umum" di pemilih jenis (bukan nama jenis mana pun). */
+const UMUM = '__umum__';
+
 function ServiceTemplatesCard() {
   const t = useT();
-  const [complaints, setComplaints] = useState<string[]>(() => getComplaintTemplates());
+  // Berlangganan baris toko: render ulang setelah penyimpanan diterima server,
+  // dan daftar di bawah dibaca langsung darinya.
+  useSessionStore((s) => s.org);
+  const categories = getCategories();
+  const [picked, setPicked] = useState('');
   const [accessories, setAccessories] = useState<string[]>(() => getAccessoryTemplates());
   const [busy, setBusy] = useState(false);
+  // Awalnya jenis pertama, supaya isi awal per jenis langsung terlihat. Jenis yang
+  // dihapus dari daftar kategori juga jatuh kembali ke jenis pertama.
+  const active = picked === UMUM || categories.includes(picked) ? picked : (categories[0] ?? UMUM);
+  const complaints = active === UMUM ? getComplaintTemplates() : getComplaintTemplatesFor(active);
 
-  // Template kini tersimpan di baris organisasi (tersinkron), jadi penyimpanan
-  // bisa gagal — daftar di layar hanya berubah setelah servernya menerima.
-  const persist = async (next: string[], save: (v: string[]) => Promise<void>, apply: (v: string[]) => void) => {
+  const saveComplaints = async (next: string[]) => {
     setBusy(true);
     try {
-      await save(next);
-      apply(next);
+      if (active === UMUM) await setComplaintTemplates(next);
+      else await setComplaintTemplatesFor(active, next);
+    } catch {
+      toast.error(t('settingsPage.gagalMenyimpanTemplate'));
+    } finally {
+      setBusy(false);
+    }
+  };
+  const saveAccessories = async (next: string[]) => {
+    setBusy(true);
+    try {
+      await setAccessoryTemplates(next);
+      setAccessories(next);
     } catch {
       toast.error(t('settingsPage.gagalMenyimpanTemplate'));
     } finally {
@@ -76,32 +105,37 @@ function ServiceTemplatesCard() {
     }
   };
 
-  const addComplaint = (value: string) =>
-    void persist([...complaints, value], setComplaintTemplates, setComplaints);
-  const removeComplaint = (value: string) =>
-    void persist(complaints.filter((c) => c !== value), setComplaintTemplates, setComplaints);
-  const addAccessory = (value: string) =>
-    void persist([...accessories, value], setAccessoryTemplates, setAccessories);
-  const removeAccessory = (value: string) =>
-    void persist(accessories.filter((a) => a !== value), setAccessoryTemplates, setAccessories);
-
   return (
     <SettingsCard icon={<ClipboardList aria-hidden />} title={t('settingsPage.templateServis')}>
       <SettingsHint>Pilihan cepat keluhan &amp; kelengkapan saat membuat servis baru.</SettingsHint>
+      <div className={SETTINGS_GROUP}>
+        <Field label={t('settingsPage.keluhanJenis')} hint={t('settingsPage.keluhanJenisHint')}>
+          <SelectBox
+            value={active}
+            onValueChange={setPicked}
+            options={[
+              ...categories.map((c) => ({ value: c, label: c })),
+              { value: UMUM, label: t('settingsPage.keluhanUmum') },
+            ]}
+            disabled={busy}
+          />
+        </Field>
+      </div>
       <StringListEditor
+        key={active}
         label={t('settingsPage.templateKeluhan')}
         placeholder={t('settingsPage.misMatiTotal')}
         items={complaints}
-        onAdd={addComplaint}
-        onRemove={removeComplaint}
+        onAdd={(value) => void saveComplaints([...complaints, value])}
+        onRemove={(value) => void saveComplaints(complaints.filter((c) => c !== value))}
         disabled={busy}
       />
       <StringListEditor
         label={t('settingsPage.templateKelengkapan')}
         placeholder={t('settingsPage.misCharger')}
         items={accessories}
-        onAdd={addAccessory}
-        onRemove={removeAccessory}
+        onAdd={(value) => void saveAccessories([...accessories, value])}
+        onRemove={(value) => void saveAccessories(accessories.filter((a) => a !== value))}
         disabled={busy}
       />
     </SettingsCard>
@@ -351,6 +385,67 @@ function WarrantyCard() {
 }
 
 /**
+ * Toleransi terlambat absensi (L-70). Hanya disimpan di sini; status terlambat
+ * dihitung di langkah absensi (L-79). Kosong = 0 menit, tanpa toleransi.
+ */
+function AttendanceCard() {
+  const t = useT();
+  const saved = useSessionStore((s) => s.org?.settings?.lateToleranceMinutes);
+  const [value, setValue] = useState(() => (typeof saved === 'number' ? String(saved) : ''));
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    const parsed = parseLateTolerance(value);
+    if (!parsed.ok) {
+      setError(interpolate(t('settingsPage.toleransiTidakValid'), { n: String(LATE_TOLERANCE_MAX) }));
+      return;
+    }
+    setError('');
+    setSaving(true);
+    try {
+      await setLateToleranceMinutes(parsed.value);
+      toast.success(t('settingsPage.toleransiDisimpan'));
+    } catch {
+      toast.error(t('settingsPage.gagalMenyimpanToleransi'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <SettingsCard icon={<Clock aria-hidden />} title={t('settingsPage.absensiCard')}>
+      <Field
+        label={t('settingsPage.toleransiTerlambat')}
+        hint={t('settingsPage.toleransiHint')}
+        error={error || undefined}
+        className="max-w-[28ch]"
+      >
+        <Input
+          type="text"
+          inputMode="numeric"
+          className={NUM}
+          maxLength={3}
+          placeholder="0"
+          value={value}
+          onChange={(e) => {
+            setValue(e.target.value.replace(/\D/g, '').slice(0, 3));
+            setError('');
+          }}
+          onKeyDown={(e) => e.key === 'Enter' && void save()}
+        />
+      </Field>
+      <SaveFoot>
+        <Button onClick={() => void save()} disabled={saving} aria-busy={saving || undefined}>
+          {saving && <Spinner />}
+          {t('settingsPage.simpanToleransi')}
+        </Button>
+      </SaveFoot>
+    </SettingsCard>
+  );
+}
+
+/**
  * Per-key WhatsApp message template editor. Saves overrides to orgConfig;
  * blank fields fall back to the built-in default via resolveWaTemplates.
  */
@@ -365,8 +460,24 @@ function WhatsAppTemplatesCard() {
   });
 
   const [saving, setSaving] = useState(false);
+  const [reviewUrl, setReviewUrlDraft] = useState(() => getReviewUrl());
+  const [reviewError, setReviewError] = useState('');
 
   const save = async () => {
+    // Link ulasan diperiksa lebih dulu: yang salah tidak menyimpan apa pun,
+    // supaya template dan link tak pernah tersimpan setengah.
+    const check = validateReviewUrl(reviewUrl);
+    if (!check.ok) {
+      setReviewError(
+        check.reason === 'scheme'
+          ? t('settingsPage.linkUlasanHarusHttps')
+          : check.reason === 'length'
+            ? interpolate(t('settingsPage.linkUlasanTerlaluPanjang'), { n: String(REVIEW_URL_MAX) })
+            : t('settingsPage.linkUlasanTidakValid'),
+      );
+      return;
+    }
+    setReviewError('');
     const next: Record<string, string> = {};
     for (const k of keys) {
       const v = drafts[k]?.trim();
@@ -376,7 +487,8 @@ function WhatsAppTemplatesCard() {
     setSaving(true);
     try {
       await setWaTemplateOverrides(next);
-      toast.success(t('settingsPage.templateWhatsappDisimpan'));
+      if (check.value !== getReviewUrl()) await setReviewUrl(check.value);
+      toast.success(t('settingsPage.waDanUlasanDisimpan'));
     } catch {
       toast.error(t('settingsPage.gagalMenyimpanTemplateWhatsapp'));
     } finally {
@@ -401,6 +513,26 @@ function WhatsAppTemplatesCard() {
         <code className={VAR}>{`{rincian_bayar}`}</code> membawa barisnya sendiri. Barisnya hilang otomatis kalau datanya
         kosong, jadi tidak perlu ditulis label lagi di depannya.
       </SettingsHint>
+      <div className={SETTINGS_GROUP}>
+        <Field
+          label={t('settingsPage.linkUlasan')}
+          hint={t('settingsPage.linkUlasanHint')}
+          error={reviewError || undefined}
+        >
+          <Input
+            type="url"
+            inputMode="url"
+            autoComplete="off"
+            spellCheck={false}
+            placeholder="https://g.page/r/..."
+            value={reviewUrl}
+            onChange={(e) => {
+              setReviewUrlDraft(e.target.value);
+              setReviewError('');
+            }}
+          />
+        </Field>
+      </div>
       {keys.map((k) => (
         <div key={k} className={SETTINGS_GROUP}>
           <div className="flex items-center justify-between gap-3">

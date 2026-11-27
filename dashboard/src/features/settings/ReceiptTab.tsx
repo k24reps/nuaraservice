@@ -18,6 +18,7 @@ import { Textarea } from '@/components/dens/textarea';
 import {
   PUBLIC_NOTE_MAX,
   setPublicNote,
+  setPrivacyNotice,
   setReceiptSettings,
   setTermsSettings,
 } from '@/config/orgConfig';
@@ -31,6 +32,7 @@ import {
   type ReceiptDoc,
 } from '@/features/services/printReceipt';
 import { interpolate } from '@/lib/business/notify';
+import { PRIVACY_NOTICE_MAX, cleanPrivacyNotice } from '@/lib/business/settingsFields';
 import {
   TERMS_EXTRA_MAX,
   currentTerms,
@@ -87,6 +89,7 @@ interface TextDraft {
   serviceTerms: string;
   saleTerms: string;
   note: string;
+  privacy: string;
 }
 
 const fromOrg = (org: Organization | null): TextDraft => {
@@ -97,6 +100,7 @@ const fromOrg = (org: Organization | null): TextDraft => {
     serviceTerms: r.serviceTerms,
     saleTerms: r.saleTerms,
     note: (org?.settings?.publicNote ?? '').trim(),
+    privacy: cleanPrivacyNotice(org?.settings?.privacyNotice),
   };
 };
 
@@ -106,6 +110,7 @@ const cleanDraft = (d: TextDraft): TextDraft => ({
   serviceTerms: cleanReceiptText(d.serviceTerms, RECEIPT_TEXT_MAX.terms),
   saleTerms: cleanReceiptText(d.saleTerms, RECEIPT_TEXT_MAX.terms),
   note: cleanReceiptText(d.note, PUBLIC_NOTE_MAX),
+  privacy: cleanPrivacyNotice(d.privacy),
 });
 
 export function ReceiptTab() {
@@ -342,6 +347,7 @@ function ContentCard({ draft, onChange }: { draft: TextDraft; onChange: (d: Text
         saleTerms: next.saleTerms,
       });
       if (next.note !== saved.note) await setPublicNote(next.note);
+      if (next.privacy !== saved.privacy) await setPrivacyNotice(next.privacy);
       onChange(next);
       toast.success(t('receipt.content.saved'));
     } catch {
@@ -400,6 +406,15 @@ function ContentCard({ draft, onChange }: { draft: TextDraft; onChange: (d: Text
         max={PUBLIC_NOTE_MAX}
         minH="min-h-24"
         onChange={set('note')}
+      />
+      <TextField
+        id="receipt-privacy"
+        label={t('receipt.field.privacy')}
+        hint={t('receipt.field.privacyHint')}
+        value={draft.privacy}
+        max={PRIVACY_NOTICE_MAX}
+        minH="min-h-24"
+        onChange={set('privacy')}
       />
       <UnsavedStatus dirty={dirty} />
       <SaveFoot note={dirty ? <span aria-hidden>{t('receipt.content.unsaved')}</span> : undefined}>

@@ -315,10 +315,12 @@ flowchart TD
 **Pemicu:** Pemilik membuka menu Pengaturan.
 **Alur utama:**
 1. Bagian: Template (keluhan, kelengkapan, pesan WA, S&K, teks pemberitahuan privasi), Tracking & ulasan (link ulasan Google), Cetak (58/80 mm), Kas (akun kas + saldo awal), Garansi awal, Absensi (titik lokasi lewat tombol "Pakai lokasi saya sekarang", toleransi terlambat).
-2. Simpan per bagian -> "Pengaturan disimpan."
+2. Simpan per bagian -> "Pengaturan disimpan." (di aplikasi tiap kartu memakai teks sendiri, mis. "Template dan link ulasan disimpan", "Toleransi terlambat disimpan").
+3. Keluhan dikelola per jenis perangkat: pilih jenis, lalu tambah atau hapus pilihan cepatnya. Jenis bawaan Laptop/PC, HP, dan Elektronik rumah tangga berisi 16 keluhan awal dari nota landing page; jenis tanpa daftar sendiri memakai daftar umum (P18.35). Toleransi terlambat kosong = 0 menit, dan teks pemberitahuan privasi kosong = tidak ditampilkan.
 
 **Alur alternatif / gagal:**
-- Link ulasan tidak valid -> "Link ulasan harus diawali https://."
+- Link ulasan bukan https -> "Link ulasan harus diawali https://."; format rusak, bersepasi, atau berisi kredensial -> "Link ulasan tidak valid. Tempel alamat lengkap tanpa spasi."; lebih dari 300 karakter -> "Link ulasan terlalu panjang (maksimal 300 karakter)." Tidak ada yang tersimpan sampai link benar.
+- Toleransi terlambat bukan bilangan bulat 0 sampai 120 -> "Toleransi harus bilangan bulat 0 sampai 120 menit."
 - Saldo awal diubah setelah akun kas punya mutasi -> "Saldo awal tidak bisa diubah. Pakai Koreksi saldo di Kas."
 - Izin lokasi ditolak saat set titik -> "Izinkan akses lokasi untuk menyimpan titik workshop."
 - Koneksi putus / sesi habis -> sama dengan F-02.

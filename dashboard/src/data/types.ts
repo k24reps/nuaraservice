@@ -109,6 +109,17 @@ export interface OrgSettings {
   warrantyPresets?: number[];
   waTemplates?: Record<string, string>;
   /**
+   * Daftar keluhan per jenis perangkat (kunci = nama jenis). Jenis tanpa entri
+   * memakai isi awal bila ia salah satu jenis bawaan, selain itu `complaintTemplates`.
+   */
+  complaintTemplatesByCategory?: Record<string, string[]>;
+  /** Teks pemberitahuan privasi untuk nota dan halaman lacak. Kosong = tidak tampil. */
+  privacyNotice?: string;
+  /** Link ulasan Google (https). Kosong = pesan ulasan tidak dikirim. */
+  reviewUrl?: string;
+  /** Toleransi terlambat absensi (menit, 0 sampai 120). Tanpa nilai = 0. */
+  lateToleranceMinutes?: number;
+  /**
    * Kapan backup manual terakhir diunduh. Dulu hanya di perangkat masing-masing,
    * jadi pemilik dengan dua perangkat melihat dua kebenaran berbeda tentang
    * kapan terakhir ia mengamankan datanya.
