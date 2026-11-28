@@ -58,6 +58,7 @@ import { walletsForOutlet } from '@/lib/business/finance';
 import { addServiceModalLine, addServicePart } from '@/data/serviceParts';
 import { resolveServiceColumns } from '@/lib/business/serviceColumns';
 import { LIST_PAGE_SIZE, resolveListView, scrollRestoreStep } from '@/lib/business/serviceListView';
+import { canCreateService, canSeeCustomerPhone, canWorkOnService } from '@/lib/business/staffAccess';
 import { readListSnapshot, readScroll, saveListScroll, saveListView, writeScroll } from './listMemory';
 import {
   SERVICE_SCOPES,
@@ -195,6 +196,10 @@ export function ServicesPage() {
   const role = me?.role;
   const isOwner = role === 'owner';
   const isManager = role === 'owner' || role === 'admin';
+  // Teknisi: tanpa Servis Baru dan nomor WA, dan hanya tiketnya sendiri yang bisa diubah (P18.3).
+  const canCreate = canCreateService(role);
+  const canSeePhone = canSeeCustomerPhone(role);
+  const canWork = (s: Service) => canWorkOnService(me, s);
   // Hanya untuk Modal Dadakan di aksi cepat sparepart, yang khusus owner/admin.
   const { data: allWallets } = useCollection('wallets', { enabled: isManager });
 
@@ -236,7 +241,7 @@ export function ServicesPage() {
   // dipakai sebagai antrean kerja. `?open=1` = "Tiket saya" dari Dashboard.
   const [scope, setScope] = useState<ServiceScope>(start.scope);
   // `?new=1` membuka Servis Baru langsung (tombol cepat Dashboard).
-  const [editOpen, setEditOpen] = useState(() => searchParams.get('new') === '1');
+  const [editOpen, setEditOpen] = useState(() => canCreate && searchParams.get('new') === '1');
   const [editing, setEditing] = useState<Service | null>(null);
   const [statusOpen, setStatusOpen] = useState(false);
   const [statusTarget, setStatusTarget] = useState<Service | null>(null);
@@ -313,7 +318,7 @@ export function ServicesPage() {
         const created = localDateOf(s.createdAt);
         return created >= range.from && created <= range.to;
       })
-      .filter((s) => matchesQuery(s, query));
+      .filter((s) => matchesQuery(s, query, { phone: canSeePhone }));
   }, [
     visible,
     scope,
@@ -328,6 +333,7 @@ export function ServicesPage() {
     customTo,
     today,
     query,
+    canSeePhone,
   ]);
 
   const statusCounts = useMemo(() => {
@@ -542,6 +548,7 @@ export function ServicesPage() {
   }, [loading, archivePending, rowCount, initial.scrollTop]);
 
   const openNew = () => {
+    if (!canCreate) return;
     setEditing(null);
     setEditOpen(true);
   };
@@ -549,7 +556,7 @@ export function ServicesPage() {
   // atau saat jendela lain terbuka.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key.toLowerCase() !== 'n' || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
+      if (!canCreate || e.key.toLowerCase() !== 'n' || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
       const el = e.target as HTMLElement | null;
       if (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) return;
       if (document.querySelector('[role="dialog"]')) return;
@@ -559,7 +566,7 @@ export function ServicesPage() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  }, [canCreate]);
 
   // Toggle physical collection (manager-only). Mirrors ServiceDetailPage so the
   // list and detail stay consistent; pickup is independent of payment status.
@@ -718,7 +725,14 @@ export function ServicesPage() {
   // Lencana status yang bisa diklik untuk mengubah status; sama di kedua tampilan.
   // Margin negatif = padding, jadi lencananya sejajar tepi lajur; pensil hanya
   // tampil saat hover atau fokus keyboard.
-  const renderStatus = (s: Service) => (
+  const statusBadge = (s: Service) => (
+    <Badge variant={STATUS_BADGE[s.status]}>{t(`statusLabel.${s.status}`)}</Badge>
+  );
+  // Teknisi pada tiket yang bukan miliknya hanya membaca: lencana tanpa tombol (P18.3).
+  const renderStatus = (s: Service) =>
+    !canWork(s) ? (
+      statusBadge(s)
+    ) : (
     <button
       type="button"
       className="group/status -mx-1.5 -my-0.5 inline-flex max-w-[calc(100%+0.75rem)] items-center gap-1 rounded-full px-1.5 py-0.5 outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring pointer-coarse:min-h-11"
@@ -732,13 +746,13 @@ export function ServicesPage() {
         status: t(`statusLabel.${s.status}`),
       })}
     >
-      <Badge variant={STATUS_BADGE[s.status]}>{t(`statusLabel.${s.status}`)}</Badge>
+      {statusBadge(s)}
       <Pencil
         aria-hidden
         className="size-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover/status:opacity-100 group-focus-visible/status:opacity-100"
       />
     </button>
-  );
+    );
 
   // Judul kolom yang bisa diurutkan (hanya tampil di tata letak lebar). Klik: naik,
   // turun, lalu kembali ke Terbaru (nextSort). Panah menandai arah; di kolom yang
@@ -847,7 +861,7 @@ export function ServicesPage() {
   const iconBtn = 'text-muted-foreground hover:text-foreground [&_svg]:size-[18px]';
   const renderActions = (s: Service, viewLink = false) => (
     <>
-      {canQuickAddParts(s.status) && (
+      {canWork(s) && canQuickAddParts(s.status) && (
         <Button
           variant="ghost"
           size="icon"
@@ -877,34 +891,38 @@ export function ServicesPage() {
           </Link>
         </Button>
       )}
-      <Button
-        variant="ghost"
-        size="icon"
-        className={iconBtn}
-        onClick={() => {
-          setNotifyTarget(s);
-          setNotifyOpen(true);
-        }}
-        title={t('services.notifyReceipt')}
-        aria-label={t('services.notifyReceipt')}
-        aria-describedby={noId(s)}
-      >
-        <WhatsAppIcon />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        className={iconBtn}
-        onClick={() => {
-          setEditing(s);
-          setEditOpen(true);
-        }}
-        title={t('common.edit')}
-        aria-label={t('common.edit')}
-        aria-describedby={noId(s)}
-      >
-        <Pencil aria-hidden />
-      </Button>
+      {canSeePhone && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className={iconBtn}
+          onClick={() => {
+            setNotifyTarget(s);
+            setNotifyOpen(true);
+          }}
+          title={t('services.notifyReceipt')}
+          aria-label={t('services.notifyReceipt')}
+          aria-describedby={noId(s)}
+        >
+          <WhatsAppIcon />
+        </Button>
+      )}
+      {canWork(s) && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className={iconBtn}
+          onClick={() => {
+            setEditing(s);
+            setEditOpen(true);
+          }}
+          title={t('common.edit')}
+          aria-label={t('common.edit')}
+          aria-describedby={noId(s)}
+        >
+          <Pencil aria-hidden />
+        </Button>
+      )}
     </>
   );
 
@@ -1008,10 +1026,12 @@ export function ServicesPage() {
             <span className={cn(countPill, 'absolute -right-1 -top-1')}>{moreActive + foldedOnMobile}</span>
           )}
         </Button>
-        <Button className="ml-auto phone:hidden" onClick={openNew}>
-          <Plus aria-hidden />
-          {t('services.new')}
-        </Button>
+        {canCreate && (
+          <Button className="ml-auto phone:hidden" onClick={openNew}>
+            <Plus aria-hidden />
+            {t('services.new')}
+          </Button>
+        )}
       </div>
 
       <div
@@ -1207,17 +1227,19 @@ export function ServicesPage() {
             title={t(visible.length === 0 ? 'services.emptyTitle' : 'services.noResults')}
             description={
               visible.length === 0
-                ? t('services.emptyFirst')
+                ? t(canCreate ? 'services.emptyFirst' : 'services.emptyFirstStaff')
                 : !filtersActive && scope === 'open' && closedCount > 0
                   ? t('services.emptyAllClosed')
                   : t('services.emptyFiltered')
             }
             action={
               visible.length === 0 ? (
-                <Button onClick={openNew}>
-                  <Plus aria-hidden />
-                  {t('services.new')}
-                </Button>
+                canCreate ? (
+                  <Button onClick={openNew}>
+                    <Plus aria-hidden />
+                    {t('services.new')}
+                  </Button>
+                ) : undefined
               ) : filtersActive ? (
                 <Button variant="outline" size="sm" onClick={resetFilters}>
                   {t('services.resetFilters')}
@@ -1333,13 +1355,16 @@ export function ServicesPage() {
                         >
                           {s.customerName}
                         </strong>
-                        {/* Nomor HP mono, tak boleh dipotong: nomor yang kehilangan digit = nomor salah. */}
-                        <small
-                          className="block max-w-full truncate font-mono text-xs text-muted-foreground @max-[521px]/svc:hidden"
-                          title={s.customerPhone || undefined}
-                        >
-                          {s.customerPhone}
-                        </small>
+                        {/* Nomor HP mono, tak boleh dipotong: nomor yang kehilangan digit = nomor salah.
+                            Teknisi tidak melihat nomor pelanggan sama sekali (P18.3). */}
+                        {canSeePhone && (
+                          <small
+                            className="block max-w-full truncate font-mono text-xs text-muted-foreground @max-[521px]/svc:hidden"
+                            title={s.customerPhone || undefined}
+                          >
+                            {s.customerPhone}
+                          </small>
+                        )}
                       </div>
                     )}
                     {cols.has('device') && (
@@ -1486,12 +1511,14 @@ export function ServicesPage() {
         </div>
       )}
 
-      <ThumbDock>
-        <Button onClick={openNew}>
-          <Plus aria-hidden />
-          {t('services.new')}
-        </Button>
-      </ThumbDock>
+      {canCreate && (
+        <ThumbDock>
+          <Button onClick={openNew}>
+            <Plus aria-hidden />
+            {t('services.new')}
+          </Button>
+        </ThumbDock>
+      )}
 
       <ServiceModal
         open={editOpen}

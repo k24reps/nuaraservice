@@ -1,6 +1,6 @@
 # AFD (App Flow Document) - Nuara Dashboard
 
-> Versi: 0.3 | Diperbarui: 2026-11-26 | Merujuk: PRD.md (F-xx, peran)
+> Versi: 0.3 | Diperbarui: 2026-11-27 | Merujuk: PRD.md (F-xx, peran)
 
 > [!note] Sejak 2026-11-21 (wawancara P13)
 > Layar S-xx di sini adalah target. Aplikasi sekarang memakai layar dan rute FixMaster (mis. `/services`, `/t/<kode>`); selisihnya dicatat di IPD "Daftar Selisih". Teks pesan baru tetap ditulis di sini lebih dulu.
@@ -109,7 +109,9 @@ flowchart TD
 ```
 
 **Alur alternatif / gagal:**
-- Teknisi membuka tiket orang lain -> detail terbaca, tombol ubah tidak tampil; permintaan paksa ditolak "Tiket ini ditugaskan ke <nama teknisi>."
+- Teknisi membuka tiket orang lain -> detail terbaca, tombol ubah tidak tampil; permintaan paksa ditolak "Tiket ini ditugaskan ke <nama teknisi>." (tiket tanpa teknisi: "Tiket ini belum ditugaskan ke teknisi."). Teks yang sama tampil sebagai catatan di S-06 menggantikan deretan tombol, dan di S-04 label tahap serta tombol aksi per baris tidak tampil (P18.3, dikerjakan L-71).
+- Teknisi pada tiket yang ditugaskan kepadanya menekan "Ubah" -> formulir terbatas: tanpa nama dan nomor WA pelanggan, tanpa pilihan teknisi, tanpa pilihan cabang; yang bisa diubah jenis, perangkat, IMEI, kondisi fisik, kelengkapan, kunci layar, keluhan, dan estimasi. Menugaskan teknisi hanya Admin atau Pemilik. Tanpa teks baru (L-71).
+- Teknisi tidak melihat nomor WA pelanggan di S-04, S-06, nota, dan pesan: baris nomor dan tombol kirim WA tidak ada, dan pencarian dengan angka nomor tidak menemukan tiket (P18.3, dikerjakan L-71; penegakan di database L-71b).
 - Selesai tanpa garansi -> "Isi garansi jasa dan garansi sparepart (hari). Isi 0 jika tanpa garansi."
 - Mundur tahap (Admin/Pemilik, hanya dari Diagnosa sampai Selesai) -> konfirmasi "Kembalikan ke <tahap sebelumnya>?"; tercatat di riwayat.
 - Diambil, Dibatalkan, dan Dikembalikan -> konfirmasi "Tahap ini final dan tidak bisa dimundurkan. Lanjutkan?"

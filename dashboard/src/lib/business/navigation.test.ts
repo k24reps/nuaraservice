@@ -28,7 +28,8 @@ describe('mobile navigation', () => {
       staffNavigation,
     );
 
-    expect(resolved.map(({ item }) => item.to)).toEqual(['/services', '/pos', '/', '/customers']);
+    // Kasir dan Pelanggan tertutup untuk Teknisi (P18.20), jadi slotnya terisi Tugas dan Absensi.
+    expect(resolved.map(({ item }) => item.to)).toEqual(['/services', '/', '/tasks', '/attendance']);
   });
 
   it('tata letak lama berisi /inventory terisi ulang tanpa slot kosong', () => {
@@ -68,5 +69,47 @@ describe('grup rail', () => {
   it('karyawan tetap melihat dua grup: operasional dan kantor', () => {
     const groups = getVisibleNavigation('karyawan').map(({ item }) => item.group);
     expect([...new Set(groups)]).toEqual(['ops', 'office']);
+  });
+});
+
+describe('menu per peran (P18.19, P18.20, P18.24)', () => {
+  const paths = (role: Parameters<typeof getVisibleNavigation>[0]) =>
+    getVisibleNavigation(role).map(({ item }) => item.to);
+
+  it('Teknisi: Beranda, Servis, Tugas, Absensi', () => {
+    expect(paths('karyawan')).toEqual(['/', '/services', '/tasks', '/attendance']);
+  });
+
+  it.each(['/calculator', '/pos', '/customers', '/suppliers', '/finance', '/reports', '/activity', '/settings'])(
+    '%s tidak tampil untuk Teknisi',
+    (to) => {
+      expect(paths('karyawan')).not.toContain(to);
+    },
+  );
+
+  it('Admin: menu aplikasi sekarang tanpa Laporan, Log Aktivitas, dan Pengaturan', () => {
+    expect(paths('admin')).toEqual([
+      '/',
+      '/services',
+      '/calculator',
+      '/pos',
+      '/customers',
+      '/suppliers',
+      '/finance',
+      '/tasks',
+      '/attendance',
+    ]);
+  });
+
+  it('Pemilik melihat semua item', () => {
+    expect(paths('owner')).toEqual(NAV_ITEMS.map((item) => item.to));
+  });
+
+  it('nav bawah Teknisi tetap empat slot walau tata letak Pemilik menunjuk halaman tertutup', () => {
+    const resolved = resolveMobileNavigation(
+      ['/pos', '/customers', '/suppliers', '/calculator'],
+      getVisibleNavigation('karyawan'),
+    );
+    expect(resolved.map(({ item }) => item.to)).toEqual(['/', '/services', '/tasks', '/attendance']);
   });
 });

@@ -3,6 +3,7 @@ import sidebarRaw from './Sidebar.tsx?raw';
 import appCssRaw from '@/styles/app.css?raw';
 import topbarRaw from './Topbar.tsx?raw';
 import layoutRaw from './AppLayout.tsx?raw';
+import mobileNavRaw from './MobileBottomNav.tsx?raw';
 
 // Checkout Windows (core.autocrlf) memberi CRLF pada ?raw.
 const lf = (s: string) => s.replace(/\r\n/g, '\n');
@@ -10,6 +11,7 @@ const sidebar = lf(sidebarRaw);
 const appCss = lf(appCssRaw);
 const topbar = lf(topbarRaw);
 const layout = lf(layoutRaw);
+const mobileNav = lf(mobileNavRaw);
 const count = (s: string, needle: string) => s.split(needle).length - 1;
 
 /**
@@ -70,9 +72,10 @@ describe('sidebar: pengelolaan fokus laci terpasang', () => {
     expect(layout).toContain('mobileOpen={mobileOpen}');
   });
 
-  it('menu cabang memakai DropdownMenu Radix (perilaku Esc diuji di drawerMenuEscape.test.tsx)', () => {
-    const branch = sidebar.slice(sidebar.indexOf('function BranchSelector('));
-    expect(branch).toContain('<DropdownMenu>');
-    expect(branch).toContain('<DropdownMenuContent');
+  it('pemilih cabang tidak tampil di sidebar maupun menu Lainnya: satu workshop (P18.21)', () => {
+    expect(sidebar).not.toContain('BranchSelector');
+    expect(sidebar).not.toContain('setActiveOutlet');
+    expect(mobileNav).not.toContain('mobile-outlet');
+    expect(mobileNav).not.toContain('setActiveOutlet');
   });
 });

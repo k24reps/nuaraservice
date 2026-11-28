@@ -26,6 +26,7 @@ import { saveScreenLock } from '@/data/serviceSecret';
 import { useT } from '@/i18n';
 import { interpolate } from '@/lib/business/notify';
 import { currentTerms } from '@/lib/business/serviceTerms';
+import { canEditServiceIdentity } from '@/lib/business/staffAccess';
 import { useListNav } from '@/hooks/useListNav';
 
 interface IntakeDraft {
@@ -78,6 +79,9 @@ export function ServiceModal({
 }: ServiceModalProps) {
   const org = useSessionStore((s) => s.org);
   const me = useSessionStore((s) => s.currentEmployee);
+  // Teknisi yang mengubah tiketnya mendapat formulir terbatas: tanpa nama dan nomor WA
+  // pelanggan, tanpa pilihan teknisi (P18.3). Tiket tak lagi menyentuh tabel pelanggan.
+  const identityLocked = !!editing && !canEditServiceIdentity(me?.role);
   const { data: outlets } = useCollection('outlets');
   // Pelanggan tidak lagi dimuat utuh. Di cloud, kotak saran dan pemeriksaan
   // duplikat memakai query bertarget; adapter lokal tetap memakai daftar penuh
@@ -85,7 +89,7 @@ export function ServiceModal({
   // TIDAK memicu pengambilan di cloud, tapi tetap membaca cache bila halaman
   // lain kebetulan sudah memuatnya.
   const serverSearch = !!repository.queryCustomers;
-  const { data: localCustomers } = useCollection('customers', { enabled: !serverSearch });
+  const { data: localCustomers } = useCollection('customers', { enabled: !serverSearch && !identityLocked });
   const categories = getCategories();
   const complaintTemplates = getComplaintTemplates();
   const accessoryTemplates = getAccessoryTemplates();
@@ -275,8 +279,8 @@ export function ServiceModal({
   };
 
   const save = async () => {
-    if (!customerName.trim()) return fail('name', t('serviceForm.nameRequired'));
-    if (!customerPhone.trim()) return fail('phone', t('serviceForm.phoneRequired'));
+    if (!identityLocked && !customerName.trim()) return fail('name', t('serviceForm.nameRequired'));
+    if (!identityLocked && !customerPhone.trim()) return fail('phone', t('serviceForm.phoneRequired'));
     if (!device.trim()) return fail('device', t('serviceForm.deviceRequired'));
     if (categories.length && !category) return fail('category', t('serviceForm.categoryRequired'));
     // OQ-C (same guard as PosPage/EntryModal): a multi-outlet user must pick a
@@ -297,31 +301,34 @@ export function ServiceModal({
       // Kandidat diambil bertarget per nomor. Filternya longgar dan mencakup
       // bentuk 0 maupun 62 (phoneLookupFilter) — kekurangan cocok di sini
       // berarti pelanggan GANDA, bug yang membuat FULL_LIST ada.
-      const candidates = repository.queryCustomers
-        ? await repository.queryCustomers({ phone: customerPhone, limit: 50 })
-        : localCustomers;
-      let customer = findByPhone(candidates, customerPhone);
-      if (!customer) {
-        customer = {
-          id: newId(),
-          orgId,
-          outletId: null,
-          name: customerName.trim(),
-          phone: customerPhone.trim(),
-          email: '',
-          address: '',
-          note: '',
-          createdAt: now,
-          updatedAt: now,
-          deletedAt: null,
-        };
-        await repository.put('customers', customer);
-      } else if (editing && customer.id === editing.customerId && customer.name !== customerName.trim()) {
-        // Nama dikoreksi dari tiket → kartu pelanggannya ikut, supaya tidak berbeda
-        // dengan menu Pelanggan. Hanya pelanggan tiket ini sendiri: nomor yang
-        // ternyata milik pelanggan lain tidak diganti namanya.
-        customer = { ...customer, name: customerName.trim(), updatedAt: now };
-        await repository.put('customers', customer);
+      let customer: Customer | null = null;
+      if (!identityLocked) {
+        const candidates = repository.queryCustomers
+          ? await repository.queryCustomers({ phone: customerPhone, limit: 50 })
+          : localCustomers;
+        customer = findByPhone(candidates, customerPhone);
+        if (!customer) {
+          customer = {
+            id: newId(),
+            orgId,
+            outletId: null,
+            name: customerName.trim(),
+            phone: customerPhone.trim(),
+            email: '',
+            address: '',
+            note: '',
+            createdAt: now,
+            updatedAt: now,
+            deletedAt: null,
+          };
+          await repository.put('customers', customer);
+        } else if (editing && customer.id === editing.customerId && customer.name !== customerName.trim()) {
+          // Nama dikoreksi dari tiket → kartu pelanggannya ikut, supaya tidak berbeda
+          // dengan menu Pelanggan. Hanya pelanggan tiket ini sendiri: nomor yang
+          // ternyata milik pelanggan lain tidak diganti namanya.
+          customer = { ...customer, name: customerName.trim(), updatedAt: now };
+          await repository.put('customers', customer);
+        }
       }
 
       const tech = employees.find((e) => e.id === technicianId);
@@ -330,17 +337,16 @@ export function ServiceModal({
         // Hanya kolom form: status, DP, biaya, dan sparepart bisa saja berubah di
         // perangkat lain selama form terbuka, dan tidak boleh tertimpa salinan ini.
         await repository.patch('services', editing.id, {
-          customerId: customer.id,
-          customerName: customerName.trim(),
-          customerPhone: customerPhone.trim(),
+          ...(customer
+            ? { customerId: customer.id, customerName: customerName.trim(), customerPhone: customerPhone.trim() }
+            : {}),
           category,
           device: device.trim(),
           complaint: complaint.trim(),
           accessories: accessories.trim(),
           deviceSerial: deviceSerial.trim(),
           deviceCondition: deviceCondition.trim(),
-          technicianId: technicianId || null,
-          technicianName: tech?.name ?? '',
+          ...(identityLocked ? {} : { technicianId: technicianId || null, technicianName: tech?.name ?? '' }),
           estimateCost: parseRpInput(estimateCost),
           updatedAt: now,
           history: [
@@ -361,6 +367,8 @@ export function ServiceModal({
         }
         toast.success(t('serviceForm.updated'));
       } else {
+        // Tiket baru hanya dibuat Admin/Pemilik, yang selalu lewat langkah pelanggan di atas.
+        if (!customer) throw new Error('Pelanggan tiket baru tidak terbentuk');
         const serviceNo = nextDocNumber(
           org?.servicePrefix ?? 'FM',
           services.map((s) => s.serviceNo),
@@ -506,39 +514,41 @@ export function ServiceModal({
             />
           </Field>
         )}
-        <div className={row}>
-          <div className="relative">
-            <Field label={t('serviceForm.customerName')} invalid={invalid('name')}>
-              <TextInput
-                capitalize="words"
-                value={customerName}
-                onChange={(e) => {
-                  setCustomerName(e.target.value);
-                  setSuggestField('name');
-                }}
-                {...comboProps('name')}
-                data-autofocus={!needOutlet || undefined}
-              />
-            </Field>
-            {suggestField === 'name' && suggestList}
+        {!identityLocked && (
+          <div className={row}>
+            <div className="relative">
+              <Field label={t('serviceForm.customerName')} invalid={invalid('name')}>
+                <TextInput
+                  capitalize="words"
+                  value={customerName}
+                  onChange={(e) => {
+                    setCustomerName(e.target.value);
+                    setSuggestField('name');
+                  }}
+                  {...comboProps('name')}
+                  data-autofocus={!needOutlet || undefined}
+                />
+              </Field>
+              {suggestField === 'name' && suggestList}
+            </div>
+            <div className="relative">
+              <Field label={t('serviceForm.customerPhone')} invalid={invalid('phone')}>
+                <TextInput
+                  capitalize="none"
+                  inputMode="tel"
+                  className="font-mono placeholder:font-sans"
+                  value={customerPhone}
+                  onChange={(e) => {
+                    setCustomerPhone(e.target.value);
+                    setSuggestField('phone');
+                  }}
+                  {...comboProps('phone')}
+                />
+              </Field>
+              {suggestField === 'phone' && suggestList}
+            </div>
           </div>
-          <div className="relative">
-            <Field label={t('serviceForm.customerPhone')} invalid={invalid('phone')}>
-              <TextInput
-                capitalize="none"
-                inputMode="tel"
-                className="font-mono placeholder:font-sans"
-                value={customerPhone}
-                onChange={(e) => {
-                  setCustomerPhone(e.target.value);
-                  setSuggestField('phone');
-                }}
-                {...comboProps('phone')}
-              />
-            </Field>
-            {suggestField === 'phone' && suggestList}
-          </div>
-        </div>
+        )}
         <div className={row}>
           <Field label={t('serviceForm.category')} invalid={invalid('category')}>
             <SelectBox
@@ -651,9 +661,11 @@ export function ServiceModal({
           </div>
         )}
         <div className={row}>
-          <Field label={t('serviceForm.technician')}>
-            <SelectBox value={technicianId} onValueChange={setTechnicianId} options={technicianOptions} />
-          </Field>
+          {!identityLocked && (
+            <Field label={t('serviceForm.technician')}>
+              <SelectBox value={technicianId} onValueChange={setTechnicianId} options={technicianOptions} />
+            </Field>
+          )}
           <Field label={t('serviceForm.estimate')}>
             <TextInput
               capitalize="none"

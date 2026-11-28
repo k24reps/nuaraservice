@@ -1,6 +1,6 @@
 # PRD (Product Requirements Document) - Nuara Dashboard
 
-> Versi: 0.3 | Diperbarui: 2026-11-26 | Status: Draft
+> Versi: 0.3 | Diperbarui: 2026-11-27 | Status: Draft
 
 > [!note] Sejak 2026-11-21 (wawancara P13)
 > Dasar kode Nuara Dashboard adalah salinan FixMaster (TRD 1). Dokumen ini tetap acuan fitur dan istilah. Perilaku aplikasi yang berbeda dari PRD dicatat di IPD bagian "Daftar Selisih" dan diputuskan Pemilik per butir; sampai diputuskan, aplikasi berperilaku seperti FixMaster.
@@ -110,7 +110,7 @@ Prioritas: P0 = wajib rilis, P1 = sebaiknya ada, P2 = jika sempat. Karena rilis 
 **F-02 Tahap + tugaskan teknisi**
 - F-02.1 Tahap: Diterima -> Diagnosa (boleh dilewati) -> Konfirmasi biaya -> Tunggu part (boleh dilewati) -> Pengerjaan -> Selesai -> Diambil. Dibatalkan bisa dari tahap Diterima sampai Selesai, lalu dilanjutkan ke Dikembalikan (F-02.10). Transisi lengkap di BSD bagian 4. Di aplikasi, Lunas adalah status sendiri (dari pelunasan) dan Diambil adalah penanda terpisah, bukan tahap; Dikembalikan adalah nama penanda untuk tiket Dibatalkan yang unitnya sudah diserahkan (P18.4).
 - F-02.2 Admin & Pemilik menugaskan atau memindah teknisi kapan saja sebelum Diambil.
-- F-02.3 Teknisi melihat semua tiket, tetapi tombol ubah hanya tampil di tiket yang ditugaskan kepadanya; server menolak perubahan tiket orang lain.
+- F-02.3 Teknisi melihat semua tiket, tetapi tombol ubah hanya tampil di tiket yang ditugaskan kepadanya; server menolak perubahan tiket orang lain. Tiket yang belum ditugaskan juga hanya dibaca sampai Admin atau Pemilik menugaskannya (P19.1). "Ubah" bagi Teknisi membuka formulir terbatas tanpa nama dan nomor WA pelanggan dan tanpa pilihan teknisi.
 - F-02.4 Admin & Pemilik bisa memundurkan tahap satu langkah (ke tahap sebelumnya di riwayat) dari Diagnosa, Konfirmasi biaya, Tunggu part, Pengerjaan, atau Selesai; tercatat nama + waktu. Diambil, Dibatalkan, dan Dikembalikan bersifat final: tidak bisa dimundurkan dan meminta konfirmasi sebelum ditekan.
 - F-02.5 Catatan teknisi selalu internal (tidak tampil di tracking), tercatat di riwayat tiket.
 - F-02.6 Dibatalkan hanya oleh Admin/Pemilik dari tahap Diterima sampai Selesai; wajib alasan dan biaya cek (boleh Rp0). Kelebihan bayar (mis. DP lebih besar dari biaya cek) dikembalikan lewat F-07.7.

@@ -13,6 +13,51 @@ Catatan keputusan desain penting + bug nyata yang ditemukan saat verifikasi.
 
 ## Keputusan desain
 
+### Peran Teknisi di layar: menu, rute, tombol, nomor WA, tiket orang lain (L-71, 27 Nov 2026)
+Keputusan Pemilik P18.3, P18.19 s.d. P18.22, P18.24 dan P19. Langkah ini **hanya layar dan rute**; penegakan
+di database dipecah ke L-71b (K-29). Sampai L-71b selesai, nomor WA pelanggan **masih ikut respons API** ke
+Teknisi dan `services_ins`/`customers_select` belum menutup mereka: jangan menyebut nomor "terlindung" sebelum
+migrasi 0106 diterapkan.
+
+- **Hak per peran = fungsi murni** di `lib/business/staffAccess.ts`: `canCreateService`, `canSeeCustomerPhone`,
+  `canEditServiceIdentity` (Admin dan Pemilik), `canWorkOnService(actor, service)` (Admin dan Pemilik semua tiket;
+  Teknisi hanya `technicianId === id`-nya), `assignmentNote`. Hanya **id** yang dibaca, bukan nama teknisi: server
+  (L-71b) hanya akan membaca id, jadi layar dan server tak boleh berbeda. Tiket lama yang hanya bernama teknisi
+  tanpa id hanya terbaca. Seed `/demo` kini mengisi `technicianId` tiket Rizal supaya simulasi Teknisi masuk akal.
+- **Menu**: `NAV_ITEMS` menandai Kalkulator, Kasir & Stok, Pelanggan, Supplier `managerOnly`; `appChildRoutes`
+  membungkus keempat rute dengan `ManagerRoute` (dialihkan ke Beranda; `/inventory` lewat `/pos`). Teknisi =
+  Beranda, Servis, Tugas, Absensi. Menu Admin dan Pemilik tidak berubah (dikunci `navigation.test.ts` dan
+  `staffRoutes.test.ts`, yang membaca tipe elemen di tabel rute, bukan merender halaman).
+- **Servis Baru** punya enam pintu, semuanya dijaga `canCreate`: tombol header, aksi keadaan kosong, dok jempol,
+  pintasan `N`, `?new=1`, dan klaim garansi (membuat tiket). Beranda: aksi cepat, aksi keadaan kosong, dok jempol.
+- **Nomor WA**: baris nomor, tombol WhatsApp (daftar dan detail), dan pencarian dengan angka nomor
+  (`matchesQuery(..., { phone: false })`). Pencarian **sisi server** (`serviceSearchFilter`, kolom
+  `customer_phone`) belum menutup: pekerjaan L-71b.
+- **Tiket orang lain**: label status bukan tombol, aksi baris (sparepart, Ubah) hilang, di detail catatan "Tiket
+  ini ditugaskan ke X." / "Tiket ini belum ditugaskan ke teknisi." (AFD F-02). Tiket belum ditugaskan hanya dibaca
+  sampai Admin menugaskan (P19.1), Teknisi tidak bisa mengambilnya sendiri.
+- **Formulir Ubah untuk Teknisi** (`identityLocked` di `ServiceModal`): tanpa nama, nomor WA, teknisi; jalur simpan
+  melewati langkah pelanggan dan tidak menulis ke tabel `customers` atau kolom identitas. Estimasi tetap bisa
+  diisi (jalur F-03.1 sampai L-72 menggantinya). Ini juga mencegah Teknisi menimpa nomor dengan kolom kosong.
+- **Pemilih cabang dibuang** untuk semua peran (P18.21): `BranchSelector` (sidebar) dan `<Select>` Cabang aktif
+  (menu Lainnya) dihapus beserta tesnya di `sidebarInert.test.ts` (diganti tes bahwa keduanya tak ada); komponen
+  dihapus karena fiturnya sengaja dibuang, bukan tes dilemahkan. State `activeOutletId` di store tetap ada.
+- **Beranda Teknisi**: peringatan stok tak dihitung dan koleksi `inventory` tak diambil (`enabled: isMgr`), karena
+  tautannya menuju Kasir yang tertutup.
+
+Bug yang ketahuan dari verifikasi: catatan penugasan di bilah aksi detail tiket **menggepeng jadi kolom huruf di
+390px** (flex `min-w-0` berebut dengan pembacaan tagihan). Probe tidak menandainya karena tak ada luberan;
+ketahuan dari foto. Kini baris penuh di atas bilah (hanya bila `!canWork`, jadi DOM Admin dan Pemilik tak berubah).
+Dua pelajaran harness: (1) foto ponsel yang dibuka lewat menu Lainnya berselisih besar karena **sorot hover dari
+ketukan terakhir** jatuh di tempat berbeda (sheet jadi lebih pendek): geser penunjuk (`page.mouse.move(2, 2)`)
+sebelum foto; (2) tunggu penanda yang hanya ada di halaman tujuan (mis. chip "Belum tuntas"), bukan teks yang juga
+ada di Beranda, atau kontrol "tampil" bisa membaca halaman yang salah.
+
+Verifikasi: build, lint, tes lolos (angka di Testing & Security); 55 pemeriksaan browser di `/demo` (Pemilik dan
+Teknisi, 1440 dan 390, termasuk simpan formulir terbatas yang tidak mengubah nama, nomor, teknisi); `audit-mobile`
+dan `audit-zoom` tanpa luberan; foto per piksel Pemilik: isi halaman identik (selisih hanya jam dan QR acak),
+sidebar berubah hanya di blok identitas toko.
+
 ### Isian Pengaturan baru (L-70, 26 Nov 2026)
 Empat isian untuk Pemilik, semuanya di baris toko (`organizations.settings`, tanpa migrasi) dan kosong
 sampai diisi, kecuali 16 keluhan awal yang berasal dari nota landing page:

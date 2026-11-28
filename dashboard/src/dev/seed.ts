@@ -135,6 +135,8 @@ export async function seedDemoWorkspace(shopName: string = DEMO_SHOP_NAME): Prom
 
   // 5) Services on 4 June — mix of paid (lunas) + still-active, per outlet.
   const tech = 'Rizal Pratama';
+  // Tiket ditugaskan lewat id, seperti tiket nyata: aturan Teknisi (L-71) hanya membaca id.
+  const techId = (await repository.list('employees')).find((e) => e.name === tech)?.id ?? null;
   // Data contoh tersebar di bulan berjalan (dulu semuanya hari ini, sehingga
   // sakelar Hari ini/Bulan ini di Dashboard tampak tak berfungsi). Dijepit ke
   // tanggal 1: di awal bulan semuanya kembali ke hari ini, tetap "bulan ini".
@@ -189,7 +191,7 @@ export async function seedDemoWorkspace(shopName: string = DEMO_SHOP_NAME): Prom
       completionNote: done ? (opts.handling ?? '') : '',
       accessories: 'Charger',
       status,
-      technicianId: null,
+      technicianId: techId,
       technicianName: tech,
       estimateCost: finalCost || 500_000,
       finalCost,

@@ -20,18 +20,20 @@ export interface NavItem {
 export type NavGroup = 'ops' | 'office' | 'system';
 
 /**
- * Primary navigation. FixMaster goes beyond FixNova with a dedicated
- * "Tugas Internal" (internal tasks) section, and groups items logically.
+ * Primary navigation. Menu Teknisi (`karyawan`) = Beranda, Servis, Tugas,
+ * Absensi (PRD, P18.20 dan P18.24): Kalkulator, Kasir & Stok, Pelanggan, dan
+ * Supplier hanya untuk Admin dan Pemilik (`managerOnly`). Menu Admin dan
+ * Pemilik tidak berubah.
  */
 export const NAV_ITEMS: NavItem[] = [
   { to: '/', labelKey: 'nav.dashboard', shortLabelKey: 'nav.home', icon: 'fa-chart-pie', group: 'ops' },
   { to: '/services', labelKey: 'nav.services', icon: 'fa-screwdriver-wrench', group: 'ops' },
-  { to: '/calculator', labelKey: 'nav.calculator', icon: 'fa-calculator', group: 'ops' },
+  { to: '/calculator', labelKey: 'nav.calculator', icon: 'fa-calculator', managerOnly: true, group: 'ops' },
   // Kasir dan Inventori satu layar: datanya sama (inventory). /inventory
   // dialihkan ke sini (appChildRoutes) agar tautan lama tetap hidup.
-  { to: '/pos', labelKey: 'nav.pos', shortLabelKey: 'nav.posShort', icon: 'fa-cash-register', group: 'ops' },
-  { to: '/customers', labelKey: 'nav.customers', icon: 'fa-users', group: 'ops' },
-  { to: '/suppliers', labelKey: 'nav.suppliers', icon: 'fa-truck-field', group: 'ops' },
+  { to: '/pos', labelKey: 'nav.pos', shortLabelKey: 'nav.posShort', icon: 'fa-cash-register', managerOnly: true, group: 'ops' },
+  { to: '/customers', labelKey: 'nav.customers', icon: 'fa-users', managerOnly: true, group: 'ops' },
+  { to: '/suppliers', labelKey: 'nav.suppliers', icon: 'fa-truck-field', managerOnly: true, group: 'ops' },
   { to: '/finance', labelKey: 'nav.finance', icon: 'fa-wallet', managerOnly: true, group: 'office' },
   { to: '/tasks', labelKey: 'nav.tasks', icon: 'fa-list-check', group: 'office' },
   { to: '/attendance', labelKey: 'nav.attendance', icon: 'fa-calendar-check', group: 'office' },

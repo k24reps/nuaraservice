@@ -51,6 +51,14 @@ describe('matchesQuery', () => {
   it('kueri no. servis tidak ikut mencocokkan digit di nomor HP', () => {
     expect(matchesQuery({ ...svc, serviceNo: 'FM-0002' }, 'FM-3456')).toBe(false);
   });
+
+  it('Teknisi (phone: false): angka nomor HP tidak menemukan tiket, kolom lain tetap', () => {
+    expect(matchesQuery(svc, '0812-3456', { phone: false })).toBe(false);
+    expect(matchesQuery(svc, '081234563456', { phone: false })).toBe(false);
+    expect(matchesQuery(svc, 'mengisi daya', { phone: false })).toBe(true);
+    expect(matchesQuery(svc, svc.serviceNo, { phone: false })).toBe(true);
+    expect(matchesQuery(svc, '', { phone: false })).toBe(true);
+  });
 });
 
 describe('matchesTechnician', () => {

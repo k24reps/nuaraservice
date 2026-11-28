@@ -4,9 +4,6 @@ import { Ellipsis, LogOut, X } from 'lucide-react';
 import { EmptyValue } from '@/components/ui/EmptyValue';
 import { Button } from '@/components/dens/button';
 import { Drawer, DrawerContent, DrawerTitle } from '@/components/dens/drawer';
-import { Label } from '@/components/dens/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/dens/select';
-import { useCollection } from '@/hooks/useCollection';
 import { useNavSignals } from '@/hooks/useNavSignals';
 import { useSessionStore } from '@/stores/session';
 import { useAuthStore } from '@/stores/auth';
@@ -22,8 +19,6 @@ import { ROLE_LABEL } from './roleLabel';
 import { ShopMark } from './Sidebar';
 import { Avatar } from './Topbar';
 
-/** Nilai Select untuk "Semua Outlet": Radix Select tidak menerima nilai kosong. */
-const ALL_OUTLETS = '__all__';
 
 function pathIsActive(path: string, pathname: string): boolean {
   return path === '/' ? pathname === '/' : pathname.startsWith(path);
@@ -38,12 +33,8 @@ export function MobileBottomNav() {
   const location = useLocation();
   const org = useSessionStore((state) => state.org);
   const employee = useSessionStore((state) => state.currentEmployee);
-  const activeOutletId = useSessionStore((state) => state.activeOutletId);
-  const allowedOutletIds = useSessionStore((state) => state.allowedOutletIds);
-  const setActiveOutlet = useSessionStore((state) => state.setActiveOutlet);
   const signOutEmployee = useSessionStore((state) => state.signOutEmployee);
   const authSignOut = useAuthStore((state) => state.signOut);
-  const { data: outlets } = useCollection('outlets');
   const signals = useNavSignals();
   const t = useT();
   const [moreOpen, setMoreOpen] = useState(false);
@@ -60,9 +51,6 @@ export function MobileBottomNav() {
   const primaryPaths = new Set(primaryNavigation.map(({ item }) => item.to));
   const moreNavigation = visibleNavigation.filter(({ item }) => !primaryPaths.has(item.to));
   const moreIsActive = moreNavigation.some(({ item }) => pathIsActive(item.to, location.pathname));
-  const reachableOutlets = allowedOutletIds.length
-    ? outlets.filter((outlet) => allowedOutletIds.includes(outlet.id))
-    : outlets;
 
   const handleLogout = () => {
     if (demoGuard('demo.logout')) return;
@@ -143,28 +131,6 @@ export function MobileBottomNav() {
                   </strong>
                 </span>
               </div>
-
-              {reachableOutlets.length > 0 && (
-                <div className="grid gap-1.5">
-                  <Label htmlFor="mobile-outlet">{t('nav.mobile.activeOutlet')}</Label>
-                  <Select
-                    value={activeOutletId ?? ALL_OUTLETS}
-                    onValueChange={(value) => setActiveOutlet(value === ALL_OUTLETS ? null : value)}
-                  >
-                    <SelectTrigger id="mobile-outlet">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={ALL_OUTLETS}>{t('nav.mobile.allOutlets')}</SelectItem>
-                      {reachableOutlets.map((outlet) => (
-                        <SelectItem key={outlet.id} value={outlet.id}>
-                          {outlet.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
 
               <ZoomStepper />
 

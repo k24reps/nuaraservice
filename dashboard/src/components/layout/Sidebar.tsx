@@ -1,23 +1,15 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { useLayoutEffect, useRef, type ReactNode, type RefObject } from 'react';
-import { CheckIcon, ChevronsUpDownIcon, Layers, PanelLeftClose, PanelLeftOpen, Store, X } from 'lucide-react';
+import { useLayoutEffect, useRef, type RefObject } from 'react';
+import { PanelLeftClose, PanelLeftOpen, X } from 'lucide-react';
 import { EmptyValue } from '@/components/ui/EmptyValue';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/dens/dropdown-menu';
 import { Button } from '@/components/dens/button';
 import { getVisibleNavigation } from '@/lib/business/navigation';
 import { useSessionStore } from '@/stores/session';
-import { useCollection } from '@/hooks/useCollection';
 import { useT } from '@/i18n';
 import { useNavSignals } from '@/hooks/useNavSignals';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { useDrawerFocus } from '@/hooks/useDrawerFocus';
 import { cn } from '@/lib/utils';
-import type { Outlet, ID } from '@/data/types';
 import { FALLBACK_NAV_ICON, NAV_ICONS } from './navIcons';
 import { NavCount, NavDot } from './navSignal';
 
@@ -53,10 +45,6 @@ export function Sidebar({
 }: SidebarProps) {
   const org = useSessionStore((s) => s.org);
   const employee = useSessionStore((s) => s.currentEmployee);
-  const activeOutletId = useSessionStore((s) => s.activeOutletId);
-  const setActiveOutlet = useSessionStore((s) => s.setActiveOutlet);
-  const allowedOutletIds = useSessionStore((s) => s.allowedOutletIds);
-  const { data: outlets } = useCollection('outlets');
   const t = useT();
   const signals = useNavSignals();
   // Laci tertutup di ponsel/tablet: inert (tak bisa difokus, tak dibacakan).
@@ -107,8 +95,6 @@ export function Sidebar({
   }, [pathname, collapsed]);
 
   const logo = <ShopMark name={org?.name} logo={org?.logoDataUrl} />;
-  const reachable =
-    allowedOutletIds.length > 0 ? outlets.filter((o) => allowedOutletIds.includes(o.id)) : outlets;
 
   return (
     <>
@@ -239,30 +225,19 @@ export function Sidebar({
           })}
         </nav>
 
-        {/* ---------- Unit usaha (identitas toko + pemilih cabang) ---------- */}
+        {/* ---------- Unit usaha (identitas toko). Satu workshop: tanpa pemilih cabang (P18.21). ---------- */}
         <div className={cn('shrink-0 border-t border-sidebar-border/70 p-3', rail && 'px-0')}>
-          {reachable.length > 0 ? (
-            <BranchSelector
-              logo={logo}
-              orgName={org?.name}
-              outlets={reachable}
-              activeOutletId={activeOutletId}
-              onSelect={setActiveOutlet}
-              rail={rail}
-            />
-          ) : (
-            <div className={cn('flex items-center gap-3 p-1.5', rail && 'justify-center')}>
-              {logo}
-              {!rail && (
-                <div className="flex min-w-0 flex-col">
-                  <small className="text-xs text-muted-foreground">{t('nav.mobile.businessUnit')}</small>
-                  <strong className="line-clamp-2 text-sm font-semibold leading-snug">
-                    {org?.name ?? <EmptyValue />}
-                  </strong>
-                </div>
-              )}
-            </div>
-          )}
+          <div className={cn('flex items-center gap-3 p-1.5', rail && 'justify-center')}>
+            {logo}
+            {!rail && (
+              <div className="flex min-w-0 flex-col">
+                <small className="text-xs text-muted-foreground">{t('nav.mobile.businessUnit')}</small>
+                <strong className="line-clamp-2 text-sm font-semibold leading-snug">
+                  {org?.name ?? <EmptyValue />}
+                </strong>
+              </div>
+            )}
+          </div>
         </div>
       </aside>
     </>
@@ -281,91 +256,5 @@ export function ShopMark({ name, logo, className }: { name?: string; logo?: stri
     >
       {logo ? <img src={logo} alt="" className="size-full bg-card object-contain" /> : (name ?? 'N').charAt(0).toUpperCase()}
     </span>
-  );
-}
-
-/**
- * Pemilih cabang (outlet). "Semua Outlet" (null) menampilkan data seluruh toko;
- * memilih cabang membatasi seluruh aplikasi ke cabang itu. Menu Radix dirender
- * di portal, jadi tidak terpotong `overflow: hidden` sidebar saat rail diciutkan.
- * Esc ditangani menunya sendiri (Radix menandai event-nya `defaultPrevented`),
- * sehingga laci di tablet tidak ikut tertutup (useDrawerFocus melewatinya).
- */
-function BranchSelector({
-  logo,
-  orgName,
-  outlets,
-  activeOutletId,
-  onSelect,
-  rail,
-}: {
-  logo: ReactNode;
-  orgName: string | undefined;
-  outlets: Outlet[];
-  activeOutletId: ID | null;
-  onSelect: (id: ID | null) => void;
-  rail: boolean;
-}) {
-  const t = useT();
-  const active = outlets.find((o) => o.id === activeOutletId) ?? null;
-  const allLabel = t('nav.mobile.allOutlets');
-  const label = active ? active.name : allLabel;
-
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          title={`${t('nav.mobile.activeOutlet')}: ${label}`}
-          className={cn(
-            'relative flex min-h-(--control-h) w-full items-center gap-3 rounded-xl p-1.5 pr-2.5 text-left outline-none transition-colors duration-150 hover:bg-sidebar-accent/70 focus-visible:ring-2 focus-visible:ring-sidebar-ring data-[state=open]:bg-sidebar-accent',
-            rail && 'mx-auto size-11 justify-center p-0',
-          )}
-        >
-          {logo}
-          {rail ? (
-            <span
-              aria-hidden
-              className={cn('absolute right-0.5 top-0.5 size-2 rounded-full ring-2 ring-sidebar', active ? 'bg-highlight' : 'bg-success-foreground')}
-            />
-          ) : (
-            <>
-              <span className="flex min-w-0 flex-1 flex-col">
-                <span className="line-clamp-2 text-sm font-semibold leading-snug">{orgName ?? <EmptyValue />}</span>
-                <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <span aria-hidden className={cn('size-1.5 shrink-0 rounded-full', active ? 'bg-highlight' : 'bg-success-foreground')} />
-                  <span className="truncate">{label}</span>
-                </span>
-              </span>
-              <ChevronsUpDownIcon aria-hidden className="size-4 shrink-0 text-muted-foreground" />
-            </>
-          )}
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent side="top" align="start" className="w-(--sidebar-width) max-w-[calc(100vw-2rem)]">
-        <DropdownMenuItem onSelect={() => onSelect(null)} aria-checked={!activeOutletId} role="menuitemradio">
-          <Layers />
-          <span className="flex-1 truncate">{allLabel}</span>
-          {!activeOutletId && <CheckIcon className="text-primary" />}
-        </DropdownMenuItem>
-        {outlets.map((o) => (
-          <DropdownMenuItem
-            key={o.id}
-            onSelect={() => onSelect(o.id)}
-            aria-checked={activeOutletId === o.id}
-            role="menuitemradio"
-          >
-            <Store />
-            <span className="flex-1 truncate">{o.name}</span>
-            {o.isPrimary && (
-              <span className="rounded-full bg-secondary px-2 text-xs font-medium text-secondary-foreground">
-                {t('sidebar.primary')}
-              </span>
-            )}
-            {activeOutletId === o.id && <CheckIcon className="text-primary" />}
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
   );
 }

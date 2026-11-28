@@ -58,6 +58,7 @@ import { interpolate } from '@/lib/business/notify';
 import { useSessionStore } from '@/stores/session';
 import { useSettingsStore } from '@/stores/settings';
 import { isManager } from '@/config/plans';
+import { canCreateService } from '@/lib/business/staffAccess';
 import { useT, type TranslationKey } from '@/i18n';
 import type { Service, ServiceStatus } from '@/data/types';
 
@@ -102,6 +103,8 @@ export function DashboardPage() {
   const language = useSettingsStore((s) => s.language);
   const me = useSessionStore((s) => s.currentEmployee);
   const isMgr = me ? isManager(me.role) : false;
+  // Teknisi tidak membuat tiket dan tidak punya Kasir & Stok (P18.3, P18.20).
+  const canCreate = canCreateService(me?.role);
   // Laba = angka Laporan, dan Laporan khusus owner. Admin tetap melihat arus kas.
   const isOwner = me?.role === 'owner';
   const { from, to } = monthRange();
@@ -158,7 +161,7 @@ export function DashboardPage() {
   const incomesQuery = useCollectionRange('incomes', 'date', from, to);
   const expensesQuery = useCollectionRange('expenses', 'date', from, to);
   const walletsQuery = useCollection('wallets');
-  const inventoryQuery = useCollection('inventory');
+  const inventoryQuery = useCollection('inventory', { enabled: isMgr });
   const { data: outlets } = useCollection('outlets');
   // Hanya baris hari ini yang dipakai (activeStaff) — kunci query-nya sama
   // dengan rail navigasi, jadi keduanya berbagi satu tarikan kecil.
@@ -216,8 +219,8 @@ export function DashboardPage() {
   const open = openQuery.data;
   const ages = useMemo(() => alertAges(open), [open]);
   const alerts = useMemo(
-    () => computeAlerts(summary ?? { confirmation: 0, awaitingPickup: 0 }, inventory),
-    [summary, inventory],
+    () => computeAlerts(summary ?? { confirmation: 0, awaitingPickup: 0 }, isMgr ? inventory : []),
+    [summary, inventory, isMgr],
   );
   // Sama dengan daftar yang ditautnya (/services?tech=me&open=1): tiket saya yang
   // belum tuntas. Dulu hanya "belum selesai" sementara tautannya membuka semua tiket saya.
@@ -321,14 +324,16 @@ export function DashboardPage() {
         </div>
         {/* Aksi cepat — di wadah sempit dilipat (menu bawah sudah memuat Servis & Kasir);
             di ponsel Servis Baru tinggal di dok zona jempol. */}
-        <div className="ml-auto flex gap-2 @max-[561px]/dashboard:hidden" role="group" aria-label={t('dashboard.quickActions')}>
-          <Link className={cn(primaryLink, 'phone:hidden')} to="/services?new=1">
-            <Plus aria-hidden /> {t('dashboard.newService')}
-          </Link>
-          <Link className={secondaryLink} to="/pos">
-            <ShoppingCart aria-hidden /> {t('dashboard.openPos')}
-          </Link>
-        </div>
+        {isMgr && (
+          <div className="ml-auto flex gap-2 @max-[561px]/dashboard:hidden" role="group" aria-label={t('dashboard.quickActions')}>
+            <Link className={cn(primaryLink, 'phone:hidden')} to="/services?new=1">
+              <Plus aria-hidden /> {t('dashboard.newService')}
+            </Link>
+            <Link className={secondaryLink} to="/pos">
+              <ShoppingCart aria-hidden /> {t('dashboard.openPos')}
+            </Link>
+          </div>
+        )}
       </section>
 
       {criticalError && (
@@ -556,9 +561,11 @@ export function DashboardPage() {
                   title={t('dashboard.noServices')}
                   description={t('dashboard.noServicesDescription')}
                   action={
-                    <Link className={primaryLink} to="/services?new=1">
-                      <Plus aria-hidden /> {t('dashboard.newService')}
-                    </Link>
+                    canCreate ? (
+                      <Link className={primaryLink} to="/services?new=1">
+                        <Plus aria-hidden /> {t('dashboard.newService')}
+                      </Link>
+                    ) : undefined
                   }
                 />
               ) : (
@@ -689,11 +696,13 @@ export function DashboardPage() {
       )}
       {/* Aksi cepat konsol dilipat di ponsel; tab Servis di menu bawah membuka
           daftar, bukan tiket baru. Servis Baru pindah ke zona jempol. */}
-      <ThumbDock>
-        <Link className={cn(primaryLink, 'h-11 px-4 shadow-raised ring-2 ring-primary-foreground/70')} to="/services?new=1">
-          <Plus aria-hidden /> {t('dashboard.newService')}
-        </Link>
-      </ThumbDock>
+      {canCreate && (
+        <ThumbDock>
+          <Link className={cn(primaryLink, 'h-11 px-4 shadow-raised ring-2 ring-primary-foreground/70')} to="/services?new=1">
+            <Plus aria-hidden /> {t('dashboard.newService')}
+          </Link>
+        </ThumbDock>
+      )}
     </div>
   );
 }

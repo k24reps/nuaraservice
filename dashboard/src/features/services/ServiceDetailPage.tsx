@@ -34,6 +34,12 @@ import { useFormat } from '@/lib/useFormat';
 import { useT } from '@/i18n';
 import { walletsForOutlet } from '@/lib/business/finance';
 import {
+  assignmentNote,
+  canCreateService,
+  canSeeCustomerPhone,
+  canWorkOnService,
+} from '@/lib/business/staffAccess';
+import {
   outstandingBalance,
   serviceProfit,
   cancelledProfit,
@@ -233,11 +239,19 @@ export function ServiceDetailPage() {
   const profitKnown = cancelled ? cancelProfit !== null : service.finalCost > 0;
   const modalTotal = cancelled ? heldCost(service.spareparts) : serviceModalTotal(service.spareparts);
   const costLocked = finalCostLocked(service);
+  // Teknisi hanya mengubah tiket yang ditugaskan kepadanya dan tidak melihat nomor WA (P18.3).
+  const canWork = canWorkOnService(me, service);
+  const canSeePhone = canSeeCustomerPhone(role);
+  const note = assignmentNote(service);
+  const staffNote =
+    note.kind === 'unassigned'
+      ? t('serviceDetail.staffUnassigned')
+      : interpolate(t('serviceDetail.staffAssigned'), { name: note.name });
   // Tiket Lunas sudah dibayar: menambah part hanya untuk owner/admin (0093).
-  const canAddParts = !cancelled && (service.status !== 'lunas' || isManager);
+  const canAddParts = canWork && !cancelled && (service.status !== 'lunas' || isManager);
   // Satu klaim berjalan per tiket asli (juga dijaga server, 0064).
   const openClaim = openClaimFor(services, service.id);
-  const claimable = canClaimWarranty(service, localDateStr()) && !openClaim;
+  const claimable = canCreateService(role) && canClaimWarranty(service, localDateStr()) && !openClaim;
   // When the only thing this role can do is take a DP (no allowed status
   // transitions, but the ticket isn't terminal), label the action accordingly
   // instead of the misleading "Update Status" — e.g. staff on a finished unit.
@@ -559,7 +573,9 @@ export function ServiceDetailPage() {
   // Satu daftar aksi untuk bilah bawah DAN panel "Lainnya" di ponsel, supaya
   // syarat tampil tiap aksi tidak ditulis dua kali.
   const actions: TicketAction[] = [
-    { key: 'edit', icon: Pencil, label: t('serviceDetail.edit'), onClick: () => setEditOpen(true) },
+    ...(canWork
+      ? [{ key: 'edit', icon: Pencil, label: t('serviceDetail.edit'), onClick: () => setEditOpen(true) }]
+      : []),
     ...(org
       ? [{ key: 'print', icon: Printer, label: t('serviceDetail.printReceipt'), onClick: servicePrint.print }]
       : []),
@@ -585,7 +601,7 @@ export function ServiceDetailPage() {
     ...(openClaim
       ? [{ key: 'open-claim', icon: ShieldCheck, label: interpolate(t('serviceDetail.claimRunning'), { no: openClaim.serviceNo }), to: `/services/${openClaim.id}` }]
       : []),
-    ...(!isTerminal(service.status)
+    ...(canWork && !isTerminal(service.status)
       ? [
           onlyDp
             ? { key: 'status', icon: Banknote, label: t('serviceDetail.receiveDp'), primary: true, onClick: () => openStatus() }
@@ -848,11 +864,15 @@ export function ServiceDetailPage() {
         <section className={panel}>
           <h3 className={panelTitle}>{t('serviceDetail.customerLabel')}</h3>
           <p className="text-lg font-semibold [overflow-wrap:anywhere]">{service.customerName}</p>
-          <p className="font-mono text-sm text-muted-foreground">{service.customerPhone || emptyValue}</p>
+          {canSeePhone && (
+            <p className="font-mono text-sm text-muted-foreground">{service.customerPhone || emptyValue}</p>
+          )}
           <div className="mt-4 flex flex-wrap gap-2">
-            <Button variant="outline" size="sm" onClick={() => setNotifyOpen(true)}>
-              <WhatsAppIcon className="size-4" /> WhatsApp
-            </Button>
+            {canSeePhone && (
+              <Button variant="outline" size="sm" onClick={() => setNotifyOpen(true)}>
+                <WhatsAppIcon className="size-4" /> WhatsApp
+              </Button>
+            )}
             <Button variant="outline" size="sm" onClick={() => void copyTrackingLink()}>
               <Link2 aria-hidden /> {t('serviceDetail.copyTracking')}
             </Button>
@@ -1034,7 +1054,7 @@ export function ServiceDetailPage() {
                         </Button>
                       )}
                       {/* Part terpasang di tiket Lunas sudah dibayar: stoknya tak bisa kembali (0088). */}
-                      {!cancelled && !(manual && !isManager) && !(service.status === 'lunas' && !manual && p.deducted) && (
+                      {canWork && !cancelled && !(manual && !isManager) && !(service.status === 'lunas' && !manual && p.deducted) && (
                         <Button
                           variant="ghost"
                           size="icon"
@@ -1154,7 +1174,18 @@ export function ServiceDetailPage() {
           fixed dengan tepi kiri = lebar sidebar, sehingga salah tempat saat
           sidebar dilipat. Sekunder disembunyikan bila bilahnya sempit. */}
       <div className="@container/bar sticky bottom-0 z-(--z-sticky) mt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
-        <div className="flex items-center justify-between gap-4 rounded-2xl bg-card/90 px-5 py-3 shadow-raised ring-1 ring-border/70 backdrop-blur-md compact:px-4">
+        <div
+          className={cn(
+            'flex items-center justify-between gap-4 rounded-2xl bg-card/90 px-5 py-3 shadow-raised ring-1 ring-border/70 backdrop-blur-md compact:px-4',
+            // Teknisi pada tiket orang lain: catatan penugasan mengisi baris sendiri di atas bilah.
+            !canWork && 'flex-wrap gap-y-2',
+          )}
+        >
+          {!canWork && (
+            <p className="basis-full text-sm text-muted-foreground [overflow-wrap:anywhere]" role="note">
+              {staffNote}
+            </p>
+          )}
           <div className="flex min-w-0 shrink-0 flex-col">
             <span className="text-xs font-medium text-muted-foreground">{billingReadout.label}</span>
             <span className={cn(money, 'text-lg font-semibold leading-tight')}>{billingReadout.value}</span>

@@ -109,10 +109,12 @@ const digitsOf = (v: string) => v.replace(/\D/g, '');
 export function matchesQuery(
   s: Pick<Service, 'serviceNo' | 'customerName' | 'device' | 'complaint' | 'customerPhone'>,
   query: string,
+  /** `phone: false` untuk Teknisi: nomor WA tak boleh jadi petunjuk lewat pencarian (P18.3). */
+  { phone = true }: { phone?: boolean } = {},
 ): boolean {
   const q = query.trim().toLowerCase();
   if (!q) return true;
-  const looksLikePhone = /^[\d\s+().-]+$/.test(q) && digitsOf(q).length >= 3;
+  const looksLikePhone = phone && /^[\d\s+().-]+$/.test(q) && digitsOf(q).length >= 3;
   return (
     s.serviceNo.toLowerCase().includes(q) ||
     s.customerName.toLowerCase().includes(q) ||
